@@ -1,0 +1,2206 @@
+{
+  "complete": true,
+  "node": "v24.12.0",
+  "context": {
+    "candidateCommit": "93ad00d0fd901785d0d70177b67c1deb6b59245d",
+    "packagedFromCommit": "c27a07b9c42e3e3c669b0df7ca2751d61815a6db",
+    "deploymentContractRevision": "312909bba56d9a75041aa41720c39faa3a0ca01d",
+    "packageManager": "11.22.0",
+    "ipfsExecutable": "ipfs.exe",
+    "ipfsBinarySha256": "fd0d46df76f455d938713c98c7fca5fa117b74c934c9fc0d37730fdb33313651",
+    "archives": [
+      {
+        "name": "@potential-guide/artifact-files",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-artifact-files-0.1.0-rc.0.tgz",
+        "bytes": 9580,
+        "sha256": "3029f58a25469c9afc3cbe2bf162e1f938be642db7f08c5a0dda6f383a9640d4"
+      },
+      {
+        "name": "@potential-guide/check-artifacts",
+        "version": "0.1.0",
+        "file": "potential-guide-check-artifacts-0.1.0.tgz",
+        "bytes": 48818,
+        "sha256": "8cfc793bcb2954ba8921bb407a2063e381b52df3b7c8ec5cb01e57a624c6081a"
+      },
+      {
+        "name": "@potential-guide/check-runtime-files",
+        "version": "0.1.0",
+        "file": "potential-guide-check-runtime-files-0.1.0.tgz",
+        "bytes": 35163,
+        "sha256": "726703287bbcc70b9ff61459cd8db8bdf06a3029a1fb2551f71d4e46b773cf31"
+      },
+      {
+        "name": "@potential-guide/cli-core",
+        "version": "0.3.0-rc.0",
+        "file": "potential-guide-cli-core-0.3.0-rc.0.tgz",
+        "bytes": 94085,
+        "sha256": "52db2ea2f6d23a13f106568eabbfb5335009599c97d897dad4beae6335d9b00b"
+      },
+      {
+        "name": "@potential-guide/pguide-task-bundle",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-pguide-task-bundle-0.1.0-rc.0.tgz",
+        "bytes": 34255,
+        "sha256": "03db66cc74269c870fa4d0c6c5746bc1ae3b54b5380fe964114825d9b836973f"
+      },
+      {
+        "name": "@potential-guide/task-engine",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-task-engine-0.1.0-rc.0.tgz",
+        "bytes": 96461,
+        "sha256": "e626052ebe9b68a688afb1e37a343fe33fc2c068180e88e963703115c5061ab4"
+      },
+      {
+        "name": "@potential-guide/task-engine-http",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-task-engine-http-0.1.0-rc.0.tgz",
+        "bytes": 17652,
+        "sha256": "8036d9fc468c99d1ff180bf00547d8dd649cbdf22fbf0159420bb32a0e5386a1"
+      },
+      {
+        "name": "@potential-guide/task-engine-server",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-task-engine-server-0.1.0-rc.0.tgz",
+        "bytes": 8462,
+        "sha256": "6d868f3e95fafe7a2709bae10a23fc3afb80cd6f6dd1798a6342ec772e7ab4b5"
+      },
+      {
+        "name": "@potential-guide/task-engine-storage",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-task-engine-storage-0.1.0-rc.0.tgz",
+        "bytes": 11668,
+        "sha256": "ed44990f520bc83b2710bbd4559ab243992da4347ee88532d6276e030ca57c79"
+      },
+      {
+        "name": "@potential-guide/task-protocol",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-task-protocol-0.1.0-rc.0.tgz",
+        "bytes": 48135,
+        "sha256": "58bcadbef1847953348b3fdf1c76076556f36ad60af66d020d5d533f4e26f2de"
+      },
+      {
+        "name": "@potential-guide/task-sdk",
+        "version": "0.1.0-rc.0",
+        "file": "potential-guide-task-sdk-0.1.0-rc.0.tgz",
+        "bytes": 11893,
+        "sha256": "4e16cd592f67bbbcc575c632dcbf7af0c46a074758e4adf9d3f9fc0f341aeeee"
+      }
+    ],
+    "authorLockSha256": "4796f88ad3bd78c8a799b85b5615048306ca07e96f125da8652a1bbf5c9eda44",
+    "runtimeLockSha256": "73266911bb0d457adb33671fd45818659411a7a01ecd42bd94dc992af2682035"
+  },
+  "author": {
+    "node": "v24.12.0",
+    "packageVersion": "0.1.0-rc.0",
+    "settingsRemoved": true,
+    "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+    "carFile": "bundle.car",
+    "carBytes": 812645,
+    "carSha256": "64a9366e2ec7628826fdd6c9e53bf239d4fffbd4de575f234fdd50d7ed8792ec",
+    "payload": {
+      "path": "resources/nested/payload.bin",
+      "bytes": 800000,
+      "sha256": "e2e4edd479ed8c39944c757110ded875b4bd125af24d43fe5487596df0af7c57",
+      "sum": 99999533
+    },
+    "files": [
+      "resources/nested/payload.bin",
+      "task.yaml",
+      "worker.cjs"
+    ],
+    "helpSubcommands": [
+      "init",
+      "check",
+      "build"
+    ],
+    "artifactCheck": {
+      "schemaVersion": 1,
+      "command": "task-bundle check",
+      "status": "ok",
+      "result": {
+        "declaration": {
+          "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
+          "name": "独立 CAR 交付验证",
+          "runtime": {
+            "type": "node",
+            "minVersion": "22.13.0"
+          },
+          "entry": "worker.cjs",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "enum": [
+                  "ok",
+                  "missing-path",
+                  "missing-block",
+                  "cid-mismatch",
+                  "cancel",
+                  "outage"
+                ]
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "additionalProperties": false
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "sum": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "mode",
+              "path",
+              "bytes",
+              "sha256",
+              "sum"
+            ],
+            "additionalProperties": false
+          },
+          "messageSchema": false,
+          "include": [
+            "resources/nested/payload.bin",
+            "task.yaml",
+            "worker.cjs"
+          ]
+        },
+        "resolved": {
+          "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
+          "name": "独立 CAR 交付验证",
+          "runtime": {
+            "type": "node",
+            "minVersion": "22.13.0"
+          },
+          "entry": "worker.cjs",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "enum": [
+                  "ok",
+                  "missing-path",
+                  "missing-block",
+                  "cid-mismatch",
+                  "cancel",
+                  "outage"
+                ]
+              }
+            },
+            "required": [
+              "mode"
+            ],
+            "additionalProperties": false
+          },
+          "resultSchema": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "sum": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "mode",
+              "path",
+              "bytes",
+              "sha256",
+              "sum"
+            ],
+            "additionalProperties": false
+          },
+          "messageSchema": false,
+          "include": [
+            "resources/nested/payload.bin",
+            "task.yaml",
+            "worker.cjs"
+          ]
+        },
+        "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "files": [
+          "resources/nested/payload.bin",
+          "task.yaml",
+          "worker.cjs"
+        ]
+      }
+    },
+    "removedCommand": {
+      "exitCode": 2,
+      "stderr": ""
+    },
+    "removedExport": "ERR_PACKAGE_PATH_NOT_EXPORTED",
+    "networkRequests": []
+  },
+  "packages": [
+    {
+      "name": "@potential-guide/task-engine",
+      "version": "0.1.0-rc.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_948ab7ace8f632e4f23cced4343e64f3\\node_modules\\@potential-guide\\task-engine",
+      "dependencies": {
+        "@helia/http": "3.0.4",
+        "@helia/unixfs": "8.0.9",
+        "@helia/block-brokers": "5.2.4",
+        "@helia/routers": "4.0.6",
+        "blockstore-core": "7.0.1",
+        "multiformats": "14.0.5",
+        "ipfs-unixfs-exporter": "16.2.3",
+        "ipfs-unixfs-importer": "17.1.1",
+        "@potential-guide/task-protocol": "^0.1.0-rc.0",
+        "@potential-guide/check-artifacts": "^0.1.0"
+      }
+    },
+    {
+      "name": "@potential-guide/task-protocol",
+      "version": "0.1.0-rc.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+task-proto_49aa89b55e8f7462962131a7b1a8d92a\\node_modules\\@potential-guide\\task-protocol",
+      "dependencies": {
+        "multiformats": "14.0.5",
+        "ajv": "8.20.0"
+      }
+    },
+    {
+      "name": "@potential-guide/check-artifacts",
+      "version": "0.1.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+check-arti_fd80d8d4a1400de1476780c6d24167f1\\node_modules\\@potential-guide\\check-artifacts",
+      "dependencies": {
+        "ajv": "8.20.0",
+        "esbuild": "0.28.2",
+        "tar": "7.5.22",
+        "yaml": "2.9.1",
+        "@potential-guide/check-runtime-files": "^0.1.0",
+        "@potential-guide/artifact-files": "^0.1.0-rc.0"
+      }
+    },
+    {
+      "name": "@potential-guide/check-runtime-files",
+      "version": "0.1.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+check-runt_8eb5d9a035addb578e6999b3f83fd75a\\node_modules\\@potential-guide\\check-runtime-files",
+      "dependencies": {
+        "@potential-guide/artifact-files": "^0.1.0-rc.0"
+      }
+    },
+    {
+      "name": "@potential-guide/artifact-files",
+      "version": "0.1.0-rc.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+artifact-f_cfef61d3c52c247b128c68886d3a1dab\\node_modules\\@potential-guide\\artifact-files",
+      "dependencies": {
+        "yaml": "2.9.1"
+      }
+    },
+    {
+      "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_a1ae8b16bf5b42dbb51246b77ca1cad9\\node_modules\\@potential-guide\\task-engine-http",
+      "dependencies": {
+        "@potential-guide/task-protocol": "^0.1.0-rc.0"
+      }
+    },
+    {
+      "name": "@potential-guide/task-engine-server",
+      "version": "0.1.0-rc.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_71cb7095dd87be3cc242a8fc33f57b18\\node_modules\\@potential-guide\\task-engine-server",
+      "dependencies": {
+        "@potential-guide/task-engine": "^0.1.0-rc.0",
+        "@potential-guide/task-protocol": "^0.1.0-rc.0",
+        "@potential-guide/task-engine-http": "^0.1.0-rc.0",
+        "@potential-guide/task-engine-storage": "^0.1.0-rc.0"
+      }
+    },
+    {
+      "name": "@potential-guide/task-engine-storage",
+      "version": "0.1.0-rc.0",
+      "path": "node_modules\\.pnpm\\@potential-guide+task-engin_2d471d2a7e2157937ccfee8a88ecb283\\node_modules\\@potential-guide\\task-engine-storage",
+      "dependencies": {
+        "@potential-guide/task-protocol": "^0.1.0-rc.0"
+      }
+    }
+  ],
+  "external": {
+    "version": "Kubo version: 0.43.1-acc53c093\nRepo version: 18\nSystem version: amd64/windows\nGolang version: go1.26.5",
+    "configuration": {
+      "Bootstrap": "[]",
+      "Addresses.Swarm": "[]",
+      "Discovery.MDNS.Enabled": "false"
+    },
+    "starts": [
+      {
+        "api": "/ip4/127.0.0.1/tcp/59272",
+        "gateway": "http://127.0.0.1:59273",
+        "log": [
+          "Swarm not listening, running in offline mode.",
+          "RPC API server listening on /ip4/127.0.0.1/tcp/59272",
+          "Gateway server listening on /ip4/127.0.0.1/tcp/59273",
+          "Daemon is ready"
+        ]
+      },
+      {
+        "api": "/ip4/127.0.0.1/tcp/58935",
+        "gateway": "http://127.0.0.1:58936",
+        "log": [
+          "Swarm not listening, running in offline mode.",
+          "RPC API server listening on /ip4/127.0.0.1/tcp/58935",
+          "Gateway server listening on /ip4/127.0.0.1/tcp/58936",
+          "Daemon is ready"
+        ]
+      }
+    ],
+    "import": "Pinned root\tbafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe\tsuccess",
+    "pinAfterImport": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive",
+    "resource": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+    "resourceLeaves": [
+      "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y",
+      "bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e",
+      "bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de",
+      "bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e"
+    ],
+    "stops": [
+      {
+        "code": 0,
+        "signal": null
+      },
+      {
+        "code": 0,
+        "signal": null
+      }
+    ],
+    "pinAfterRestart": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive",
+    "pinAfterConsumers": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive",
+    "offlinePin": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive"
+  },
+  "cases": [
+    {
+      "mode": "ok",
+      "gateway": "http://127.0.0.1:58939",
+      "server": "http://127.0.0.1:58940",
+      "request": {
+        "requestId": "01M6KP31B2WKATK43VW9PKZJNK",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "mode": "ok",
+        "timeoutMs": 60000
+      },
+      "requests": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-11-04T16:25:48.681Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw",
+          "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+          "sourceSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "bytes": 168,
+          "responseSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.683Z",
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-11-04T16:25:48.697Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw",
+          "cid": "bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y",
+          "sourceSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "bytes": 56,
+          "responseSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.698Z",
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-11-04T16:25:48.709Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw",
+          "cid": "bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma",
+          "sourceSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "bytes": 61,
+          "responseSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.710Z",
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-11-04T16:25:48.720Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw",
+          "cid": "bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+          "sourceSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "bytes": 206,
+          "responseSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.721Z",
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-11-04T16:25:48.732Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw",
+          "cid": "bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri",
+          "sourceSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "bytes": 794,
+          "responseSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.733Z",
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-11-04T16:25:48.743Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw",
+          "cid": "bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q",
+          "sourceSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "bytes": 10920,
+          "responseSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.744Z",
+          "aborted": false
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-11-04T16:25:48.897Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw",
+          "cid": "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y",
+          "sourceSha256": "378fdbb612602f5b600b573be908ae106a2784e2cc51e4b189a0dc703c298ae6",
+          "bytes": 262144,
+          "responseSha256": "378fdbb612602f5b600b573be908ae106a2784e2cc51e4b189a0dc703c298ae6",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.931Z",
+          "aborted": false
+        },
+        {
+          "sequence": 8,
+          "timestamp": "2026-11-04T16:25:48.955Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e?format=raw",
+          "cid": "bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e",
+          "sourceSha256": "77c3c8695c9d4ea13afb4eed5e235eaf8825f758230f963d6fe3c13f62a55ce1",
+          "bytes": 262144,
+          "responseSha256": "77c3c8695c9d4ea13afb4eed5e235eaf8825f758230f963d6fe3c13f62a55ce1",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.009Z",
+          "aborted": false
+        },
+        {
+          "sequence": 9,
+          "timestamp": "2026-11-04T16:25:48.956Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e?format=raw",
+          "cid": "bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e",
+          "sourceSha256": "77c3c8695c9d4ea13afb4eed5e235eaf8825f758230f963d6fe3c13f62a55ce1",
+          "bytes": 262144,
+          "responseSha256": "77c3c8695c9d4ea13afb4eed5e235eaf8825f758230f963d6fe3c13f62a55ce1",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.959Z",
+          "aborted": false
+        },
+        {
+          "sequence": 10,
+          "timestamp": "2026-11-04T16:25:48.983Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de?format=raw",
+          "cid": "bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de",
+          "sourceSha256": "fdc8ad896531747d8a7ee9a2c97c0946009065991364a20784a9174d8d141a19",
+          "bytes": 262144,
+          "responseSha256": "fdc8ad896531747d8a7ee9a2c97c0946009065991364a20784a9174d8d141a19",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:48.985Z",
+          "aborted": false
+        },
+        {
+          "sequence": 11,
+          "timestamp": "2026-11-04T16:25:48.983Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de?format=raw",
+          "cid": "bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de",
+          "sourceSha256": "fdc8ad896531747d8a7ee9a2c97c0946009065991364a20784a9174d8d141a19",
+          "bytes": 262144,
+          "responseSha256": "fdc8ad896531747d8a7ee9a2c97c0946009065991364a20784a9174d8d141a19",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.011Z",
+          "aborted": false
+        },
+        {
+          "sequence": 12,
+          "timestamp": "2026-11-04T16:25:49.011Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e?format=raw",
+          "cid": "bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e",
+          "sourceSha256": "2eb6c633e34e56b449ec864a875679ce8401f0a1bbd92433931214f6ee77aff9",
+          "bytes": 13568,
+          "responseSha256": "2eb6c633e34e56b449ec864a875679ce8401f0a1bbd92433931214f6ee77aff9",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.017Z",
+          "aborted": false
+        },
+        {
+          "sequence": 13,
+          "timestamp": "2026-11-04T16:25:49.013Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e?format=raw",
+          "cid": "bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e",
+          "sourceSha256": "2eb6c633e34e56b449ec864a875679ce8401f0a1bbd92433931214f6ee77aff9",
+          "bytes": 13568,
+          "responseSha256": "2eb6c633e34e56b449ec864a875679ce8401f0a1bbd92433931214f6ee77aff9",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.017Z",
+          "aborted": false
+        }
+      ],
+      "fetches": [
+        {
+          "timestamp": "2026-11-04T16:25:48.642Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.675Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.679Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/requests/01M6KP31B2WKATK43VW9PKZJNK/status?waitMs=1000"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.696Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.708Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.720Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.731Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.742Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.836Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.896Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.897Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.898Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/runs/01M6KP31GEMHKP8DTCPN0QM4V7"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.914Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.915Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/runs/01M6KP31GEMHKP8DTCPN0QM4V7"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.929Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.944Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.944Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/runs/01M6KP31GEMHKP8DTCPN0QM4V7"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.954Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.970Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.971Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.980Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.983Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/runs/01M6KP31GEMHKP8DTCPN0QM4V7"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:48.997Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.008Z",
+          "origin": "http://127.0.0.1:58939",
+          "path": "/ipfs/bafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.009Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.017Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/runs/01M6KP31GEMHKP8DTCPN0QM4V7"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.033Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/tasks/01M6KP31G34TXGEJZC8ZQ4K4R0"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.039Z",
+          "origin": "http://127.0.0.1:58940",
+          "path": "/runs/01M6KP31GEMHKP8DTCPN0QM4V7"
+        }
+      ],
+      "forbidden": [],
+      "decision": {
+        "status": "accepted",
+        "requestId": "01M6KP31B2WKATK43VW9PKZJNK",
+        "taskId": "01M6KP31G34TXGEJZC8ZQ4K4R0"
+      },
+      "task": {
+        "requestId": "01M6KP31B2WKATK43VW9PKZJNK",
+        "taskId": "01M6KP31G34TXGEJZC8ZQ4K4R0",
+        "seriesId": "01M6KP31G34TXGEJZC8ZQ4K4R0",
+        "stage": "completed",
+        "receivedAt": "2026-11-04T16:25:48.803Z",
+        "eligibleAt": "2026-11-04T16:25:48.803Z",
+        "deadlineAt": "2026-11-04T16:26:48.803Z",
+        "timestamp": "2026-11-04T16:25:49.039Z",
+        "updatedAt": "2026-11-04T16:25:49.034Z",
+        "revision": "7fe094b2-7ebb-47e7-a117-efa950de56de:10",
+        "dataDomain": "7fe094b2-7ebb-47e7-a117-efa950de56de",
+        "canceled": false,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "run": {
+          "runId": "01M6KP31GEMHKP8DTCPN0QM4V7",
+          "startedAt": "2026-11-04T16:25:48.868Z",
+          "matchedAt": "2026-11-04T16:25:48.868Z",
+          "completedAt": "2026-11-04T16:25:49.034Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-04T16:25:49.034Z"
+        },
+        "result": {
+          "mode": "ok",
+          "path": "resources/nested/payload.bin",
+          "bytes": 800000,
+          "sha256": "e2e4edd479ed8c39944c757110ded875b4bd125af24d43fe5487596df0af7c57",
+          "sum": 99999533
+        }
+      },
+      "run": {
+        "runId": "01M6KP31GEMHKP8DTCPN0QM4V7",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "dataDomain": "7fe094b2-7ebb-47e7-a117-efa950de56de",
+        "revision": "7fe094b2-7ebb-47e7-a117-efa950de56de:10",
+        "timestamp": "2026-11-04T16:25:49.040Z",
+        "type": "bundle",
+        "version": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "environment": "node",
+        "scope": "delivery",
+        "startedAt": "2026-11-04T16:25:48.868Z",
+        "startedSequence": 6,
+        "updatedAt": "2026-11-04T16:25:49.036Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 9,
+          "occurredAt": "2026-11-04T16:25:49.034Z"
+        },
+        "completedAt": "2026-11-04T16:25:49.034Z",
+        "result": {
+          "mode": "ok",
+          "path": "resources/nested/payload.bin",
+          "bytes": 800000,
+          "sha256": "e2e4edd479ed8c39944c757110ded875b4bd125af24d43fe5487596df0af7c57",
+          "sum": 99999533
+        },
+        "reclaimedAt": "2026-11-04T16:25:49.036Z"
+      }
+    },
+    {
+      "mode": "missing-path",
+      "gateway": "http://127.0.0.1:58952",
+      "server": "http://127.0.0.1:58953",
+      "request": {
+        "requestId": "01M6KP31RD0ZD4D0Y02V6YYK52",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "mode": "missing-path",
+        "timeoutMs": 60000
+      },
+      "requests": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-11-04T16:25:49.090Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw",
+          "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+          "sourceSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "bytes": 168,
+          "responseSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.091Z",
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-11-04T16:25:49.101Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw",
+          "cid": "bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y",
+          "sourceSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "bytes": 56,
+          "responseSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.102Z",
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-11-04T16:25:49.111Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw",
+          "cid": "bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma",
+          "sourceSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "bytes": 61,
+          "responseSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.112Z",
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-11-04T16:25:49.122Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw",
+          "cid": "bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+          "sourceSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "bytes": 206,
+          "responseSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.123Z",
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-11-04T16:25:49.133Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw",
+          "cid": "bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri",
+          "sourceSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "bytes": 794,
+          "responseSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.133Z",
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-11-04T16:25:49.143Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw",
+          "cid": "bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q",
+          "sourceSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "bytes": 10920,
+          "responseSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.144Z",
+          "aborted": false
+        }
+      ],
+      "fetches": [
+        {
+          "timestamp": "2026-11-04T16:25:49.069Z",
+          "origin": "http://127.0.0.1:58953",
+          "path": "/tasks"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.088Z",
+          "origin": "http://127.0.0.1:58952",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.089Z",
+          "origin": "http://127.0.0.1:58953",
+          "path": "/requests/01M6KP31RD0ZD4D0Y02V6YYK52/status?waitMs=1000"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.100Z",
+          "origin": "http://127.0.0.1:58952",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.111Z",
+          "origin": "http://127.0.0.1:58952",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.121Z",
+          "origin": "http://127.0.0.1:58952",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.132Z",
+          "origin": "http://127.0.0.1:58952",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.142Z",
+          "origin": "http://127.0.0.1:58952",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.211Z",
+          "origin": "http://127.0.0.1:58953",
+          "path": "/tasks/01M6KP31W3GE2AX7T5DVY0NVHF"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.264Z",
+          "origin": "http://127.0.0.1:58953",
+          "path": "/tasks/01M6KP31W3GE2AX7T5DVY0NVHF"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.265Z",
+          "origin": "http://127.0.0.1:58953",
+          "path": "/runs/01M6KP31W769YJ734BF4H57X8V"
+        }
+      ],
+      "forbidden": [],
+      "decision": {
+        "status": "accepted",
+        "requestId": "01M6KP31RD0ZD4D0Y02V6YYK52",
+        "taskId": "01M6KP31W3GE2AX7T5DVY0NVHF"
+      },
+      "task": {
+        "requestId": "01M6KP31RD0ZD4D0Y02V6YYK52",
+        "taskId": "01M6KP31W3GE2AX7T5DVY0NVHF",
+        "seriesId": "01M6KP31W3GE2AX7T5DVY0NVHF",
+        "stage": "failed",
+        "receivedAt": "2026-11-04T16:25:49.187Z",
+        "eligibleAt": "2026-11-04T16:25:49.187Z",
+        "deadlineAt": "2026-11-04T16:26:49.187Z",
+        "timestamp": "2026-11-04T16:25:49.265Z",
+        "updatedAt": "2026-11-04T16:25:49.259Z",
+        "revision": "7a4714a0-3274-42eb-bbb2-4d5486ebd799:10",
+        "dataDomain": "7a4714a0-3274-42eb-bbb2-4d5486ebd799",
+        "canceled": false,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "run": {
+          "runId": "01M6KP31W769YJ734BF4H57X8V",
+          "startedAt": "2026-11-04T16:25:49.237Z",
+          "matchedAt": "2026-11-04T16:25:49.237Z",
+          "failedAt": "2026-11-04T16:25:49.259Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-04T16:25:49.259Z"
+        },
+        "error": {
+          "code": "invalid_bundle",
+          "message": "Bundle path is absent or outside its root."
+        }
+      },
+      "run": {
+        "runId": "01M6KP31W769YJ734BF4H57X8V",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "dataDomain": "7a4714a0-3274-42eb-bbb2-4d5486ebd799",
+        "revision": "7a4714a0-3274-42eb-bbb2-4d5486ebd799:10",
+        "timestamp": "2026-11-04T16:25:49.266Z",
+        "type": "bundle",
+        "version": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "environment": "node",
+        "scope": "delivery",
+        "startedAt": "2026-11-04T16:25:49.237Z",
+        "startedSequence": 6,
+        "updatedAt": "2026-11-04T16:25:49.262Z",
+        "stage": "failed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 9,
+          "occurredAt": "2026-11-04T16:25:49.259Z"
+        },
+        "failedAt": "2026-11-04T16:25:49.259Z",
+        "error": {
+          "code": "invalid_bundle",
+          "message": "Bundle path is absent or outside its root."
+        },
+        "reclaimedAt": "2026-11-04T16:25:49.262Z"
+      }
+    },
+    {
+      "mode": "missing-block",
+      "gateway": "http://127.0.0.1:58960",
+      "server": "http://127.0.0.1:58961",
+      "request": {
+        "requestId": "01M6KP31ZFFW8BXVXY2HYAWZMB",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "mode": "missing-block",
+        "timeoutMs": 60000
+      },
+      "requests": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-11-04T16:25:49.311Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw",
+          "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+          "sourceSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "bytes": 168,
+          "responseSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.312Z",
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-11-04T16:25:49.321Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw",
+          "cid": "bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y",
+          "sourceSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "bytes": 56,
+          "responseSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.322Z",
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-11-04T16:25:49.331Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw",
+          "cid": "bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma",
+          "sourceSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "bytes": 61,
+          "responseSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.332Z",
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-11-04T16:25:49.341Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw",
+          "cid": "bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+          "sourceSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "bytes": 206,
+          "responseSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.341Z",
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-11-04T16:25:49.351Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw",
+          "cid": "bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri",
+          "sourceSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "bytes": 794,
+          "responseSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.351Z",
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-11-04T16:25:49.361Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw",
+          "cid": "bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q",
+          "sourceSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "bytes": 10920,
+          "responseSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.362Z",
+          "aborted": false
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-11-04T16:25:49.465Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw",
+          "cid": "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y",
+          "status": 404,
+          "closedAt": "2026-11-04T16:25:49.465Z",
+          "aborted": false
+        }
+      ],
+      "fetches": [
+        {
+          "timestamp": "2026-11-04T16:25:49.295Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/tasks"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.309Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.310Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/requests/01M6KP31ZFFW8BXVXY2HYAWZMB/status?waitMs=1000"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.320Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.331Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.340Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.350Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.360Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.416Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/tasks/01M6KP322MC79EJ9HRQYS7NWBM"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.464Z",
+          "origin": "http://127.0.0.1:58960",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.465Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/tasks/01M6KP322MC79EJ9HRQYS7NWBM"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.467Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/runs/01M6KP322Q1C5F3J4EY4H26E4W"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.484Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/tasks/01M6KP322MC79EJ9HRQYS7NWBM"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.485Z",
+          "origin": "http://127.0.0.1:58961",
+          "path": "/runs/01M6KP322Q1C5F3J4EY4H26E4W"
+        }
+      ],
+      "forbidden": [],
+      "decision": {
+        "status": "accepted",
+        "requestId": "01M6KP31ZFFW8BXVXY2HYAWZMB",
+        "taskId": "01M6KP322MC79EJ9HRQYS7NWBM"
+      },
+      "task": {
+        "requestId": "01M6KP31ZFFW8BXVXY2HYAWZMB",
+        "taskId": "01M6KP322MC79EJ9HRQYS7NWBM",
+        "seriesId": "01M6KP322MC79EJ9HRQYS7NWBM",
+        "stage": "failed",
+        "receivedAt": "2026-11-04T16:25:49.396Z",
+        "eligibleAt": "2026-11-04T16:25:49.396Z",
+        "deadlineAt": "2026-11-04T16:26:49.396Z",
+        "timestamp": "2026-11-04T16:25:49.485Z",
+        "updatedAt": "2026-11-04T16:25:49.471Z",
+        "revision": "247915fb-1c18-4f41-bc25-092f8b99cb00:10",
+        "dataDomain": "247915fb-1c18-4f41-bc25-092f8b99cb00",
+        "canceled": false,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "run": {
+          "runId": "01M6KP322Q1C5F3J4EY4H26E4W",
+          "startedAt": "2026-11-04T16:25:49.438Z",
+          "matchedAt": "2026-11-04T16:25:49.438Z",
+          "failedAt": "2026-11-04T16:25:49.471Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-04T16:25:49.471Z"
+        },
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "Failed to load block for bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y"
+        }
+      },
+      "run": {
+        "runId": "01M6KP322Q1C5F3J4EY4H26E4W",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "dataDomain": "247915fb-1c18-4f41-bc25-092f8b99cb00",
+        "revision": "247915fb-1c18-4f41-bc25-092f8b99cb00:10",
+        "timestamp": "2026-11-04T16:25:49.485Z",
+        "type": "bundle",
+        "version": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "environment": "node",
+        "scope": "delivery",
+        "startedAt": "2026-11-04T16:25:49.438Z",
+        "startedSequence": 6,
+        "updatedAt": "2026-11-04T16:25:49.474Z",
+        "stage": "failed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 9,
+          "occurredAt": "2026-11-04T16:25:49.471Z"
+        },
+        "failedAt": "2026-11-04T16:25:49.471Z",
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "Failed to load block for bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y"
+        },
+        "reclaimedAt": "2026-11-04T16:25:49.474Z"
+      }
+    },
+    {
+      "mode": "cid-mismatch",
+      "gateway": "http://127.0.0.1:58966",
+      "server": "http://127.0.0.1:58967",
+      "request": {
+        "requestId": "01M6KP326BST8RT59A9YFD3YQC",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "mode": "cid-mismatch",
+        "timeoutMs": 60000
+      },
+      "requests": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-11-04T16:25:49.531Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw",
+          "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+          "sourceSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "bytes": 168,
+          "responseSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.532Z",
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-11-04T16:25:49.542Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw",
+          "cid": "bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y",
+          "sourceSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "bytes": 56,
+          "responseSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.542Z",
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-11-04T16:25:49.552Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw",
+          "cid": "bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma",
+          "sourceSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "bytes": 61,
+          "responseSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.552Z",
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-11-04T16:25:49.561Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw",
+          "cid": "bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+          "sourceSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "bytes": 206,
+          "responseSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.562Z",
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-11-04T16:25:49.573Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw",
+          "cid": "bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri",
+          "sourceSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "bytes": 794,
+          "responseSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.573Z",
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-11-04T16:25:49.583Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw",
+          "cid": "bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q",
+          "sourceSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "bytes": 10920,
+          "responseSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.583Z",
+          "aborted": false
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-11-04T16:25:49.682Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw",
+          "cid": "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y",
+          "sourceSha256": "378fdbb612602f5b600b573be908ae106a2784e2cc51e4b189a0dc703c298ae6",
+          "bytes": 262144,
+          "responseSha256": "4bbc409841447bb081552b4be046c586b7b13efba2df209f9d75bd0b85164917",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.703Z",
+          "aborted": false
+        }
+      ],
+      "fetches": [
+        {
+          "timestamp": "2026-11-04T16:25:49.515Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/tasks"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.529Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.530Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/requests/01M6KP326BST8RT59A9YFD3YQC/status?waitMs=1000"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.541Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.551Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.561Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.571Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.582Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.634Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/tasks/01M6KP329GK11480FKBB37EEE3"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.682Z",
+          "origin": "http://127.0.0.1:58966",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.682Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/tasks/01M6KP329GK11480FKBB37EEE3"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.683Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/runs/01M6KP329KKS6HE3P7NC6AM1HZ"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.700Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/tasks/01M6KP329GK11480FKBB37EEE3"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.701Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/runs/01M6KP329KKS6HE3P7NC6AM1HZ"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.714Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/tasks/01M6KP329GK11480FKBB37EEE3"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.715Z",
+          "origin": "http://127.0.0.1:58967",
+          "path": "/runs/01M6KP329KKS6HE3P7NC6AM1HZ"
+        }
+      ],
+      "forbidden": [],
+      "decision": {
+        "status": "accepted",
+        "requestId": "01M6KP326BST8RT59A9YFD3YQC",
+        "taskId": "01M6KP329GK11480FKBB37EEE3"
+      },
+      "task": {
+        "requestId": "01M6KP326BST8RT59A9YFD3YQC",
+        "taskId": "01M6KP329GK11480FKBB37EEE3",
+        "seriesId": "01M6KP329GK11480FKBB37EEE3",
+        "stage": "failed",
+        "receivedAt": "2026-11-04T16:25:49.616Z",
+        "eligibleAt": "2026-11-04T16:25:49.616Z",
+        "deadlineAt": "2026-11-04T16:26:49.616Z",
+        "timestamp": "2026-11-04T16:25:49.715Z",
+        "updatedAt": "2026-11-04T16:25:49.709Z",
+        "revision": "c3a27a6d-3fd4-4a2f-b2b2-0037ae0997d1:10",
+        "dataDomain": "c3a27a6d-3fd4-4a2f-b2b2-0037ae0997d1",
+        "canceled": false,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "run": {
+          "runId": "01M6KP329KKS6HE3P7NC6AM1HZ",
+          "startedAt": "2026-11-04T16:25:49.656Z",
+          "matchedAt": "2026-11-04T16:25:49.656Z",
+          "failedAt": "2026-11-04T16:25:49.709Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-04T16:25:49.709Z"
+        },
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "Failed to load block for bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y"
+        }
+      },
+      "run": {
+        "runId": "01M6KP329KKS6HE3P7NC6AM1HZ",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "dataDomain": "c3a27a6d-3fd4-4a2f-b2b2-0037ae0997d1",
+        "revision": "c3a27a6d-3fd4-4a2f-b2b2-0037ae0997d1:10",
+        "timestamp": "2026-11-04T16:25:49.716Z",
+        "type": "bundle",
+        "version": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "environment": "node",
+        "scope": "delivery",
+        "startedAt": "2026-11-04T16:25:49.656Z",
+        "startedSequence": 6,
+        "updatedAt": "2026-11-04T16:25:49.712Z",
+        "stage": "failed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 9,
+          "occurredAt": "2026-11-04T16:25:49.709Z"
+        },
+        "failedAt": "2026-11-04T16:25:49.709Z",
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "Failed to load block for bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y"
+        },
+        "reclaimedAt": "2026-11-04T16:25:49.712Z"
+      }
+    },
+    {
+      "mode": "cancel",
+      "gateway": "http://127.0.0.1:58974",
+      "server": "http://127.0.0.1:58975",
+      "request": {
+        "requestId": "01M6KP32DHV5QAJYXE8QDJKTX0",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "mode": "cancel",
+        "timeoutMs": 60000
+      },
+      "requests": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-11-04T16:25:49.763Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw",
+          "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+          "sourceSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "bytes": 168,
+          "responseSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.764Z",
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-11-04T16:25:49.773Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw",
+          "cid": "bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y",
+          "sourceSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "bytes": 56,
+          "responseSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.774Z",
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-11-04T16:25:49.783Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw",
+          "cid": "bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma",
+          "sourceSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "bytes": 61,
+          "responseSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.784Z",
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-11-04T16:25:49.794Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw",
+          "cid": "bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+          "sourceSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "bytes": 206,
+          "responseSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.795Z",
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-11-04T16:25:49.804Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw",
+          "cid": "bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri",
+          "sourceSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "bytes": 794,
+          "responseSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.805Z",
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-11-04T16:25:49.814Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw",
+          "cid": "bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q",
+          "sourceSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "bytes": 10920,
+          "responseSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:49.815Z",
+          "aborted": false
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-11-04T16:25:49.909Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw",
+          "cid": "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y",
+          "sourceSha256": "378fdbb612602f5b600b573be908ae106a2784e2cc51e4b189a0dc703c298ae6",
+          "bytes": 262144,
+          "status": "held",
+          "closedAt": "2026-11-04T16:25:49.956Z",
+          "aborted": true
+        }
+      ],
+      "fetches": [
+        {
+          "timestamp": "2026-11-04T16:25:49.745Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/tasks"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.761Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.762Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/requests/01M6KP32DHV5QAJYXE8QDJKTX0/status?waitMs=1000"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.772Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.783Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.793Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.803Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.814Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.908Z",
+          "origin": "http://127.0.0.1:58974",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.930Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/tasks/01M6KP32GSAPM601WBWTRGR6AS/cancel"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.953Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/tasks/01M6KP32GSAPM601WBWTRGR6AS"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.958Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/tasks?runId=01M6KP32GV9Z9JF132PMR3GZWA"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.959Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/runs/01M6KP32GV9Z9JF132PMR3GZWA"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.960Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/tasks/01M6KP32GSAPM601WBWTRGR6AS"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:49.961Z",
+          "origin": "http://127.0.0.1:58975",
+          "path": "/runs/01M6KP32GV9Z9JF132PMR3GZWA"
+        }
+      ],
+      "forbidden": [],
+      "decision": {
+        "status": "accepted",
+        "requestId": "01M6KP32DHV5QAJYXE8QDJKTX0",
+        "taskId": "01M6KP32GSAPM601WBWTRGR6AS"
+      },
+      "cancel": {
+        "requestId": "01M6KP32DHV5QAJYXE8QDJKTX0",
+        "taskId": "01M6KP32GSAPM601WBWTRGR6AS",
+        "seriesId": "01M6KP32GSAPM601WBWTRGR6AS",
+        "stage": "running",
+        "receivedAt": "2026-11-04T16:25:49.849Z",
+        "eligibleAt": "2026-11-04T16:25:49.849Z",
+        "deadlineAt": "2026-11-04T16:26:49.849Z",
+        "timestamp": "2026-11-04T16:25:49.949Z",
+        "updatedAt": "2026-11-04T16:25:49.944Z",
+        "revision": "58db5726-cf3e-4bd8-b748-58a9912e3e9f:9",
+        "dataDomain": "58db5726-cf3e-4bd8-b748-58a9912e3e9f",
+        "canceled": true,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "canceledAt": "2026-11-04T16:25:49.944Z",
+        "run": {
+          "runId": "01M6KP32GV9Z9JF132PMR3GZWA",
+          "startedAt": "2026-11-04T16:25:49.882Z",
+          "matchedAt": "2026-11-04T16:25:49.882Z"
+        },
+        "changed": true
+      },
+      "task": {
+        "requestId": "01M6KP32DHV5QAJYXE8QDJKTX0",
+        "taskId": "01M6KP32GSAPM601WBWTRGR6AS",
+        "seriesId": "01M6KP32GSAPM601WBWTRGR6AS",
+        "stage": "stopped",
+        "receivedAt": "2026-11-04T16:25:49.849Z",
+        "eligibleAt": "2026-11-04T16:25:49.849Z",
+        "deadlineAt": "2026-11-04T16:26:49.849Z",
+        "timestamp": "2026-11-04T16:25:49.960Z",
+        "updatedAt": "2026-11-04T16:25:49.953Z",
+        "revision": "58db5726-cf3e-4bd8-b748-58a9912e3e9f:12",
+        "dataDomain": "58db5726-cf3e-4bd8-b748-58a9912e3e9f",
+        "canceled": true,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "canceledAt": "2026-11-04T16:25:49.944Z",
+        "run": {
+          "runId": "01M6KP32GV9Z9JF132PMR3GZWA",
+          "startedAt": "2026-11-04T16:25:49.882Z",
+          "matchedAt": "2026-11-04T16:25:49.882Z",
+          "stoppedAt": "2026-11-04T16:25:49.953Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-04T16:25:49.953Z"
+        }
+      },
+      "run": {
+        "runId": "01M6KP32GV9Z9JF132PMR3GZWA",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "dataDomain": "58db5726-cf3e-4bd8-b748-58a9912e3e9f",
+        "revision": "58db5726-cf3e-4bd8-b748-58a9912e3e9f:12",
+        "timestamp": "2026-11-04T16:25:49.961Z",
+        "type": "bundle",
+        "version": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "environment": "node",
+        "scope": "delivery",
+        "startedAt": "2026-11-04T16:25:49.882Z",
+        "startedSequence": 6,
+        "updatedAt": "2026-11-04T16:25:49.954Z",
+        "stage": "stopped",
+        "stopRequested": {
+          "occurredAt": "2026-11-04T16:25:49.946Z",
+          "sequence": 9,
+          "reason": "no_active_demand"
+        },
+        "stoppingAt": "2026-11-04T16:25:49.950Z",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 11,
+          "occurredAt": "2026-11-04T16:25:49.953Z"
+        },
+        "stoppedAt": "2026-11-04T16:25:49.953Z",
+        "reclaimedAt": "2026-11-04T16:25:49.954Z"
+      }
+    },
+    {
+      "mode": "outage",
+      "gateway": "http://127.0.0.1:58981",
+      "server": "http://127.0.0.1:58982",
+      "request": {
+        "requestId": "01M6KP32N7X6TG2TFHR5W3ETHX",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "mode": "outage",
+        "timeoutMs": 60000
+      },
+      "requests": [
+        {
+          "sequence": 1,
+          "timestamp": "2026-11-04T16:25:50.006Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw",
+          "cid": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+          "sourceSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "bytes": 168,
+          "responseSha256": "ac639f9d195517c39af8e6b2caa37a5f4c9b1f67106686fa211f5f22bbfdea79",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:50.007Z",
+          "aborted": false
+        },
+        {
+          "sequence": 2,
+          "timestamp": "2026-11-04T16:25:50.017Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw",
+          "cid": "bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y",
+          "sourceSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "bytes": 56,
+          "responseSha256": "68e11600cae61849813d870d64df5adbbb8ffbb39f69987c4874ef6174a036ee",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:50.018Z",
+          "aborted": false
+        },
+        {
+          "sequence": 3,
+          "timestamp": "2026-11-04T16:25:50.027Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw",
+          "cid": "bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma",
+          "sourceSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "bytes": 61,
+          "responseSha256": "8f7b0d6f20e7303d8deffa328c429b47f4f9279f7e6edf70363198b326b4ad60",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:50.028Z",
+          "aborted": false
+        },
+        {
+          "sequence": 4,
+          "timestamp": "2026-11-04T16:25:50.037Z",
+          "method": "GET",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw",
+          "cid": "bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44",
+          "sourceSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "bytes": 206,
+          "responseSha256": "d04e79a6d3ea660ad122cad2d3efe56d8c0733e4725087458f39028d25e14fe7",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:50.038Z",
+          "aborted": false
+        },
+        {
+          "sequence": 5,
+          "timestamp": "2026-11-04T16:25:50.047Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw",
+          "cid": "bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri",
+          "sourceSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "bytes": 794,
+          "responseSha256": "8c0367a2a6be730be922f3f04c080e4649ef08755f10124afd9fef1ce05dd68a",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:50.048Z",
+          "aborted": false
+        },
+        {
+          "sequence": 6,
+          "timestamp": "2026-11-04T16:25:50.057Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw",
+          "cid": "bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q",
+          "sourceSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "bytes": 10920,
+          "responseSha256": "1d220abf157a66fceda2fd95cef88499e40d42e3497c8e3ae69fd628fff45ef4",
+          "status": 200,
+          "closedAt": "2026-11-04T16:25:50.058Z",
+          "aborted": false
+        },
+        {
+          "sequence": 7,
+          "timestamp": "2026-11-04T16:25:50.161Z",
+          "method": "GET",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw",
+          "cid": "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y",
+          "status": "connection-reset",
+          "closedAt": "2026-11-04T16:25:50.161Z",
+          "aborted": true
+        }
+      ],
+      "fetches": [
+        {
+          "timestamp": "2026-11-04T16:25:49.991Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/tasks"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.005Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.006Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/requests/01M6KP32N7X6TG2TFHR5W3ETHX/status?waitMs=1000"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.016Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafybeidi4elabsxgdbeycpmhbvsn6ww3xoh7xm47ngmhysdu55qxjibw5y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.027Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafybeieppmgw6ihhga6y3372gkgefg2h6t4sph36n3pxanrrtczsnnfnma?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.037Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.047Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafkreiemant2fjv6omf6sixt6bgaqdsgjhxqq5k7cajev7m754ooaxowri?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.057Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafkreia5eifl6fl2m36o3ix5sxhprbez4qgufy2jpshdvzu72yup75c66q?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.112Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/tasks/01M6KP32RCCJES86N202GJ33RY"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.160Z",
+          "origin": "http://127.0.0.1:58981",
+          "path": "/ipfs/bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y?format=raw"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.160Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/tasks/01M6KP32RCCJES86N202GJ33RY"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.162Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/runs/01M6KP32RFC4607B5DB1NA1YBS"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.176Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/tasks/01M6KP32RCCJES86N202GJ33RY"
+        },
+        {
+          "timestamp": "2026-11-04T16:25:50.177Z",
+          "origin": "http://127.0.0.1:58982",
+          "path": "/runs/01M6KP32RFC4607B5DB1NA1YBS"
+        }
+      ],
+      "forbidden": [],
+      "decision": {
+        "status": "accepted",
+        "requestId": "01M6KP32N7X6TG2TFHR5W3ETHX",
+        "taskId": "01M6KP32RCCJES86N202GJ33RY"
+      },
+      "task": {
+        "requestId": "01M6KP32N7X6TG2TFHR5W3ETHX",
+        "taskId": "01M6KP32RCCJES86N202GJ33RY",
+        "seriesId": "01M6KP32RCCJES86N202GJ33RY",
+        "stage": "failed",
+        "receivedAt": "2026-11-04T16:25:50.092Z",
+        "eligibleAt": "2026-11-04T16:25:50.092Z",
+        "deadlineAt": "2026-11-04T16:26:50.092Z",
+        "timestamp": "2026-11-04T16:25:50.176Z",
+        "updatedAt": "2026-11-04T16:25:50.167Z",
+        "revision": "d5a87a4b-01dd-46f8-a17a-0110751c1ac6:10",
+        "dataDomain": "d5a87a4b-01dd-46f8-a17a-0110751c1ac6",
+        "canceled": false,
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "run": {
+          "runId": "01M6KP32RFC4607B5DB1NA1YBS",
+          "startedAt": "2026-11-04T16:25:50.133Z",
+          "matchedAt": "2026-11-04T16:25:50.133Z",
+          "failedAt": "2026-11-04T16:25:50.167Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-04T16:25:50.167Z"
+        },
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "Failed to load block for bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y"
+        }
+      },
+      "run": {
+        "runId": "01M6KP32RFC4607B5DB1NA1YBS",
+        "bundle": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "name": "独立 CAR 交付验证",
+        "dataDomain": "d5a87a4b-01dd-46f8-a17a-0110751c1ac6",
+        "revision": "d5a87a4b-01dd-46f8-a17a-0110751c1ac6:10",
+        "timestamp": "2026-11-04T16:25:50.177Z",
+        "type": "bundle",
+        "version": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe",
+        "environment": "node",
+        "scope": "delivery",
+        "startedAt": "2026-11-04T16:25:50.133Z",
+        "startedSequence": 6,
+        "updatedAt": "2026-11-04T16:25:50.170Z",
+        "stage": "failed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 9,
+          "occurredAt": "2026-11-04T16:25:50.167Z"
+        },
+        "failedAt": "2026-11-04T16:25:50.167Z",
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "Failed to load block for bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y"
+        },
+        "reclaimedAt": "2026-11-04T16:25:50.170Z"
+      },
+      "gatewayStoppedAt": "2026-11-04T16:25:50.161Z"
+    }
+  ],
+  "commands": [
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "version",
+        "--all"
+      ],
+      "exitCode": 0,
+      "stdout": "Kubo version: 0.43.1-acc53c093\nRepo version: 18\nSystem version: amd64/windows\nGolang version: go1.26.5\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "init",
+        "--profile=test",
+        "--empty-repo=true"
+      ],
+      "exitCode": 0,
+      "stdout": "generating ED25519 keypair...done\npeer identity: 12D3KooWGCyfn8yQbLWjZNRSoCFtia7QeC5uCQM5djxxgqDoB8r2\ninitializing IPFS node at D:\\Code\\potential-guide.worktrees\\ipfs-car-official-followup\\.cache\\official-car-delivery-02\\runtime\\kubo-data\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.API",
+        "/ip4/127.0.0.1/tcp/0"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.Gateway",
+        "/ip4/127.0.0.1/tcp/0"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "--json",
+        "Bootstrap",
+        "[]"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "--json",
+        "Addresses.Swarm",
+        "[]"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "--json",
+        "Discovery.MDNS.Enabled",
+        "false"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "Bootstrap"
+      ],
+      "exitCode": 0,
+      "stdout": "[]\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.Swarm"
+      ],
+      "exitCode": 0,
+      "stdout": "[]\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "config",
+        "Discovery.MDNS.Enabled"
+      ],
+      "exitCode": 0,
+      "stdout": "false\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "dag",
+        "import",
+        "--pin-roots=true",
+        "D:\\Code\\potential-guide.worktrees\\ipfs-car-official-followup\\.cache\\official-car-delivery-02\\runtime\\bundle.car"
+      ],
+      "exitCode": 0,
+      "stdout": "Pinned root\tbafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe\tsuccess\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "pin",
+        "ls",
+        "--type=recursive",
+        "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe"
+      ],
+      "exitCode": 0,
+      "stdout": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "resolve",
+        "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe/resources/nested/payload.bin"
+      ],
+      "exitCode": 0,
+      "stdout": "/ipfs/bafybeigqjz42nu7kmyfnciwk2lj67zlnrqdthzdskcduldzzakgslykp44\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "refs",
+        "/ipfs/bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe/resources/nested/payload.bin"
+      ],
+      "exitCode": 0,
+      "stdout": "bafkreibxr7n3metaf5nwac2xhpuqrlqqnityjywmkhsldcna3rydykmk4y\nbafkreidxypegsxe5j2qtv62o5vpcgxvpras7owbdb6ld237dye7wfjk44e\nbafkreih5zcwyszjror6yu7xjulexyckgaciglgitmsrapbfjc5gy2fa2de\nbafkreibow3ddhy2ok22et3egjkdvm6ooqqa7bin33esdheysct3o455p7e\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "shutdown"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "pin",
+        "ls",
+        "--type=recursive",
+        "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe"
+      ],
+      "exitCode": 0,
+      "stdout": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "pin",
+        "ls",
+        "--type=recursive",
+        "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe"
+      ],
+      "exitCode": 0,
+      "stdout": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive\n",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "shutdown"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "executable": "ipfs.exe",
+      "args": [
+        "--offline",
+        "pin",
+        "ls",
+        "--type=recursive",
+        "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe"
+      ],
+      "exitCode": 0,
+      "stdout": "bafybeifmmopz2gkvc7bzv6hgwlfkg6s7jsnr6zyqm2dpuii7l4rlx7pkpe recursive\n",
+      "stderr": ""
+    }
+  ]
+}

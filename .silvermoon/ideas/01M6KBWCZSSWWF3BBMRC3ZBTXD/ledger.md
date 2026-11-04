@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证外部 CAR 交付与 Gateway 执行
-- [ ] **D-S02:** 验证故障与迁移说明
+- [x] **D-S01:** 验证外部 CAR 交付与 Gateway 执行
+- [x] **D-S02:** 验证故障与迁移说明
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 独立消费者完成 CAR 到 Worker 的闭环
-- [ ] **D-AC02:** 故障结果及用户边界得到确认
+- [x] **D-AC01:** 独立消费者完成 CAR 到 Worker 的闭环
+- [x] **D-AC02:** 故障结果及用户边界得到确认
