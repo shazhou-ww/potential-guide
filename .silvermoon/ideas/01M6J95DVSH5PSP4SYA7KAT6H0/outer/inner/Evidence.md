@@ -115,6 +115,8 @@ node .silvermoon\ideas\01M6J95DVSH5PSP4SYA7KAT6H0\outer\inner\Measure.mjs . curr
 
 ## 自动化证明
 
+以下保留 `1317e081` 首轮验证及其真实失败历史；后续追加结果不覆盖这些观察。
+
 - `task-protocol/test/precompile.test.ts`：普通编译与 standalone 的明确成功/
   失败预期，Never、布尔、required/optional、数值/字符串、tuple/数组、
   record/patternProperties、additional/unevaluated、引用 siblings、原型名称。
@@ -150,7 +152,7 @@ node .silvermoon\ideas\01M6J95DVSH5PSP4SYA7KAT6H0\outer\inner\Measure.mjs . curr
   重建（objective-pilot、task-engine-server，无源码改动），随后到达 authoring
   消费环境，但被下述本机 CLI discovery 歧义阻塞，退出 1；没有把该失败省略为成功。
 
-### 尚未满足的门限
+### 首轮未满足的门限（1317e081，历史保留）
 
 `packages/task-engine/package.json` 早已声明
 `@potential-guide/ipfs-content`（来源提交 `6471f793`），但同包
@@ -181,6 +183,104 @@ dependencies: @potential-guide/ipfs-content is outside the allowed dependency di
 验收或提前进入部署。本阶段只保留经过 Silvermoon snapshot 检查的本地提交，
 不把未满足完整门限的候选推送为 primary 当前实现。
 
+### 后续修复与续验（2026-11-04）
+
+父 agent 未接受实施；追加授权要求在保留基线失败的前提下完成进程隔离验证，
+并同步实现候选，而不是以同步或测试结果代替验收。
+
+#### binding manifest 故障传播
+
+按父审查意见，只让候选 manifest 的 ENOENT/ENOTDIR 返回非候选；
+EACCES、EIO 及其他读取故障原样传播给 esbuild。空文件、语法无效 JSON、
+null/array/scalar 等无效 manifest 明确失败，不再被当成非 SDK 跳过。
+未扩大 scope 调整普通 compiler 的 code.source 或 standalone 导入开销。
+
+- 新增 `packages/task-sdk/test/binding-manifest.test.ts`，针对读取的 builtin
+  named import 使用可恢复 mock，验证 ENOENT/ENOTDIR、EACCES/EIO 的原始
+  Error identity、无效 manifest 和正常非 SDK 候选：11/11 通过。
+- 单独安装 SDK 副本的正向 binding 案例 1/1 通过；测试 TypeScript 检查和
+  task-sdk lint 均退出 0。
+- 新候选的 workspace 诊断验证
+  `turbo run test --concurrency=2 --filter='!@potential-guide/objective-monorepo-standard'`
+  为 72/72 task 通过，完整 SDK 现在为 42/42；根 scripts 再验 37/37 通过。
+- 再运行 Measure 的四个案例，与原 `Current.json` 逐一断言 Worker 字节、
+  总字节、Worker SHA-256 和 CID 全部相同：默认 34148/34911、代表性
+  36162/37339、作者 validator 170787/171550；分析/正式构建字节断言仍通过。
+  恢复 workspace 布局后再次执行了该四案例对照及 manifest 最小测试 11/11，
+  结果仍完全相同。
+
+#### 仅对子进程隔离 CLI 环境
+
+没有卸载或修改任何全局安装，没有改变 CLI 歧义保护，也没有修改消费检查脚本。
+仅过滤 PATH 的探索调用已中止，没有将它宣称为通过。随后尝试的
+`npm_config_*` 前缀实际上被 pnpm 11 忽略（config get 为 undefined），不能把
+该尝试当成配置生效的证据；完整调用确实在 npm-objectives 消费阶段退出 1，
+因为 pnpm isolated 布局中的符号链接入口令既有 CLI 自启判定产生空 stdout。
+使用 `--preserve-symlinks-main` 的独立探索使 JSON help 能输出，但另一次完整
+调用出现 yaml 无法解析的错误，仍退出 1；该参数不是最终验证方案。
+
+再使用 pnpm 11 实际支持的 `pnpm_config_*` 前缀，保持原 PNPM_HOME 和
+用户全局安装不变，只为此验证子进程设置 global-bin-dir 及 hoisted 消费布局。
+实测 config get 分别返回现有仓库工具目录和 hoisted，pnpm 子进程 PATH
+不包含原全局 bin。独立实际打包探针确认：消费者包目录非 symlink、路径
+canonical，真实安装的 CLI 直接输出 3860 字节 JSON help，声明的 yaml 可解析，
+无需 preserve-symlinks flags。Node 仍为 v24.11.1，pnpm 仍为 11.22.0。
+
+以下是实际执行过的诊断配置，不代表完整检查已经通过；在新的 PowerShell
+验证子进程中执行：
+
+```powershell
+$pnpmCmd = (Get-Command pnpm.cmd).Source
+$globalBin = Split-Path $pnpmCmd
+$env:PATH = (($env:PATH -split ';') | Where-Object {
+  $_.TrimEnd('\') -ine $globalBin.TrimEnd('\')
+}) -join ';'
+$env:pnpm_config_global_bin_dir = (Resolve-Path node_modules\.bin).Path
+$env:pnpm_config_node_linker = 'hoisted'
+& $pnpmCmd run pack:check
+```
+
+环境变量只属于此 PowerShell 验证进程及其子进程，不写用户配置、不新增工具 shim。
+pnpm 11 默认 verifyDepsBeforeRun=install，此布局探索曾自动重链接 workspace
+依赖；随后已用原默认配置的 offline/frozen install 恢复 nodeLinker=isolated，
+锁文件和源码均未变化。后续定向消费探索使用 verifyDepsBeforeRun=warn 避免再次
+改动 workspace 布局；没有把警告模式当成测试或生命周期 gate 的通过。
+
+#### 本轮完整命令的实际结论
+
+- **完整 `pnpm pack:check` 仍退出 1。** 初始全局 task-bundle CLI 歧义已排除。
+  上述真实 hoisted 配置通过了 task-sdk、probe-task、artifact-contracts、
+  mvp-server、mvp-check、task-protocol、task-engine、task-adapters、
+  npm-objectives、protocol 共十组实际包消费；随后在未修改的
+  `scripts/check-package-consumers.mjs:629` 失败：main 消费者期望 command
+  source 为 `bundled`，hoisted 安装把 transitive CLI 放入 PATH，实际为 `PATH`。
+  没有更改此断言或 pguide 的来源判断以凑绿。用 isolated/public-hoist 的定向
+  布局探针也复现同一断言，不将探索当成完整通过。
+- **原脚本 `--bundle-authoring` 定向消费退出 1。** 通过 init/check/build 等步骤，
+  已推进到真实 runtime/consume.mjs，但其缺失依赖负控制出现
+  `Missing expected rejection`。工作区祖先仍可解析 TypeBox，不能把这个位置的
+  运行当成已证明无作者依赖的隔离宿主；未删改未知依赖或注入模块解析 hook
+  使该断言消失。标准 SDK 打包消费和静态 Worker 自包含证明仍按前述真实结果保留，
+  不用它们替代此失败。
+- **恢复 workspace 后再次原样 `pnpm check` 退出 1。** 刷新 origin 仍为
+  `e6447bb0bb237ccb925efc21ffafe1258ab3ee6b`，基线策略没有并发修复。
+  layers/build、format、lint、typecheck 全部通过；workspace 阶段 73/74 task
+  通过，唯一失败仍是 task-engine 的 ipfs-content dependency-direction。
+  根 scripts 独立 37/37、其余 workspace 诊断验证 72/72 和 SDK 42/42 的结果
+  均保留，但没有将这些替代完整 check。
+
+相关 CLI/检查源码均与基线相同：
+
+| 路径 | 基线和当前共同 blob |
+| --- | --- |
+| packages/pilot-protocol/src/migrate-cli.ts | 185ce05033385535943d9c08c1548231325ec3cf |
+| packages/pguide/src/bin.ts | a50ba203a63a293ade996d7723314f326044db03 |
+| scripts/check-package-consumers.mjs | 87fa60be6e63b64b7e6910352cc62712e04ea577 |
+
+所以本次没有得到完整门限通过的结论。按后续明确授权同步实现候选与这些失败证据，
+仍保持 I-AC02 未勾选，不记录 submitInner、acceptInner/Outer 或部署事实，
+交由父 agent 独立处理上述剩余门限。
+
 ## 变更路径
 
 实现与测试：
@@ -199,6 +299,7 @@ packages/task-sdk/README.md
 packages/task-sdk/src/binding.ts
 packages/task-sdk/src/build.ts
 packages/task-sdk/src/index.ts
+packages/task-sdk/test/binding-manifest.test.ts
 packages/task-sdk/test/precompile.test.ts
 packages/pguide-task-bundle/README.md
 packages/pguide-task-bundle/examples/echo/main.ts

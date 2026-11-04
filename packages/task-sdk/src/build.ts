@@ -143,8 +143,15 @@ runTask(async (input, context) => {
               const manifest = await readFile(
                 resolve(dirname(args.path), "..", "package.json"),
                 "utf8",
-              ).catch(() => undefined);
-              if (!manifest || JSON.parse(manifest).name !== "@potential-guide/task-sdk")
+              ).catch((error: NodeJS.ErrnoException) => {
+                if (error.code === "ENOENT" || error.code === "ENOTDIR") return undefined;
+                throw error;
+              });
+              if (manifest === undefined) return undefined;
+              const candidate: unknown = JSON.parse(manifest);
+              if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
+                throw new Error("Task binding package.json must contain an object.");
+              if (!("name" in candidate) || candidate.name !== "@potential-guide/task-sdk")
                 return undefined;
             }
             return {
