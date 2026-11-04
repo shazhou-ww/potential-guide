@@ -24,9 +24,9 @@ export async function guardGeneratedSources(root, build) {
   try {
     await build();
     for (const { path, bytes } of snapshots)
-      assert.equal(
-        (await readFile(path, "utf8")).replaceAll("\r\n", "\n"),
-        bytes.toString().replaceAll("\r\n", "\n"),
+      assert.ok(
+        (await readFile(path, "utf8")).replaceAll("\r\n", "\n") ===
+          bytes.toString().replaceAll("\r\n", "\n"),
         `Generated source drift: ${path}; run pnpm build explicitly and review generated changes.`,
       );
   } finally {

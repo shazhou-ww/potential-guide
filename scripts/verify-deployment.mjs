@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { access, chmod, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import {
   assertLatestVersion,
   consumerManifest,
@@ -102,6 +103,23 @@ async function packAndInstall() {
     console.log(`packed ${definition.name}: ${paths.length} files`);
   }
 
+  if (!installPublished) {
+    await checkPackageConsumers(
+      root,
+      scratch,
+      packageDefinitions,
+      tarballs,
+      async (command, args, cwd, env = process.env, expectedCode = 0) => {
+        const result = await execute(command, args, { cwd, env });
+        assert.equal(
+          result.code,
+          expectedCode,
+          `${command} ${args.join(" ")}\n${result.stderr}\n${result.stdout}`,
+        );
+        return result.stdout;
+      },
+    );
+  }
   await mkdir(consumer, { recursive: true });
   const manifest = consumerManifest(mode, expectedVersions, tarballs, consumerEntries);
   if (mode === "latest") {

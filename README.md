@@ -80,11 +80,12 @@ needed by Worker validation without silently repairing drift. Objective staging 
 
 Run `pnpm consumers:check` for the full isolated package-consumer suite (including
 production dependency isolation, authoring, SDK, task bundles and services), and
-`pnpm deployment:verify` for npm installation, CLI discovery and runtime deployment
-checks. Full delivery validation is `pnpm check && pnpm consumers:check &&
-pnpm deployment:verify`; it does not publish packages. CI runs default checks and
-isolated consumers on Node 22/24, and the npm CLI deployment suite on Linux,
-macOS and Windows without repeating the isolated consumer suite in each OS job.
+`pnpm deployment:verify` for the same full consumer suite plus npm installation,
+CLI discovery and runtime deployment checks. Full delivery validation is
+`pnpm check && pnpm deployment:verify`; it does not publish packages. CI runs
+default checks on Node 22/24 and the full consumer/deployment suite on Linux,
+macOS and Windows. This retains platform-specific artifact and Worker assertions
+while removing two redundant consumer runs from the Node matrix.
 Direct `node scripts/check-packages.mjs` retains full consumer validation;
 `--structure` selects artifact structure only and cannot be combined with consumer
 scope flags.

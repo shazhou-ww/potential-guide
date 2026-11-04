@@ -1,6 +1,6 @@
 # Implementation
 
-默认 `pnpm check` 保留源码漂移、构建/分层、格式、lint、生产与测试类型、测试和 tarball 结构检查；完整隔离消费者独立为 `pnpm consumers:check`，在 Node 22/24 CI 中各运行一次。跨平台 `deployment:verify` 继续执行真实 npm 安装、依赖图和 CLI 运行，但不再重复该隔离消费者套件。
+默认 `pnpm check` 保留源码漂移、构建/分层、格式、lint、生产与测试类型、测试和 tarball 结构检查；完整隔离消费者独立为 `pnpm consumers:check`，也完整保留在跨平台 `deployment:verify` 中。CI 的完整消费者由五轮收敛为 Linux/macOS/Windows 三轮，保留 macOS file fail-closed 等平台独有断言；Node 22/24 矩阵继续执行默认检查。完整交付入口为 `pnpm check && pnpm deployment:verify`，不包含发布。
 
 Objective 的 `.staging/<package>` 纳入各自 Turbo build outputs；测试入口以快照保护已检入的 settings/task Worker 源码，在构建提供校验所需依赖后检测漂移，并无条件恢复原始源码，避免构建静默修复漂移；保留所有生成运行时和 schema 校验。修复 self-check bundler 对调用目录的隐式依赖，确保从 workspace 构建和根目录校验产生相同字节。HTTPS 测试在停止监听后主动关闭遗留活动连接，保留双 digest、重定向、大小、超时、篡改和离线复用断言，并设置测试等待上限。不调整测试并发。
 

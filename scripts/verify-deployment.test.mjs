@@ -4,12 +4,12 @@ import { basename, join } from "node:path";
 import test from "node:test";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
-test("CI retains isolated consumers on both Node versions without repeating them in deployment", async () => {
+test("CI separates default package structure from full cross-platform isolated consumers", async () => {
   const root = new URL("../", import.meta.url);
   const manifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   assert.match(manifest.scripts["deployment:verify"], /scripts\/verify-deployment\.mjs/);
   const source = await readFile(new URL("scripts/verify-deployment.mjs", root), "utf8");
-  assert.doesNotMatch(source, /checkPackageConsumers/);
+  assert.match(source, /if \(!installPublished\) \{\s+await checkPackageConsumers\(/);
   assert.equal(
     manifest.scripts["pack:check"],
     "pnpm run build && node scripts/check-packages.mjs --structure",
@@ -23,7 +23,8 @@ test("CI retains isolated consumers on both Node versions without repeating them
   assert.doesNotMatch(consumers, /"--offline"/);
   const ci = await readFile(new URL(".github/workflows/ci.yaml", root), "utf8");
   assert.match(ci, /run: pnpm deployment:verify/);
-  assert.match(ci, /run: pnpm consumers:check/);
+  assert.doesNotMatch(ci, /run: pnpm consumers:check/);
+  for (const os of ["ubuntu-latest", "macos-latest", "windows-latest"]) assert.ok(ci.includes(os));
   assert.match(ci, /22\.13\.0/);
   assert.match(ci, /24\.11\.1/);
   const packs = await readFile(new URL("scripts/check-packages.mjs", root), "utf8");
