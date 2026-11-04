@@ -28,10 +28,16 @@ Linux Node 22 的逐阶段诊断证明异常等待发生在 `/slow` acquisition 
 
 记录提交、环境、缓存条件、执行命令、各阶段耗时和退出码；同机配对的 Node 22/24 冷轮各至少缩短 10%，热轮各至少缩短 25%，全部八轮完整成功。不混用本地、不同镜像或失败运行。
 
+结果：Node 22 冷/热改善 24.44% / 53.35%，Node 24 为 18.26% / 56.96%；八轮退出码均为 0。原始阶段记录与 provenance 见 [Measurements.json](./Measurements.json)，测量边界和完整解释见 [Performance.md](./Performance.md)。
+
 ### I-AC02: 检查覆盖不退化
 
 提供每项删除、合并或迁移检查的职责映射与验证结果，证明包内容、生成源码一致性、依赖隔离、测试类型和跨平台 CLI 契约仍被覆盖。
 
+结果：默认结构检查、三 OS 全消费者/CLI、发布前显式消费者门禁及所有生成校验均有映射；候选 `c50c6fac` 的 Node 22/24 和 Linux/macOS/Windows CI 全部通过。没有发布 npm。
+
 ### I-AC03: 构建缓存与错误传播可靠
 
 冷、热缓存及独立入口均完成所需前置生成；失效产物、契约失败和消费者失败仍返回失败。通过相关回归测试和完整 `pnpm check` 证明。
+
+结果：配对两 job 均在热轮后以 38/38 build cache hits 完成 staging 字节级恢复；源码漂移/构建失败恢复、失效 Worker、互斥 scope、测量失败退出码回归通过。完整交付 CI 和本地诊断边界见 [Performance.md](./Performance.md)。
