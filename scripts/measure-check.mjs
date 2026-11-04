@@ -10,35 +10,43 @@ const manifest = JSON.parse(await readFile(resolve(directory, "package.json"), "
 const stages = manifest.scripts.check.split(" && ").map((command) => command.split(" ").at(-1));
 const timings = [];
 let current;
-let pending = "";
 const start = performance.now();
-function line(text) {
-  process.stdout.write(`${text}\n`);
-  const stage = stages.find(
-    (name) =>
-      text.startsWith(`> ${manifest.name}@${manifest.version} ${name} `) ||
-      text === `$ ${manifest.scripts[name]}`,
-  );
-  if (!stage) return;
+function line(text, output) {
+  output.write(`${text}\n`);
+  const stage = stages[timings.length];
+  if (
+    !stage ||
+    !(
+      text.startsWith(`> ${manifest.name}@${manifest.version} ${stage} `) ||
+      text === `$ ${manifest.scripts[stage]}`
+    )
+  )
+    return;
   const now = performance.now();
   if (current) current.seconds = (now - current.start) / 1000;
   current = { stage, start: now };
   timings.push(current);
 }
-const code = await new Promise((accept, reject) => {
-  const child = spawn("pnpm", ["check"], { cwd: directory, env: process.env, shell: false });
-  child.stdout.setEncoding("utf8");
-  child.stdout.on("data", (chunk) => {
+function collect(stream, output) {
+  let pending = "";
+  stream.setEncoding("utf8");
+  stream.on("data", (chunk) => {
     pending += chunk;
     const lines = pending.split(/\r?\n/);
     pending = lines.pop();
-    for (const text of lines) line(text);
+    for (const text of lines) line(text, output);
   });
-  child.stderr.pipe(process.stderr);
+  stream.on("end", () => {
+    if (pending) line(pending, output);
+  });
+}
+const code = await new Promise((accept, reject) => {
+  const child = spawn("pnpm", ["check"], { cwd: directory, env: process.env, shell: false });
+  collect(child.stdout, process.stdout);
+  collect(child.stderr, process.stderr);
   child.on("error", reject);
   child.on("close", accept);
 });
-if (pending) line(pending);
 const end = performance.now();
 if (current) current.seconds = (end - current.start) / 1000;
 const result = {
