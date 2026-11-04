@@ -58,6 +58,9 @@ jobs:
       - name: Run all checks
         run: pnpm check
 
+      - name: Verify isolated package consumers
+        run: pnpm consumers:check
+
   deployment-cli:
     name: Packed CLI (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

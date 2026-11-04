@@ -343,7 +343,9 @@ test("aborted preparation and unsafe HTTPS declarations fail without output", as
   }
   assert.deepEqual(await readdir(cacheDirectory), []);
 });
-test("real HTTPS acquisition pins both digests, rejects redirects and tampering, then prepares offline", async () => {
+test("real HTTPS acquisition pins both digests, rejects redirects and tampering, then prepares offline", {
+  timeout: 30_000,
+}, async () => {
   const certDirectory = join(scratch, "tls");
   await mkdir(certDirectory);
   const cert = join(certDirectory, "cert.pem");
@@ -437,9 +439,11 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
         `sha256:${"0".repeat(64)}`,
       ),
     );
-    await new Promise<void>((done, fail) =>
-      server.close((error) => (error ? fail(error) : done())),
-    );
+    await new Promise<void>((done, fail) => {
+      server.close((error) => (error ? fail(error) : done()));
+      // Aborted /slow responses can remain active on Node 22 until its HTTP timeout.
+      server.closeAllConnections();
+    });
     assert.equal(
       JSON.parse((await child("/unreachable", cacheDirectory)).stdout).revision,
       prepared.revision,

@@ -47,44 +47,48 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/packages/objective-monorepo-standard/src/**",
+        "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-objective-package.mjs",
         "$TURBO_ROOT$/scripts/build-check-workers.mjs"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "$TURBO_ROOT$/.staging/objective-package-standard/**"]
     },
     "@potential-guide/objective-setup-marker#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-objective-package.mjs",
         "$TURBO_ROOT$/scripts/build-check-workers.mjs"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "$TURBO_ROOT$/.staging/objective-setup-marker/**"]
     },
     "@potential-guide/objective-pguide-self-check#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-self-check-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-objective-package.mjs",
         "$TURBO_ROOT$/scripts/build-check-workers.mjs",
         "$TURBO_ROOT$/scripts/self-check-agent.mjs"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "$TURBO_ROOT$/.staging/objective-pguide-self-check/**"]
     },
     "@potential-guide/objective-monorepo-standard#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-monorepo-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-objective-package.mjs",
         "$TURBO_ROOT$/scripts/build-check-workers.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "$TURBO_ROOT$/.staging/objective-monorepo-standard/**"]
     },
     "@potential-guide/objective-monorepo-standard#test": {
       "dependsOn": ["build"],
@@ -95,23 +99,25 @@
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-health-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-objective-package.mjs",
         "$TURBO_ROOT$/scripts/build-check-workers.mjs"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "$TURBO_ROOT$/.staging/objective-devbox-health/**"]
     },
     "@potential-guide/objective-pguide-setup#build": {
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/build-*.mjs",
         "$TURBO_ROOT$/scripts/build-setup-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-evidence-runtime.mjs",
         "$TURBO_ROOT$/scripts/build-objective-package.mjs",
         "$TURBO_ROOT$/scripts/build-check-workers.mjs"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "$TURBO_ROOT$/.staging/objective-pguide-setup/**"]
     },
     "pguide#test": {
       "dependsOn": ["build"],

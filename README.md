@@ -70,7 +70,28 @@ pnpm typecheck
 pnpm test
 ```
 
-Run `pnpm check` for the complete repository verification.
+Run `pnpm check` for the default repository verification: source drift, build/layer
+boundaries, formatting, lint, production and test types, tests, and packed artifact
+structure. Checked-in settings and embedded task Workers are checked **before**
+builds can regenerate them. Objective staging resources are Turbo build outputs;
+`pnpm test` builds or restores them instead of rebuilding every Worker unconditionally.
+
+Run `pnpm consumers:check` for the full isolated package-consumer suite (including
+production dependency isolation, authoring, SDK, task bundles and services), and
+`pnpm deployment:verify` for npm installation, CLI discovery and runtime deployment
+checks. Full delivery validation is `pnpm check && pnpm consumers:check &&
+pnpm deployment:verify`; it does not publish packages. CI runs default checks and
+isolated consumers on Node 22/24, and the npm CLI deployment suite on Linux,
+macOS and Windows without repeating the isolated consumer suite in each OS job.
+Direct `node scripts/check-packages.mjs` retains full consumer validation;
+`--structure` selects artifact structure only and cannot be combined with consumer
+scope flags.
+
+The manually dispatched **Check performance** workflow measures cold build/Turbo
+outputs and then warm caches for an exact revision, preserving stage timings and
+exit codes. Cold excludes dependency installation; each measurement job starts
+with a fresh checkout. `node scripts/verify-worker-cache.mjs` checks byte-for-byte
+restoration of `.staging` after a successful build.
 The test command runs at most two workspace suites at once because each suite
 can also start parallel test files, child processes and Workers.
 Generated `.test-*` fixture directories are ignored by Git and Biome; keep

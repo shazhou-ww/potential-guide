@@ -13,7 +13,8 @@ const bundlesOnly = process.argv.includes("--task-bundles");
 const sdkOnly = process.argv.includes("--task-sdk");
 const serviceOnly = process.argv.includes("--task-service");
 const authoringOnly = process.argv.includes("--bundle-authoring");
-if ([sdkOnly, bundlesOnly, serviceOnly, authoringOnly].filter(Boolean).length > 1)
+const structureOnly = process.argv.includes("--structure");
+if ([sdkOnly, bundlesOnly, serviceOnly, authoringOnly, structureOnly].filter(Boolean).length > 1)
   throw new Error("Select only one consumer scope.");
 const authoringPackages = new Set([
   "pguide",
@@ -197,7 +198,9 @@ try {
     tarballs.set(expected.name, packed.filename);
     console.log(`${expected.name}: ${String(files.length)} packed files`);
   }
-  if (bundlesOnly) await checkTaskBundleConsumer(destination, tarballs, manifests, run);
+  if (structureOnly)
+    console.log("Package structure verified; run pnpm consumers:check for isolated consumers.");
+  else if (bundlesOnly) await checkTaskBundleConsumer(destination, tarballs, manifests, run);
   else
     await checkPackageConsumers(
       root,

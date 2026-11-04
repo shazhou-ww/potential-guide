@@ -44,6 +44,11 @@ jobs:
         run: node harness/scripts/measure-check.mjs subject cold
       - name: Warm check (same checkout and caches)
         run: node harness/scripts/measure-check.mjs subject warm
+      - name: Verify candidate worker cache restoration
+        run: |
+          if test -f subject/scripts/verify-worker-cache.mjs; then
+            node subject/scripts/verify-worker-cache.mjs
+          fi
       - name: Preserve measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

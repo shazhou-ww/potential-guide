@@ -73,6 +73,7 @@ await emit(
 );
 await emit("direct-agent.mjs", await source("scripts/self-check-agent.mjs"));
 const directoryProbe = await build({
+  absWorkingDir: root,
   entryPoints: [join(root, "packages", "check-environment", "src", "directories.ts")],
   bundle: true,
   platform: "node",

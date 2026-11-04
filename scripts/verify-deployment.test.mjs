@@ -4,21 +4,30 @@ import { basename, join } from "node:path";
 import test from "node:test";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
-test("packed deployment CI invokes the eight isolated package consumers", async () => {
+test("CI retains isolated consumers on both Node versions without repeating them in deployment", async () => {
   const root = new URL("../", import.meta.url);
   const manifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   assert.match(manifest.scripts["deployment:verify"], /scripts\/verify-deployment\.mjs/);
   const source = await readFile(new URL("scripts/verify-deployment.mjs", root), "utf8");
-  assert.match(
-    source,
-    /import \{ checkPackageConsumers \} from "\.\/check-package-consumers\.mjs"/,
+  assert.doesNotMatch(source, /checkPackageConsumers/);
+  assert.equal(
+    manifest.scripts["pack:check"],
+    "pnpm run build && node scripts/check-packages.mjs --structure",
   );
-  assert.match(source, /if \(!installPublished\) \{\s+await checkPackageConsumers\(/);
+  assert.equal(
+    manifest.scripts["consumers:check"],
+    "pnpm run build && node scripts/check-packages.mjs",
+  );
   const consumers = await readFile(new URL("scripts/check-package-consumers.mjs", root), "utf8");
   assert.match(consumers, /"--prefer-offline"/);
   assert.doesNotMatch(consumers, /"--offline"/);
   const ci = await readFile(new URL(".github/workflows/ci.yaml", root), "utf8");
   assert.match(ci, /run: pnpm deployment:verify/);
+  assert.match(ci, /run: pnpm consumers:check/);
+  assert.match(ci, /22\.13\.0/);
+  assert.match(ci, /24\.11\.1/);
+  const packs = await readFile(new URL("scripts/check-packages.mjs", root), "utf8");
+  assert.match(packs, /else\s+await checkPackageConsumers\(/);
 });
 
 test("execute preserves paths and arguments containing shell metacharacters", async () => {

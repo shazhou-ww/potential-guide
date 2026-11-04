@@ -25,7 +25,8 @@
     "task-workers:check": "node scripts/embed-task-workers.mjs check-runtime-files --check && node scripts/embed-task-workers.mjs check-task --check && node scripts/embed-task-workers.mjs probe-task --check",
     "bootstrap:pack": "node scripts/create-npm-bootstrap-packages.mjs",
     "build": "turbo run build",
-    "check": "pnpm run layers:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
+    "sources:check": "pnpm run settings:check && pnpm run task-workers:check",
+    "check": "pnpm run sources:check && pnpm run layers:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
     "layers:check": "pnpm run build && node scripts/check-layers.mjs",
     "clean": "turbo run clean && node -e \"for (const path of ['.cache', '.turbo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "deployment:verify": "pnpm run build && node scripts/verify-deployment.mjs",
@@ -33,8 +34,9 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "turbo run lint && biome lint scripts config",
-    "pack:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "pnpm settings:check && pnpm schemas:check && pnpm workers:build && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && pnpm task-workers:check && turbo run test --concurrency=2 && node --test scripts/*.test.mjs",
+    "pack:check": "pnpm run build && node scripts/check-packages.mjs --structure",
+    "consumers:check": "pnpm run build && node scripts/check-packages.mjs",
+    "test": "pnpm run sources:check && pnpm run build && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test --concurrency=2 && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
