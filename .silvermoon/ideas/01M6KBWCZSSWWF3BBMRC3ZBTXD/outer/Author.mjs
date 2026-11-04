@@ -59,7 +59,7 @@ try {
   await execute(process.execPath, [bin, "publish", built.car, "--ipfs-rpc", "http://127.0.0.1:1"]);
   assert.fail("已移除的发布命令不得成功。");
 } catch (error) {
-  assert.equal(error.code, 1);
+  assert.equal(error.code, 2);
   removedCommand = { exitCode: error.code, stderr: error.stderr };
 }
 const removedExport = "@potential-guide/pguide-task-bundle/publish";
