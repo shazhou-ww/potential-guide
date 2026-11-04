@@ -15,13 +15,14 @@ import { checkTaskArtifact } from "@potential-guide/task-sdk/artifact";
 import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
 
 const help: CommandHelp = {
-  description: "Check, build and publish complete TypeBox Task Bundles.",
+  description: "Initialize, check, build and publish complete TypeBox Task Bundles.",
   usage:
-    "pguide task-bundle check author <task.build.yaml> | check artifact <directory> | build <task.build.yaml> | publish <directory> [--ipfs-rpc <url>]",
+    "pguide task-bundle init [directory] | check author <task.build.yaml> | check artifact <directory> | build <task.build.yaml> | publish <directory> [--ipfs-rpc <url>]",
   sections: [
     {
       title: "Commands",
       lines: [
+        "  init [directory]        Create a minimal Echo task and declare TypeBox in the nearest npm package; offline.",
         "  check author <file>     Compile trusted author input in memory; no output writes or network publishing.",
         "  check artifact <dir>    Validate exact manifest, Schema and UnixFS CID; never evaluate author code.",
         "  build <file>            Replace only managed output after complete validation; no network publishing.",
@@ -50,7 +51,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       {
         schemaVersion: 1,
         command: "task-bundle",
-        subcommands: ["check", "build", "publish"],
+        subcommands: ["init", "check", "build", "publish"],
         ...helpMetadata(help),
       },
       globals.format,
@@ -60,7 +61,10 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
   }
   const [command, ...args] = argv;
   let result: unknown;
-  if (command === "check") {
+  if (command === "init") {
+    if (args.length > 1 || args[0]?.startsWith("-")) throw new CliError("Use init [directory].");
+    result = await (await import("./init.js")).initTaskBundle(resolve(globals.cwd, args[0] ?? "."));
+  } else if (command === "check") {
     if (args.length !== 2 || !["author", "artifact"].includes(args[0]!))
       throw new CliError("Use check author <task.build.yaml> or check artifact <directory>.");
     result =
@@ -89,7 +93,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     if (url.username || url.password || url.search || url.hash)
       throw new CliError("IPFS RPC URL must not embed credentials, query or fragment.");
     result = await importTaskBundle(directory, await createIpfsClient(url.href));
-  } else throw new CliError("Unknown task-bundle command; use check, build or publish.");
+  } else throw new CliError("Unknown task-bundle command; use init, check, build or publish.");
   writeResult(
     { schemaVersion: 1, command: `task-bundle ${command}`, status: "ok", result },
     globals.format,
