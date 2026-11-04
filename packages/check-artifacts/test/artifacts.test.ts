@@ -410,8 +410,13 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
   ) {
     const script = `import {prepareCheckArtifact} from ${JSON.stringify(moduleURL)};
       const {closePrivateFileBackend:close}=await import(${JSON.stringify(new URL("../../check-runtime-files/dist/index.js", import.meta.url).href)});
-      try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},${JSON.stringify({ cacheDirectory: cache, timeoutMs })}))); }
-      finally {await close();}`;
+    let code=0;
+    try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},${JSON.stringify({ cacheDirectory: cache, timeoutMs })}))); }
+    catch(error) {console.error(error);code=1;}
+    finally {await close();}
+    await new Promise(done=>process.stdout.write("",done));
+    await new Promise(done=>process.stderr.write("",done));
+    process.exit(code);`;
     return exec(process.execPath, ["--input-type=module", "--eval", script], {
       cwd: scratch,
       env: { ...process.env, NODE_EXTRA_CA_CERTS: cert, NODE_PATH: "", NODE_OPTIONS: "" },
