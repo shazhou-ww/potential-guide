@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
-import { delimiter, dirname, isAbsolute, join } from "node:path";
+import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
@@ -211,15 +211,36 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       await checkTaskSdkConsumer(directory, run);
     }
     if (label === "task-service") await checkTaskServiceConsumer(root, directory, run);
+    const binaries = join(directory, "node_modules", ".bin");
+    const toolchain = join(directory, "toolchain");
+    await mkdir(toolchain);
+    await writeFile(
+      join(toolchain, process.platform === "win32" ? "node.cmd" : "node"),
+      process.platform === "win32"
+        ? `@"${process.execPath}" %*\r\n`
+        : `#!/bin/sh\nexec "${process.execPath}" "$@"\n`,
+      { mode: 0o755 },
+    );
+    if (process.platform !== "win32") {
+      for (const name of ["dirname", "sed", "uname", "readlink", "realpath"]) {
+        const source = (process.env.PATH ?? "")
+          .split(delimiter)
+          .filter((path) => isAbsolute(path))
+          .map((path) => join(path, name))
+          .find(existsSync);
+        if (["dirname", "sed", "uname"].includes(name))
+          assert.ok(source, `Missing shim utility: ${name}`);
+        if (source) await symlink(source, join(toolchain, name));
+      }
+    }
     if (label === "bundle-authoring") {
-      const bin = join(directory, "node_modules", ".bin");
       const home = join(directory, "home");
       await mkdir(home);
       const env = {
         ...process.env,
         APPDATA: home,
         XDG_CONFIG_HOME: home,
-        PATH: [bin, dirname(process.execPath)].join(delimiter),
+        PATH: [binaries, toolchain].join(delimiter),
       };
       const pguide = join(directory, "node_modules", "pguide", "dist", "bin.js");
       const metadata = JSON.parse(
@@ -574,28 +595,6 @@ assert.equal(count,16);
       `,
       );
       await run(process.execPath, [script], directory);
-    }
-    const binaries = join(directory, "node_modules", ".bin");
-    const toolchain = join(directory, "toolchain");
-    await mkdir(toolchain);
-    await writeFile(
-      join(toolchain, process.platform === "win32" ? "node.cmd" : "node"),
-      process.platform === "win32"
-        ? `@"${process.execPath}" %*\r\n`
-        : `#!/bin/sh\nexec "${process.execPath}" "$@"\n`,
-      { mode: 0o755 },
-    );
-    if (process.platform !== "win32") {
-      for (const name of ["dirname", "sed", "uname", "readlink", "realpath"]) {
-        const source = (process.env.PATH ?? "")
-          .split(delimiter)
-          .filter((path) => isAbsolute(path))
-          .map((path) => join(path, name))
-          .find(existsSync);
-        if (["dirname", "sed", "uname"].includes(name))
-          assert.ok(source, `Missing shim utility: ${name}`);
-        if (source) await symlink(source, join(toolchain, name));
-      }
     }
     const env = {
       ...process.env,
