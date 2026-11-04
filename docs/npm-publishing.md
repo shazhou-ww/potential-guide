@@ -181,6 +181,7 @@ git pull --ff-only origin main
 corepack enable
 pnpm install --frozen-lockfile
 pnpm check
+pnpm consumers:check
 pnpm bootstrap:pack
 
 npm login --registry=https://registry.npmjs.org/ --auth-type=web
@@ -346,7 +347,8 @@ CLI tarballs. It packs the release inventory plus the local runtime support
 packages (`check-runtime-files` and `check-artifacts`), checks their contents, and uses npm
 `overrides` pointing to the internal tarballs. This isolated consumer makes
 unpublished RC dependencies available without requiring the main package to
-depend on optional commands. `pnpm pack:check` additionally checks main-only
+depend on optional commands. `pnpm pack:check` checks packed artifact structure;
+`pnpm consumers:check` additionally checks main-only
 consumption: exactly seven default commands, working bundled entrypoints without
 transitive PATH bins, and installation hints for missing optional commands.
 It also checks protocol-only consumption without business logic and combined

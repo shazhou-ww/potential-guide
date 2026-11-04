@@ -139,7 +139,7 @@ Root `package-layers.yaml` explicitly classifies every workspace. The repository
 The `objective-monorepo-standard` structure phase owns this cross-package
 architecture check; an unreadable/invalid policy or unknown, duplicate or missing
 assignment blocks structure before package dependency probes.
-`pnpm layers:check`, the first step of `pnpm check`, is a thin adapter to the same
+`pnpm layers:check`, after generated-source validation in `pnpm check`, is a thin adapter to the same
 bundled implementation, not an independent rule engine.
 The checker uses actual pnpm workspace discovery and covers all package dependency fields and production
 imports/reexports (including type imports, import types, dynamic imports,
@@ -161,12 +161,15 @@ edges and rejects reverse/deferred-concrete/unknown edges, including actual
 temporary workspace manifests and relative source/type references.
 All scratch data stays under repository `.cache`.
 
-`pnpm pack:check` builds and packs the release inventory, checks exports and bins,
-then installs isolated tarball consumers: protocol-only,
+`pnpm pack:check` builds and packs the release inventory and checks artifact
+structure, exports and bins. `pnpm consumers:check` additionally installs isolated tarball consumers: protocol-only,
 main-only, each standalone command package, and all commands together.
 The default packed `pnpm deployment:verify` runs these same combinations
 before its npm runtime scenarios, so the existing Ubuntu/macOS/Windows deployment
 CI matrix executes them too; published/latest verification remains registry-based.
+The Node 22/24 matrix runs default checks without repeating these installs.
+The publishing workflow explicitly runs `pnpm consumers:check` after `pnpm check`
+to preserve its full pre-release consumer gate; neither validation command publishes.
 Internal transitive versions are resolved from each real installed parent,
 including pnpm's physical symlink layout. Protocol-only consumption installs no
 business packages; main-only consumption installs Pilot, config and objectives but no

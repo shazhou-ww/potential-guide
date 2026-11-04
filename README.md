@@ -86,6 +86,8 @@ CLI discovery and runtime deployment checks. Full delivery validation is
 default checks on Node 22/24 and the full consumer/deployment suite on Linux,
 macOS and Windows. This retains platform-specific artifact and Worker assertions
 while removing two redundant consumer runs from the Node matrix.
+The publishing workflow explicitly retains `pnpm consumers:check` after default
+checks; this validation split does not change release permissions or publish packages.
 Direct `node scripts/check-packages.mjs` retains full consumer validation;
 `--structure` selects artifact structure only and cannot be combined with consumer
 scope flags.
@@ -95,6 +97,9 @@ outputs and then warm caches for an exact revision, preserving stage timings and
 exit codes. Cold excludes dependency installation; each measurement job starts
 with a fresh checkout. `node scripts/verify-worker-cache.mjs` checks byte-for-byte
 restoration of `.staging` after a successful build.
+Supply the workflow's optional `baseline` revision to run control cold/warm checks
+before candidate cold/warm checks on the **same runner**. This avoids confounding
+results with the rolling image versions behind `ubuntu-latest`.
 The test command runs at most two workspace suites at once because each suite
 can also start parallel test files, child processes and Workers.
 Generated `.test-*` fixture directories are ignored by Git and Biome; keep

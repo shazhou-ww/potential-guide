@@ -255,10 +255,28 @@ export async function prepareCheckArtifact(
   const timeoutMs = options.timeoutMs ?? 30_000;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new Error("Invalid Check preparation timeout.");
-  const signal = AbortSignal.any([
-    AbortSignal.timeout(timeoutMs),
-    ...(options.signal ? [options.signal] : []),
-  ]);
+  // Retain deadline ownership through streamed bodies, including on Node 22.
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () => deadline.abort(new DOMException("Check preparation timed out.", "TimeoutError")),
+    timeoutMs,
+  );
+  timer.unref();
+  const signal = options.signal
+    ? AbortSignal.any([deadline.signal, options.signal])
+    : deadline.signal;
+  try {
+    return await prepareWithSignal(source, options, signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function prepareWithSignal(
+  source: CheckArtifactSource,
+  options: PrepareCheckOptions,
+  signal: AbortSignal,
+): Promise<PreparedCheckArtifact> {
   signal.throwIfAborted();
   const cache = resolve(options.cacheDirectory);
   await ensurePrivateDirectory(cache);

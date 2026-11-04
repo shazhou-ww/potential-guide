@@ -27,6 +27,9 @@ test("CI separates default package structure from full cross-platform isolated c
   for (const os of ["ubuntu-latest", "macos-latest", "windows-latest"]) assert.ok(ci.includes(os));
   assert.match(ci, /22\.13\.0/);
   assert.match(ci, /24\.11\.1/);
+  const publishing = await readFile(new URL(".github/workflows/publish-npm.yaml", root), "utf8");
+  assert.match(publishing, /run: pnpm check/);
+  assert.match(publishing, /run: pnpm consumers:check/);
   const packs = await readFile(new URL("scripts/check-packages.mjs", root), "utf8");
   assert.match(packs, /else\s+await checkPackageConsumers\(/);
 });

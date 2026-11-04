@@ -227,6 +227,9 @@ jobs:
       - name: Validate repository
         run: pnpm check
 
+      - name: Validate isolated package consumers
+        run: pnpm consumers:check
+
       - name: Assign a temporary dry-run version
         if: github.event_name == 'workflow_dispatch' && inputs.mode != 'verify-published'
         env:

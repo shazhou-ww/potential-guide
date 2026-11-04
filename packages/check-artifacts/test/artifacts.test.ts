@@ -345,7 +345,7 @@ test("aborted preparation and unsafe HTTPS declarations fail without output", as
 });
 test("real HTTPS acquisition pins both digests, rejects redirects and tampering, then prepares offline", {
   timeout: 30_000,
-}, async () => {
+}, async (t) => {
   const certDirectory = join(scratch, "tls");
   await mkdir(certDirectory);
   const cert = join(certDirectory, "cert.pem");
@@ -379,6 +379,8 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
   const server = createServer(
     { cert: await readFile(cert), key: await readFile(key) },
     (request, response) => {
+      // Each child makes one request; pooled sockets must not extend its lifetime.
+      response.setHeader("connection", "close");
       if (request.url === "/redirect") {
         response.writeHead(302, { location: "/check.tgz" });
         response.end();
@@ -405,15 +407,26 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
     digest = built.digest,
     transfer = packed.transportDigest,
     timeoutMs = 30_000,
+    externalSignal = false,
   ) {
     const script = `import {prepareCheckArtifact} from ${JSON.stringify(moduleURL)};
       const {closePrivateFileBackend:close}=await import(${JSON.stringify(new URL("../../check-runtime-files/dist/index.js", import.meta.url).href)});
-      try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},${JSON.stringify({ cacheDirectory: cache, timeoutMs })}))); }
-      finally {await close();}`;
-    return exec(process.execPath, ["--input-type=module", "--eval", script], {
+    const trace=value=>{if(process.env.PGUIDE_HTTPS_TRACE==="1")console.error(${JSON.stringify(path)}+":"+value);};
+    trace("acquire");
+    let code=0;
+    try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},{...${JSON.stringify({ cacheDirectory: cache, timeoutMs })}${externalSignal ? ",signal:new AbortController().signal" : ""}}))); }
+    catch(error) {console.error(error);code=1;}
+    finally {trace("backend-close");await close();trace("backend-closed");}
+    await new Promise(done=>process.stdout.write("",done));
+    await new Promise(done=>process.stderr.write("",done));
+    process.exit(code);`;
+    const pending = exec(process.execPath, ["--input-type=module", "--eval", script], {
       cwd: scratch,
       env: { ...process.env, NODE_EXTRA_CA_CERTS: cert, NODE_PATH: "", NODE_OPTIONS: "" },
+      signal: t.signal,
     });
+    if (process.env.PGUIDE_HTTPS_TRACE === "1") pending.child.stderr?.pipe(process.stderr);
+    return pending;
   }
   try {
     const { stdout } = await child("/check.tgz", cacheDirectory);
@@ -428,9 +441,18 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
         `sha256-pguide-check-v1:${"0".repeat(64)}`,
       ),
     );
-    const timedOutCache = `${cacheDirectory}-timeout`;
-    await assert.rejects(child("/slow", timedOutCache, built.digest, packed.transportDigest, 150));
-    assert.deepEqual(await readdir(timedOutCache), []);
+    for (const externalSignal of [false, true]) {
+      const timedOutCache = `${cacheDirectory}-timeout-${externalSignal}`;
+      const timeoutStarted = Date.now();
+      await assert.rejects(
+        child("/slow", timedOutCache, built.digest, packed.transportDigest, 150, externalSignal),
+      );
+      assert.ok(
+        Date.now() - timeoutStarted < 5_000,
+        "The request deadline must bound slow bodies.",
+      );
+      assert.deepEqual(await readdir(timedOutCache), []);
+    }
     await assert.rejects(
       child(
         "/check.tgz",
@@ -441,7 +463,6 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
     );
     await new Promise<void>((done, fail) => {
       server.close((error) => (error ? fail(error) : done()));
-      // Aborted /slow responses can remain active on Node 22 until its HTTP timeout.
       server.closeAllConnections();
     });
     assert.equal(
