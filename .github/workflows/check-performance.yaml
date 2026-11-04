@@ -41,6 +41,8 @@ jobs:
           pnpm --dir subject install --frozen-lockfile
           pnpm --dir harness install --frozen-lockfile
       - name: Verify bounded HTTPS cleanup in the separate harness checkout
+        env:
+          PGUIDE_HTTPS_TRACE: "1"
         run: |
           pnpm --dir harness exec turbo run build --filter=@potential-guide/check-artifacts
           pnpm --dir harness exec tsx --test --test-name-pattern="real HTTPS acquisition" packages/check-artifacts/test/artifacts.test.ts

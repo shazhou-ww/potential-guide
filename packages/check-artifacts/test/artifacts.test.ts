@@ -345,7 +345,7 @@ test("aborted preparation and unsafe HTTPS declarations fail without output", as
 });
 test("real HTTPS acquisition pins both digests, rejects redirects and tampering, then prepares offline", {
   timeout: 30_000,
-}, async () => {
+}, async (t) => {
   const certDirectory = join(scratch, "tls");
   await mkdir(certDirectory);
   const cert = join(certDirectory, "cert.pem");
@@ -410,17 +410,22 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
   ) {
     const script = `import {prepareCheckArtifact} from ${JSON.stringify(moduleURL)};
       const {closePrivateFileBackend:close}=await import(${JSON.stringify(new URL("../../check-runtime-files/dist/index.js", import.meta.url).href)});
+    const trace=value=>{if(process.env.PGUIDE_HTTPS_TRACE==="1")console.error(${JSON.stringify(path)}+":"+value);};
+    trace("acquire");
     let code=0;
     try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},${JSON.stringify({ cacheDirectory: cache, timeoutMs })}))); }
     catch(error) {console.error(error);code=1;}
-    finally {await close();}
+    finally {trace("backend-close");await close();trace("backend-closed");}
     await new Promise(done=>process.stdout.write("",done));
     await new Promise(done=>process.stderr.write("",done));
     process.exit(code);`;
-    return exec(process.execPath, ["--input-type=module", "--eval", script], {
+    const pending = exec(process.execPath, ["--input-type=module", "--eval", script], {
       cwd: scratch,
       env: { ...process.env, NODE_EXTRA_CA_CERTS: cert, NODE_PATH: "", NODE_OPTIONS: "" },
+      signal: t.signal,
     });
+    if (process.env.PGUIDE_HTTPS_TRACE === "1") pending.child.stderr?.pipe(process.stderr);
+    return pending;
   }
   try {
     const { stdout } = await child("/check.tgz", cacheDirectory);
