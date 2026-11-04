@@ -1,7 +1,8 @@
 {
-  "sourceCommit": "741e77ef8d44413116cf0da7abfc2bb7a7aaf096",
+  "sourceCommit": "09f93e45cf63fbe1db9d8e8da7bbf20a4411bcfc",
   "deploymentBlob": "cda9ee9c25fee9cdff5233ad722f3acfdebab80d",
-  "verifiedDeploymentRevision": "09abf9de18c2f3b5667cc115fcd6ad526506210c",
+  "verifiedDeploymentRevision": "92fbaf5f3f074fefd8474cb8046510a07f625f80",
+  "acceptedInnerRevision": "e766edd27d16c247d8ff059021ecb8a08f03c9d9",
   "platform": "win32",
   "node": "v24.11.1",
   "commands": [
@@ -367,11 +368,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-0.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -385,11 +386,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-1.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -403,11 +404,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-2.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -421,11 +422,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-3.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -439,11 +440,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-4.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -457,11 +458,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-5.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -475,11 +476,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-6.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -493,11 +494,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-7.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -511,11 +512,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-8.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -529,11 +530,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-9.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -547,11 +548,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-10.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ipfs-rpc-url=http://127.0.0.1:5001"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
@@ -566,11 +567,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-11.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ipfs-transport=gateway"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
@@ -585,7 +586,7 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-12.sqlite"
       ],
@@ -601,11 +602,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-13.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -619,11 +620,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-14.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -637,11 +638,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-15.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -655,11 +656,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "57732",
+        "55353",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-16.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -684,14 +685,14 @@
         "<owned-root>\\runtime\\workspace",
         "--no-global-config",
         "--port",
-        "63800",
+        "55399",
         "--database",
         "rollback-false.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ui",
         "--ui-options",
-        "{\"host\":\"127.0.0.1\",\"port\":57578,\"favoritesFile\":\"rollback.json\"}"
+        "{\"host\":\"127.0.0.1\",\"port\":51481,\"favoritesFile\":\"rollback.json\"}"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -706,11 +707,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-18.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -725,11 +726,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-19.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -744,11 +745,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-20.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -763,11 +764,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-21.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -782,11 +783,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-22.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -801,11 +802,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-23.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -820,11 +821,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-24.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -839,11 +840,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-25.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -858,11 +859,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-26.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -877,11 +878,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-27.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -896,11 +897,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-28.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ipfs-rpc-url=http://127.0.0.1:5001"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
@@ -916,11 +917,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-29.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ipfs-transport=gateway"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
@@ -936,7 +937,7 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-30.sqlite"
       ],
@@ -953,11 +954,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-31.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 2
@@ -972,11 +973,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-32.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -991,11 +992,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-33.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -1010,11 +1011,11 @@
         "--config",
         "files\\invalid.json",
         "--port",
-        "63804",
+        "55403",
         "--database",
         "<owned-root>\\runtime\\workspace\\must-not-open-34.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -1041,14 +1042,14 @@
         "<owned-root>\\runtime\\workspace",
         "--no-global-config",
         "--port",
-        "60685",
+        "58289",
         "--database",
         "rollback-true.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ui",
         "--ui-options",
-        "{\"host\":\"127.0.0.1\",\"port\":57578,\"favoritesFile\":\"rollback.json\"}"
+        "{\"host\":\"127.0.0.1\",\"port\":51481,\"favoritesFile\":\"rollback.json\"}"
       ],
       "cwd": "<owned-root>\\runtime\\workspace",
       "code": 1
@@ -1130,10 +1131,6 @@
         {
           "name": "jsonc-parser",
           "version": "3.3.1"
-        },
-        {
-          "name": "@potential-guide/pguide-config",
-          "version": "0.3.0-rc.0"
         },
         {
           "name": "@potential-guide/pguide-pilot",
@@ -1836,6 +1833,10 @@
           "version": "0.1.0-rc.0"
         },
         {
+          "name": "@potential-guide/pguide-config",
+          "version": "0.3.0-rc.0"
+        },
+        {
           "name": "@potential-guide/pguide-objectives",
           "version": "0.4.0-rc.0"
         },
@@ -2328,15 +2329,15 @@
           "version": "0.1.0-rc.0"
         },
         {
-          "name": "@potential-guide/task-engine-http",
-          "version": "0.1.0-rc.0"
-        },
-        {
           "name": "@potential-guide/task-engine-storage",
           "version": "0.1.0-rc.0"
         },
         {
           "name": "@potential-guide/task-engine",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-http",
           "version": "0.1.0-rc.0"
         },
         {
@@ -3210,8 +3211,8 @@
           "version": "3.0.1"
         },
         {
-          "name": "@potential-guide/task-protocol",
-          "version": "0.1.0-rc.0"
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0"
         },
         {
           "name": "ajv",
@@ -3232,10 +3233,6 @@
         {
           "name": "require-from-string",
           "version": "2.0.2"
-        },
-        {
-          "name": "@potential-guide/check-artifacts",
-          "version": "0.1.0"
         },
         {
           "name": "tar",
@@ -3264,6 +3261,10 @@
         {
           "name": "@potential-guide/check-runtime-files",
           "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
         }
       ]
     }
@@ -3279,14 +3280,14 @@
         "--database",
         "cli\\standalone-cli.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57580",
-      "pid": 6176,
+      "url": "http://127.0.0.1:51492",
+      "pid": 49064,
       "database": "<owned-root>\\runtime\\workspace\\cli\\standalone-cli.sqlite",
-      "requestId": "01M6J933HT0Q35CA1VKP7MA8AQ",
-      "taskId": "01M6J934XVMZB37064QD17Q714",
+      "requestId": "01M6JAQX8H591FVT56CV225E38",
+      "taskId": "01M6JAQXM8PHHEVNHB7W36NC2R",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3309,11 +3310,11 @@
         "0"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57591",
-      "pid": 31488,
+      "url": "http://127.0.0.1:51500",
+      "pid": 28432,
       "database": "<owned-root>\\runtime\\workspace\\files\\standalone-yaml.sqlite",
-      "requestId": "01M6J9365PH1E7MKF90QJX2BWE",
-      "taskId": "01M6J936KPJ3MWR4XZV81989XG",
+      "requestId": "01M6JAQYNRXQYBRRF9S9SMST7W",
+      "taskId": "01M6JAQZ12X18QSVGP69MQ8HY2",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3334,11 +3335,11 @@
         "files\\server.json"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57606",
-      "pid": 48248,
+      "url": "http://127.0.0.1:51507",
+      "pid": 34116,
       "database": "<owned-root>\\runtime\\workspace\\files\\standalone-json.sqlite",
-      "requestId": "01M6J938J3E4SKV133FDTMGXY0",
-      "taskId": "01M6J93901G8GXM7A8MRYWR1DG",
+      "requestId": "01M6JAR02C06WS6BP9GNQ50CHP",
+      "taskId": "01M6JAR0DCP6FSZG22RSYEV0XK",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3355,11 +3356,11 @@
       "entry": "pguide-task-engine",
       "arguments": [],
       "event": "ready",
-      "url": "http://127.0.0.1:57617",
-      "pid": 1432,
+      "url": "http://127.0.0.1:51514",
+      "pid": 49768,
       "database": "<owned-root>\\isolated-user\\pguide\\standalone-user.sqlite",
-      "requestId": "01M6J93A2YZZDBCSEFYWE1D0VQ",
-      "taskId": "01M6J93AEFWK7APPE758460R7Z",
+      "requestId": "01M6JAR1EGWEF6G0T5MS5KP48B",
+      "taskId": "01M6JAR1STKY9Y6QVZ8D2BDJCC",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3380,17 +3381,17 @@
         "--port",
         "0",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ui"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57624",
-      "uiUrl": "http://127.0.0.1:57626",
-      "pid": 16636,
+      "url": "http://127.0.0.1:51525",
+      "uiUrl": "http://127.0.0.1:51526",
+      "pid": 12956,
       "database": "<owned-root>\\isolated-user\\pguide\\standalone-layered.sqlite",
-      "requestId": "01M6J93CYZQ5NE72SYJE77WEV0",
-      "taskId": "01M6J93DACQ1408F5XPD43AD59",
-      "proxyTaskId": "01M6J93DMZTQRWQDD6WYC5R0RY",
+      "requestId": "01M6JAR2V26N2YVJXEGPTQXZ9J",
+      "taskId": "01M6JAR361F158P99V8ZVRKBQN",
+      "proxyTaskId": "01M6JAR3G7DP093AS2BEA41JT5",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3412,14 +3413,14 @@
         "--database",
         "cli\\standalone-isolated-5.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57643",
-      "pid": 22492,
+      "url": "http://127.0.0.1:52227",
+      "pid": 42340,
       "database": "<owned-root>\\runtime\\workspace\\cli\\standalone-isolated-5.sqlite",
-      "requestId": "01M6J93EJY2PATPGP50NZKYJ5B",
-      "taskId": "01M6J93EYA28XZB2EXDNZY6RV6",
+      "requestId": "01M6JAR4J62102H21DE6NCXWB8",
+      "taskId": "01M6JAR4XCVZJTBWY2NGC2ZRSC",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3441,14 +3442,14 @@
         "--database",
         "cli\\standalone-isolated-6.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57651",
-      "pid": 51700,
+      "url": "http://127.0.0.1:52234",
+      "pid": 44928,
       "database": "<owned-root>\\runtime\\workspace\\cli\\standalone-isolated-6.sqlite",
-      "requestId": "01M6J93FZ1P11EEFMF8CAXA0B8",
-      "taskId": "01M6J93GA7HSEYNEFR67V6QCY5",
+      "requestId": "01M6JAR5WTP3MPEE35VVX5GQ8Q",
+      "taskId": "01M6JAR67Q9AA2PN14SYQBJ7HW",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3470,14 +3471,14 @@
         "--database",
         "cli\\pguide-cli.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57660",
-      "pid": 36992,
+      "url": "http://127.0.0.1:52243",
+      "pid": 25284,
       "database": "<owned-root>\\runtime\\workspace\\cli\\pguide-cli.sqlite",
-      "requestId": "01M6J93HZNBK9Q472AWAE0B6PA",
-      "taskId": "01M6J93JBWE5HF0MV5YJQQJBYD",
+      "requestId": "01M6JAR81GG4RE550C3FSQS4VH",
+      "taskId": "01M6JAR8CSQ7FZNYTWHMY3M1PC",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3500,11 +3501,11 @@
         "0"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57668",
-      "pid": 35176,
+      "url": "http://127.0.0.1:52252",
+      "pid": 12836,
       "database": "<owned-root>\\runtime\\workspace\\files\\pguide-yaml.sqlite",
-      "requestId": "01M6J93KTYJ0QXDYT9ZQXSKGYC",
-      "taskId": "01M6J93M5VAY91TRZS2EDV777P",
+      "requestId": "01M6JAR9V2TMKHQFWZMZX94Y14",
+      "taskId": "01M6JARA60SNBWCHJNXEBDMZ6Z",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3525,11 +3526,11 @@
         "files\\server.json"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57677",
-      "pid": 48068,
+      "url": "http://127.0.0.1:52261",
+      "pid": 11920,
       "database": "<owned-root>\\runtime\\workspace\\files\\pguide-json.sqlite",
-      "requestId": "01M6J93NK85HGJ2STNQ3FQP1QS",
-      "taskId": "01M6J93NXVVZYF9A69GQ3GC8Y3",
+      "requestId": "01M6JARBSMDR529311ZNJFD52K",
+      "taskId": "01M6JARC4YQZJHC3YGPT9X2AYD",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3546,11 +3547,11 @@
       "entry": "pguide task-engine",
       "arguments": [],
       "event": "ready",
-      "url": "http://127.0.0.1:57685",
-      "pid": 37040,
+      "url": "http://127.0.0.1:52268",
+      "pid": 20736,
       "database": "<owned-root>\\isolated-user\\pguide\\pguide-user.sqlite",
-      "requestId": "01M6J93QP58NMYRQHTNDERQH8D",
-      "taskId": "01M6J93R0SSHSBXNWK7DHKRZ9X",
+      "requestId": "01M6JARDR634XNGW6K26RG416V",
+      "taskId": "01M6JARE3JPRJYJS2T5GNSPSCN",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3571,17 +3572,17 @@
         "--port",
         "0",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good",
+        "http://127.0.0.1:51481/good",
         "--ui"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57695",
-      "uiUrl": "http://127.0.0.1:57696",
-      "pid": 29860,
+      "url": "http://127.0.0.1:55319",
+      "uiUrl": "http://127.0.0.1:55320",
+      "pid": 50948,
       "database": "<owned-root>\\isolated-user\\pguide\\pguide-layered.sqlite",
-      "requestId": "01M6J93SFG7RC9QEZ29M55HYPW",
-      "taskId": "01M6J93STCEEGADWS6JZ3FER03",
-      "proxyTaskId": "01M6J93T87JBFWTHMX9EZJWRG3",
+      "requestId": "01M6JARFMGMB3NDP4RQ2YDFG8Z",
+      "taskId": "01M6JARFZJA6KQP5HK48N3BQ92",
+      "proxyTaskId": "01M6JARGABCYWD6FWDGPWDE16F",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3603,14 +3604,14 @@
         "--database",
         "cli\\pguide-isolated-12.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57711",
-      "pid": 15344,
+      "url": "http://127.0.0.1:55336",
+      "pid": 14728,
       "database": "<owned-root>\\runtime\\workspace\\cli\\pguide-isolated-12.sqlite",
-      "requestId": "01M6J93VN942PRCECQVJ9P677G",
-      "taskId": "01M6J93W5717H0DCZFGA6880PF",
+      "requestId": "01M6JARHQP9PZ9VRZ49J9R6YX6",
+      "taskId": "01M6JARJ2HFMB6FFNPWXZ95JCX",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -3632,14 +3633,14 @@
         "--database",
         "cli\\pguide-isolated-13.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/good"
+        "http://127.0.0.1:51481/good"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:57722",
-      "pid": 30488,
+      "url": "http://127.0.0.1:55344",
+      "pid": 12940,
       "database": "<owned-root>\\runtime\\workspace\\cli\\pguide-isolated-13.sqlite",
-      "requestId": "01M6J93XWT2BYG6P29YHMN53GJ",
-      "taskId": "01M6J93Y8890ZMVSMM3ZYE3M59",
+      "requestId": "01M6JARKH91ZVFVDFNQM42FWGT",
+      "taskId": "01M6JARKW5PKYCN7CAXEJD5XVP",
       "result": {
         "message": "gateway-only-external-proof",
         "resourceBytes": 600000,
@@ -4015,20 +4016,20 @@
       "arguments": [
         "--no-global-config",
         "--port",
-        "63629",
+        "55372",
         "--database",
         "0-failure.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/bad"
+        "http://127.0.0.1:51481/bad"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:63629",
-      "pid": 37656,
+      "url": "http://127.0.0.1:55372",
+      "pid": 10540,
       "database": "<owned-root>\\runtime\\workspace\\0-failure.sqlite",
-      "requestId": "01M6J943C9RX47D185N359H518",
+      "requestId": "01M6JARSC7CJNX4DF4S8VR1Y0Q",
       "rejection": {
         "status": "rejected",
-        "requestId": "01M6J943C9RX47D185N359H518",
+        "requestId": "01M6JARSC7CJNX4DF4S8VR1Y0Q",
         "error": {
           "code": "bundle_fetch_failed",
           "message": "IPFS acquisition or CID verification failed."
@@ -4046,20 +4047,20 @@
       "arguments": [
         "--no-global-config",
         "--port",
-        "52137",
+        "55380",
         "--database",
         "1-failure.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/oversize"
+        "http://127.0.0.1:51481/oversize"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:52137",
-      "pid": 19540,
+      "url": "http://127.0.0.1:55380",
+      "pid": 24316,
       "database": "<owned-root>\\runtime\\workspace\\1-failure.sqlite",
-      "requestId": "01M6J9449ZJP8F68N16J86RVMK",
+      "requestId": "01M6JARTAB9T65MFFDWXAG32NV",
       "rejection": {
         "status": "rejected",
-        "requestId": "01M6J9449ZJP8F68N16J86RVMK",
+        "requestId": "01M6JARTAB9T65MFFDWXAG32NV",
         "error": {
           "code": "capacity_exceeded",
           "message": "IPFS acquisition exceeds host capacity."
@@ -4077,20 +4078,20 @@
       "arguments": [
         "--no-global-config",
         "--port",
-        "54695",
+        "55391",
         "--database",
         "2-failure.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:54694"
+        "http://127.0.0.1:55390"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:54695",
-      "pid": 33500,
+      "url": "http://127.0.0.1:55391",
+      "pid": 21500,
       "database": "<owned-root>\\runtime\\workspace\\2-failure.sqlite",
-      "requestId": "01M6J946QN9RT0JH3X7ZG8EBGB",
+      "requestId": "01M6JARWEHN89QZGXP0FGRQP2F",
       "rejection": {
         "status": "rejected",
-        "requestId": "01M6J946QN9RT0JH3X7ZG8EBGB",
+        "requestId": "01M6JARWEHN89QZGXP0FGRQP2F",
         "error": {
           "code": "bundle_fetch_failed",
           "message": "IPFS acquisition or CID verification failed."
@@ -4108,20 +4109,20 @@
       "arguments": [
         "--no-global-config",
         "--port",
-        "53451",
+        "60586",
         "--database",
         "3-failure.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/bad"
+        "http://127.0.0.1:51481/bad"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:53451",
-      "pid": 16644,
+      "url": "http://127.0.0.1:60586",
+      "pid": 35224,
       "database": "<owned-root>\\runtime\\workspace\\3-failure.sqlite",
-      "requestId": "01M6J94NZ2T4GBJQEYQKBZ6W3V",
+      "requestId": "01M6JASFMAS0X3GPH4V48D2CB3",
       "rejection": {
         "status": "rejected",
-        "requestId": "01M6J94NZ2T4GBJQEYQKBZ6W3V",
+        "requestId": "01M6JASFMAS0X3GPH4V48D2CB3",
         "error": {
           "code": "bundle_fetch_failed",
           "message": "IPFS acquisition or CID verification failed."
@@ -4139,20 +4140,20 @@
       "arguments": [
         "--no-global-config",
         "--port",
-        "53459",
+        "58270",
         "--database",
         "4-failure.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:57578/oversize"
+        "http://127.0.0.1:51481/oversize"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:53459",
-      "pid": 24812,
+      "url": "http://127.0.0.1:58270",
+      "pid": 2552,
       "database": "<owned-root>\\runtime\\workspace\\4-failure.sqlite",
-      "requestId": "01M6J94QDETJ5N6YBZ9RYTQ60F",
+      "requestId": "01M6JASKQTSY27NX7JVY914NTX",
       "rejection": {
         "status": "rejected",
-        "requestId": "01M6J94QDETJ5N6YBZ9RYTQ60F",
+        "requestId": "01M6JASKQTSY27NX7JVY914NTX",
         "error": {
           "code": "capacity_exceeded",
           "message": "IPFS acquisition exceeds host capacity."
@@ -4170,20 +4171,20 @@
       "arguments": [
         "--no-global-config",
         "--port",
-        "53472",
+        "58282",
         "--database",
         "5-failure.sqlite",
         "--ipfs-gateway-url",
-        "http://127.0.0.1:53471"
+        "http://127.0.0.1:58281"
       ],
       "event": "ready",
-      "url": "http://127.0.0.1:53472",
-      "pid": 51172,
+      "url": "http://127.0.0.1:58282",
+      "pid": 37440,
       "database": "<owned-root>\\runtime\\workspace\\5-failure.sqlite",
-      "requestId": "01M6J94SHRVJ9ME7BWY2EPTT9J",
+      "requestId": "01M6JASP7V04JMYMB5BBQ1BQ45",
       "rejection": {
         "status": "rejected",
-        "requestId": "01M6J94SHRVJ9ME7BWY2EPTT9J",
+        "requestId": "01M6JASP7V04JMYMB5BBQ1BQ45",
         "error": {
           "code": "bundle_fetch_failed",
           "message": "IPFS acquisition or CID verification failed."
@@ -4404,8 +4405,8 @@
   },
   "rawSource": {
     "event": "ready",
-    "url": "http://127.0.0.1:57578",
-    "pid": 48244
+    "url": "http://127.0.0.1:51481",
+    "pid": 19948
   },
   "rpc": {
     "kuboStartedOrInstalled": false,

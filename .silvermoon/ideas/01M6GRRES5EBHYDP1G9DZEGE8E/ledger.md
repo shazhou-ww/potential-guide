@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 验证独立发现与服务配置
-- [ ] **D-S02:** 验证可选 UI 与隔离生命周期
+- [x] **D-S01:** 验证独立发现与服务配置
+- [x] **D-S02:** 验证可选 UI 与隔离生命周期
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 扩展服务无需 JavaScript 配置
-- [ ] **D-AC02:** 可选 UI 与资源隔离可核验
+- [x] **D-AC01:** 扩展服务无需 JavaScript 配置
+- [x] **D-AC02:** 可选 UI 与资源隔离可核验

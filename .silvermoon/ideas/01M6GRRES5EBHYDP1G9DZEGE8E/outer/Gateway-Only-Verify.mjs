@@ -29,7 +29,8 @@ assert.equal(git("rev-parse", "HEAD"), expectedCommit);
 const report = {
   sourceCommit: expectedCommit,
   deploymentBlob: git("rev-parse", "HEAD:.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Deployment.md"),
-  verifiedDeploymentRevision: "09abf9de18c2f3b5667cc115fcd6ad526506210c",
+  verifiedDeploymentRevision: git("rev-parse", "HEAD:.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer"),
+  acceptedInnerRevision: git("rev-parse", "HEAD:.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/inner"),
   platform: process.platform, node: process.version,
   commands: [], graphs: {}, scenarios: [], configurationFailures: [], contentFailures: [],
   lifecycleFailures: [], cleanup: {}, errors: [],
