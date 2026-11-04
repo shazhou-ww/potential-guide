@@ -48,6 +48,7 @@ export const taskBuildSchema = {
       properties: {
         entry: { type: "string" },
         contract: { type: "string" },
+        mode: { enum: ["callback", "explicit"] },
         exportName: { type: "string", pattern: "^(default|[A-Za-z_$][A-Za-z0-9_$]*)$" },
       },
     },
@@ -71,7 +72,7 @@ interface BuildDefinition {
   $schema: string;
   name: string;
   runtime: { minVersion: string };
-  source: { entry: string; contract: string; exportName?: string };
+  source: { entry: string; contract: string; exportName?: string; mode?: "callback" | "explicit" };
   include?: { from: string; to: string }[];
   outDirectory: string;
 }
@@ -330,6 +331,7 @@ export async function readTaskBuild(file: string): Promise<BuildTaskBundleOption
       messageSchema: { $ref: "schemas/2.json" },
     },
     entry,
+    ...(definition.source.mode ? { entryMode: definition.source.mode } : {}),
     ...(definition.source.exportName ? { exportName: definition.source.exportName } : {}),
     resources,
     schemaDocuments: documents,
@@ -338,7 +340,11 @@ export async function readTaskBuild(file: string): Promise<BuildTaskBundleOption
   };
 }
 export async function checkTaskBuild(file: string) {
-  const { contents: _contents, ...result } = await compileTaskBundle(await readTaskBuild(file));
+  const {
+    contents: _contents,
+    metafile: _metafile,
+    ...result
+  } = await compileTaskBundle(await readTaskBuild(file));
   return result;
 }
 export async function buildTask(file: string) {

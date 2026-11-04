@@ -39,20 +39,21 @@ pnpm run clean
 
 `init` defaults to the current directory and honors `--cwd`. It creates
 `.gitignore`, `task.build.yaml`, `src/contract.ts` and `src/main.ts`: a typed Echo callback with
-object input/result and no messages or resources. It needs only TypeBox, not a
-local installation of the CLI or Task SDK.
+object input/result and no messages or resources. The entry explicitly imports
+`runTask` from the public Task SDK and calls it; the CLI need not be installed locally.
 The generated `.gitignore` excludes `node_modules/`, `dist/` and `dist.car`. An existing
 regular `.gitignore` is preserved byte for byte; add these rules yourself if
 needed. Directory or linked `.gitignore` paths are rejected.
 
 Starting at the target directory, `init` searches upward for the nearest
 `package.json`. If found, it reuses that package and adds
-`@sinclair/typebox: "0.34.52"` to `dependencies` only when TypeBox is not already
+`@sinclair/typebox: "0.34.52"` and `@potential-guide/task-sdk: "0.1.0-rc.0"` to
+`dependencies` only when each dependency is not already
 declared in dependencies, devDependencies, optionalDependencies or
 peerDependencies. Existing version specifications and other package fields are
 preserved; it does not change module type or package manager.
 If no ancestor package exists, it creates a private ESM `package.json` in the
-target directory with that dependency.
+target directory with those dependencies.
 
 Only when the task directory has its own `package.json` (new or existing),
 `init` fills in missing `scripts.build` and `scripts.clean`.
@@ -94,7 +95,7 @@ runtime:
 source:
   entry: src/main.ts
   contract: src/contract.ts
-  # exportName: default
+  mode: explicit
 include:
   - from: assets/**/*.json
     to: resources/
@@ -103,7 +104,11 @@ outDirectory: dist
 
 Paths are relative to the build file, use portable `/` separators, and cannot
 escape its directory or traverse links. There is no second author-maintained
-`task.yaml`. `include` and `source.exportName` are optional; unknown fields fail.
+`task.yaml`. `include`, `source.mode` and `source.exportName` are optional; unknown fields fail.
+New templates use `mode: explicit`: the author entry starts the Worker itself.
+Absent `mode` (or `mode: callback`) preserves the old lazy callback-export path,
+including `exportName` (default `default`). Do not combine `exportName` with
+explicit mode. Existing callback tasks need no migration.
 The [machine schema](../../schemas/artifacts/task-build/v1.json) describes the
 exact fields; filesystem and Schema semantics receive additional validation.
 
@@ -123,11 +128,12 @@ export default {
 ```ts
 import type contract from "./contract.js";
 import type { BundleCallback } from "@potential-guide/pguide-task-bundle";
+import { runTask } from "@potential-guide/task-sdk";
 const callback: BundleCallback<typeof contract> = async (input) => ({ text: input.text });
-export default callback;
+runTask(callback);
 ```
 
-Install TypeBox in the author's project. `Static<typeof contract.input>` can
+Install TypeBox and the Task SDK in the author's project. `Static<typeof contract.input>` can
 also be imported from TypeBox directly. Type-only imports do not bundle the
 author library into the Worker. Run the author's TypeScript typecheck: build
 transpiles code but does not replace TypeScript typechecking.
@@ -181,6 +187,16 @@ Author check/build **evaluate the trusted contract module** in the local process
 They are not sandboxes; do not check untrusted source. They bundle but do not
 execute the business callback. Artifact check/publish never evaluate source or
 load the author's contract, TypeBox modules or dependencies.
+
+All build paths precompile input, result and message validators using Ajv
+standalone. The Worker retains automatic validation, projection and payload
+budgets, but contains no general Ajv compiler (small required `ajv/runtime`
+helpers are bundled). Type-only contract imports do not load validators.
+Authors may explicitly import their own runtime validator, including Ajv; that
+is a business dependency, not SDK overhead. Explicit entries can call a local
+wrapper delegating to `runTask` without changing build configuration: the
+builder binds immutable declaration/validator data, never selects wrappers or
+calls `runTask` again. It does not implement `runCheck` or `runProbe`.
 
 ## Selection, output and identity
 

@@ -10,6 +10,14 @@ Use `task.build.yaml`, a TypeBox contract and a typed callback to generate the
 complete self-contained artifact. The SDK has no author-build scripts, tool subpaths
 or author examples; tooling fixtures live with the author CLI.
 
+New entries explicitly `import { runTask } from "@potential-guide/task-sdk"`
+and call `runTask(callback)`. The builder binds the verified declaration and
+standalone validators into the SDK, not through author configuration or
+`workerData`. A custom wrapper may delegate to `runTask` without builder
+recognition or configuration changes.
+Input/result/message validators are precompiled by the author CLI. The Worker
+runtime executes those bound functions without importing the Schema compiler.
+
 `context.log({level, message, fields?})` provides async typed diagnostic receipts,
 independent of business outputs. The sole **v1** declaration includes its dedicated
 channel; the project is unreleased and evolves v1 in place. Removed v2 and future

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, open, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { isBuiltin } from "node:module";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertRuntime,
@@ -12,6 +12,7 @@ import {
 import { encodeContentCar, importContent } from "@potential-guide/ipfs-content/codec";
 import {
   type JsonObject,
+  precompileSchema,
   resolveBundleSchemas,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
@@ -23,6 +24,8 @@ export interface BuildTaskBundleOptions {
   declaration: string | Record<string, unknown>;
   entry: string;
   exportName?: string;
+  /** callback preserves the original lazy exported-callback API. */
+  entryMode?: "callback" | "explicit";
   outDirectory: string;
   /** Exact author-controlled shared Schema bytes, locked by SHA-256 (not Bundle tree Digest). */
   schemas?: readonly { path: string; digest: string }[];
@@ -38,6 +41,8 @@ async function regularFile(path: string): Promise<string> {
   return absolute;
 }
 export async function compileTaskBundle(options: BuildTaskBundleOptions) {
+  if (options.entryMode !== undefined && !["callback", "explicit"].includes(options.entryMode))
+    throw new Error("Invalid Task entry mode.");
   await regularFile(options.entry);
   const source =
     typeof options.declaration === "string"
@@ -81,18 +86,38 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
   if (!/^(?:default|[A-Za-z_$][A-Za-z0-9_$]*)$/.test(exportName))
     throw new Error("Invalid callback export name.");
   const runtime = fileURLToPath(import.meta.resolve("@potential-guide/task-sdk"));
+  const validators = {
+    input: precompileSchema(resolved.inputSchema, true),
+    result: precompileSchema(resolved.resultSchema),
+    message: precompileSchema(resolved.messageSchema),
+  };
+  if (options.entryMode === "explicit" && options.exportName !== undefined)
+    throw new Error("Explicit Task entries cannot select a callback export.");
+  const bindingPath = fileURLToPath(
+    new URL("./binding.js", import.meta.resolve("@potential-guide/task-sdk")),
+  );
+  const bindingPaths = new Set([
+    bindingPath,
+    bindingPath.replace(/\.js$/, ".ts"),
+    resolve(dirname(bindingPath), "..", "dist", "binding.js"),
+    resolve(dirname(bindingPath), "..", "src", "binding.ts"),
+  ]);
   const bundle = await build({
-    stdin: {
-      contents: `import {runTask} from ${JSON.stringify(runtime)};
+    ...(options.entryMode === "explicit"
+      ? { entryPoints: [resolve(options.entry)] }
+      : {
+          stdin: {
+            contents: `import {runTask} from ${JSON.stringify(runtime)};
 runTask(async (input, context) => {
   const {${exportName}: callback} = await import(${JSON.stringify(resolve(options.entry))});
   if (typeof callback !== "function") throw new Error("Task callback export is not a function.");
   return await callback(input, context);
-},${JSON.stringify(resolved)});`,
-      resolveDir: dirname(resolve(options.entry)),
-      sourcefile: "task-entry.js",
-      loader: "js",
-    },
+});`,
+            resolveDir: dirname(resolve(options.entry)),
+            sourcefile: "task-entry.js",
+            loader: "js",
+          },
+        }),
     bundle: true,
     platform: "node",
     target: "node22",
@@ -110,6 +135,49 @@ runTask(async (input, context) => {
       "unsupported-require-call": "error",
       "empty-import-meta": "error",
     },
+    plugins: [
+      {
+        name: "task-build-locked-contract",
+        setup(plugin) {
+          plugin.onLoad({ filter: /[\\/]binding\.[jt]s$/ }, async (args) => {
+            if (!bindingPaths.has(args.path)) {
+              if (!["src", "dist"].includes(basename(dirname(args.path)))) return undefined;
+              const manifest = await readFile(
+                resolve(dirname(args.path), "..", "package.json"),
+                "utf8",
+              ).catch((error: NodeJS.ErrnoException) => {
+                if (error.code === "ENOENT" || error.code === "ENOTDIR") return undefined;
+                throw error;
+              });
+              if (manifest === undefined) return undefined;
+              const candidate: unknown = JSON.parse(manifest);
+              if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
+                throw new Error("Task binding package.json must contain an object.");
+              if (!("name" in candidate) || candidate.name !== "@potential-guide/task-sdk")
+                return undefined;
+            }
+            return {
+              contents: `import input from "task-validator:input";
+import result from "task-validator:result";
+import message from "task-validator:message";
+export const binding={declaration:JSON.parse(${JSON.stringify(JSON.stringify(resolved))}),validators:{input,result,message}};`,
+              loader: "js",
+            };
+          });
+          plugin.onResolve({ filter: /^task-validator:/ }, (args) => ({
+            path: args.path.slice("task-validator:".length),
+            namespace: "task-validator",
+          }));
+          plugin.onLoad({ filter: /.*/, namespace: "task-validator" }, (args) => ({
+            contents: validators[args.path as keyof typeof validators],
+            loader: "js",
+            resolveDir: dirname(
+              fileURLToPath(import.meta.resolve("@potential-guide/task-protocol")),
+            ),
+          }));
+        },
+      },
+    ],
   });
   if (
     bundle.outputFiles.length !== 1 ||
@@ -121,7 +189,7 @@ runTask(async (input, context) => {
   files.set("worker.cjs", Buffer.from(bundle.outputFiles[0]!.contents));
   files.set("task.yaml", Buffer.from(stringify(declaration)));
   const checked = await inspectTaskArtifact(files);
-  return { ...checked, contents: files };
+  return { ...checked, contents: files, metafile: bundle.metafile };
 }
 
 export async function buildTaskBundle(options: BuildTaskBundleOptions) {

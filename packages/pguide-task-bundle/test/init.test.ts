@@ -2,18 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { on } from "node:events";
-import {
-  link,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  realpath,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { link, mkdir, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
@@ -24,8 +13,11 @@ import { initTaskBundle } from "../src/init.js";
 
 const execute = promisify(execFile);
 const typebox = "@sinclair/typebox";
+const sdk = "@potential-guide/task-sdk";
 async function fixture(action: (root: string) => Promise<void>) {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "pguide-task-init-")));
+  const root = resolve(".test-task-init", randomUUID());
+  await mkdir(root, { recursive: true });
+  await writeFile(join(root, "package.json"), '{"private":true}\n');
   try {
     await action(root);
   } finally {
@@ -37,13 +29,22 @@ async function readJson(file: string) {
 }
 test("init creates a standalone minimal package that builds deterministically and runs", async () => {
   await fixture(async (root) => {
-    const target = join(root, "new", "task");
+    const target = root;
+    await writeFile(
+      join(target, "package.json"),
+      JSON.stringify({
+        name: "task-bundle",
+        private: true,
+        type: "module",
+        engines: { node: ">=22.13.0" },
+      }),
+    );
     const initialized = await initTaskBundle(target);
     assert.equal(initialized.directory, target);
     assert.equal(initialized.buildFile, join(target, "task.build.yaml"));
     assert.equal(initialized.packageDirectory, target);
     assert.equal(initialized.packageFile, join(target, "package.json"));
-    assert.equal(initialized.packageCreated, true);
+    assert.equal(initialized.packageCreated, false);
     assert.equal(initialized.dependencyAdded, true);
     assert.equal(initialized.buildScriptAdded, true);
     assert.equal(initialized.cleanScriptAdded, true);
@@ -64,7 +65,7 @@ test("init creates a standalone minimal package that builds deterministically an
       private: true,
       type: "module",
       engines: { node: ">=22.13.0" },
-      dependencies: { [typebox]: "0.34.52" },
+      dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
       scripts: {
         build: "pguide task-bundle build task.build.yaml",
         clean: `node -e "for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })"`,
@@ -75,6 +76,31 @@ test("init creates a standalone minimal package that builds deterministically an
       await realpath(resolve("node_modules", "@sinclair", "typebox")),
       join(target, "node_modules", "@sinclair", "typebox"),
       process.platform === "win32" ? "junction" : "dir",
+    );
+    await mkdir(join(target, "node_modules", "@potential-guide"), { recursive: true });
+    await symlink(
+      await realpath(resolve("node_modules", "@potential-guide", "task-sdk")),
+      join(target, "node_modules", "@potential-guide", "task-sdk"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const main = await readFile(join(target, "src", "main.ts"), "utf8");
+    assert.match(main, /import \{ runTask \} from "@potential-guide\/task-sdk"/);
+    assert.match(main, /import type contract/);
+    assert.match(main, /runTask\(async function echo/);
+    await execute(
+      process.execPath,
+      [
+        resolve("..", "..", "node_modules", "typescript", "bin", "tsc"),
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--module",
+        "NodeNext",
+        "--target",
+        "ES2023",
+        "src/main.ts",
+      ],
+      { cwd: target },
     );
     const checked = await checkTaskBuild(initialized.buildFile);
     const built = await buildTask(initialized.buildFile);
@@ -199,7 +225,7 @@ test("init reuses the nearest ancestor package and preserves unrelated fields an
     assert.equal(result.cleanScriptAdded, false);
     assert.deepEqual(await readJson(packageFile), {
       ...manifest,
-      dependencies: { existing: "workspace:*", [typebox]: "0.34.52" },
+      dependencies: { existing: "workspace:*", [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
     });
     assert.equal(await readFile(outer, "utf8"), '{"private":true}\n');
     assert.equal(await readFile(join(target, "src", "keep.ts"), "utf8"), "keep");
@@ -213,7 +239,7 @@ test("init leaves ancestor scripts and manifest bytes unchanged when TypeBox is 
       packageFile,
       JSON.stringify({
         private: true,
-        devDependencies: { [typebox]: "0.34.52" },
+        devDependencies: { [typebox]: "0.34.52", [sdk]: "^0.1.0-rc.0" },
         scripts: { test: "node --version" },
       }),
     );
@@ -240,7 +266,7 @@ test("init adds clean independently of build and removes only the task output", 
       packageFile,
       JSON.stringify({
         private: true,
-        dependencies: { [typebox]: "0.34.52" },
+        dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
         scripts: { build: "custom-build" },
       }),
     );
@@ -297,7 +323,7 @@ test("init only adds the dependency to ancestor packages without introducing scr
     assert.equal(result.cleanScriptAdded, false);
     assert.deepEqual(await readJson(result.packageFile), {
       private: true,
-      dependencies: { [typebox]: "0.34.52" },
+      dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
     });
   });
 });
@@ -311,7 +337,7 @@ test("init preserves existing TypeBox declarations and manifest bytes", async (t
     await t.test(field, async () => {
       await fixture(async (root) => {
         const packageFile = join(root, "package.json");
-        const source = `${JSON.stringify({ private: true, scripts: { build: "existing-build", clean: "existing-clean" }, [field]: { [typebox]: "catalog:" } }, null, "\t")}\r\n`;
+        const source = `${JSON.stringify({ private: true, scripts: { build: "existing-build", clean: "existing-clean" }, [field]: { [typebox]: "catalog:", [sdk]: "workspace:^" } }, null, "\t")}\r\n`;
         await writeFile(packageFile, source);
         const result = await initTaskBundle(join(root, "task"));
         assert.equal(result.dependencyAdded, false);

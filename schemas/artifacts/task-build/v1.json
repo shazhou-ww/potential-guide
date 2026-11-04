@@ -27,6 +27,7 @@
       "properties": {
         "entry": { "type": "string" },
         "contract": { "type": "string" },
+        "mode": { "enum": ["callback", "explicit"] },
         "exportName": { "type": "string", "pattern": "^(default|[A-Za-z_$][A-Za-z0-9_$]*)$" }
       }
     },
