@@ -1,2 +1,3 @@
 {"type":"setAlias","timestamp":"2026-11-04T13:29:24.830Z","payload":{"alias":"official-ipfs-car-only"}}
 {"type":"submitIdeal","timestamp":"2026-11-04T13:30:55.893Z","payload":{"idealRevision":"95ba1df289fdecbd971464ceca57a0ab8b129a8c"}}
+{"type":"acceptIdeal","timestamp":"2026-11-04T13:42:14.885Z","payload":{"idealRevision":"95ba1df289fdecbd971464ceca57a0ab8b129a8c"}}
