@@ -8,15 +8,22 @@ diagnostics (index/kind/problem ID, not parameter/environment dumps) through
 The generic server installs Engine/HTTP/Storage/Server, **not** SDK, Check or Probe.
 Install `@potential-guide/pguide-task-engine` and run
 `pguide-task-engine --config ./server.yaml` against an independently managed
-Kubo RPC, or select `--ipfs-transport gateway --ipfs-gateway-url http://127.0.0.1:8080`
-for read-only consumption without RPC. A Gateway URL alone does not change the
-default RPC transport; authors still write/pin through RPC.
+read-only Trustless Gateway, or provide `--ipfs-gateway-url http://127.0.0.1:8080`.
+The URL is required: no default node, transport selection or RPC fallback exists.
+Authors still write/pin through RPC. Old service RPC/transport fields and flags
+are rejected; migrate manually without changing author tools.
 See [service configuration](../../docs/task-server.md) for user settings,
 precedence, `--no-global-config` and optional `--ui`.
 The token-free CLI is fixed-loopback and single-scope only.
 The `.mjs` examples are **programmatic composition helpers**, never CLI config
 inputs: import `configureTaskServer` and pass its result to `startTaskServer`
 when custom token authentication or injected clients are required.
+These programmatic helpers require an injected `ipfsClient` or an explicit
+`IPFS_GATEWAY` URL; they no longer default to Kubo RPC. `check-in-process.mjs`
+also requires `IPFS_GATEWAY`. These helper environment variables are not service
+CLI configuration layers; the separate author builder still uses `IPFS_API`.
+Install `@potential-guide/ipfs-content` and `@potential-guide/task-protocol`
+alongside the programmatic helpers and Server/Engine packages they import.
 `check-config.mjs` and `probe-config.mjs` intentionally use that identical
 business-free configuration. Use a new v5 database path; older domains are
 rejected without migration or rewriting their bytes.

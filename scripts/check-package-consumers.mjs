@@ -32,6 +32,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "probe-task",
       [
+        "@potential-guide/ipfs-content",
         "@potential-guide/probe-task",
         "@potential-guide/check-task",
         "@potential-guide/check-artifacts",
@@ -46,6 +47,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-server",
       [
+        "@potential-guide/ipfs-content",
         "@potential-guide/task-engine-server",
         "@potential-guide/task-engine",
         "@potential-guide/task-protocol",
@@ -54,6 +56,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-check",
       [
+        "@potential-guide/ipfs-content",
         "@potential-guide/task-sdk",
         "@potential-guide/check-task",
         "@potential-guide/task-engine-server",
@@ -95,6 +98,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "pguide",
         "@potential-guide/pguide-task-engine",
         "@potential-guide/ipfs-content",
+        "@potential-guide/task-protocol",
         "@potential-guide/task-sdk",
       ],
     ],
@@ -187,7 +191,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     if (label === "task-sdk") {
       await checkTaskSdkConsumer(directory, run);
     }
-    if (label === "task-service") await checkTaskServiceConsumer(directory, run);
+    if (label === "task-service") await checkTaskServiceConsumer(root, directory, run);
     if (label === "bundle-authoring") {
       const bin = join(directory, "node_modules", ".bin");
       const home = join(directory, "home");

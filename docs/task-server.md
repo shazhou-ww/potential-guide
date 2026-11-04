@@ -20,8 +20,7 @@ through existing `pguide.commandDirectories`. Both entries share one parser:
 
 ```powershell
 pguide task-engine --config .\server.yaml --port 0
-pguide-task-engine --no-global-config --database .\new-tasks.sqlite --port 0 --ipfs-rpc-url http://127.0.0.1:5001
-pguide task-engine --no-global-config --ipfs-transport gateway --ipfs-gateway-url http://127.0.0.1:8080
+pguide-task-engine --no-global-config --database .\new-tasks.sqlite --port 0 --ipfs-gateway-url http://127.0.0.1:8080
 pguide task-engine --help --format json
 ```
 
@@ -29,8 +28,7 @@ pguide task-engine --help --format json
 host: localhost
 port: 3000
 database: ./tasks.sqlite
-ipfsRpcUrl: http://127.0.0.1:5001
-ipfsTransport: rpc
+ipfsGatewayUrl: http://127.0.0.1:8080
 scope: local
 ui: true
 uiOptions:
@@ -46,28 +44,28 @@ malformed files and missing explicit files fail. No JavaScript config is importe
 No project service values or environment service overrides are added.
 
 The user file uses complete setting IDs, for example
-`{"task-engine.port":3001,"task-engine.database":"./tasks.sqlite"}`. Settings are
-`task-engine.host`, `.port`, `.database`, `.ipfsRpcUrl`, `.ipfsTransport`,
+`{"task-engine.port":3001,"task-engine.database":"./tasks.sqlite","task-engine.ipfsGatewayUrl":"http://127.0.0.1:8080"}`. Settings are
+`task-engine.host`, `.port`, `.database`,
 `.ipfsGatewayUrl`, `.scope`, `.ui` and
 `.uiOptions`; dots identify complete settings, not nested property paths.
 Other namespaces remain valid shared settings. Objects replace as a whole:
 `uiOptions` must contain exactly host, port and favoritesFile in every layer
 that supplies it. CLI equivalent is `--ui-options '<complete JSON object>'`.
-Use `--ui` / `--no-ui` for an explicit boolean, and `--ipfs-rpc-url` for Kubo
-RPC (not an HTTP Gateway). No `ipfsEndpoint` or `ipfs.rpcUrl` aliases exist.
+Use `--ui` / `--no-ui` for an explicit boolean. No `ipfsEndpoint` or
+`ipfs.rpcUrl` aliases exist.
 
-`ipfsTransport` / `--ipfs-transport` selects `rpc` (default, backward compatible)
-or `gateway`. The latter requires `ipfsGatewayUrl` / `--ipfs-gateway-url`, for example:
+The service is **Gateway-only**. An explicit `ipfsGatewayUrl` /
+`--ipfs-gateway-url` must be supplied by an enabled layer, for example:
 
 ```yaml
-ipfsTransport: gateway
 ipfsGatewayUrl: http://127.0.0.1:8080/content
 ```
 
 Equivalent user settings are
-`{"task-engine.ipfsTransport":"gateway","task-engine.ipfsGatewayUrl":"http://127.0.0.1:8080/content"}`.
-A URL alone never selects a transport. Both URLs accept only HTTP(S) without
-credentials, query or fragment, even when overridden or not selected. Gateway
+`{"task-engine.ipfsGatewayUrl":"http://127.0.0.1:8080/content"}`.
+There is no default node or public Gateway, RPC probe or fallback. Missing URLs
+fail before a database or listener is opened. URLs accept only HTTP(S) without
+credentials, query or fragment, even when overridden. Gateway
 base paths are preserved: `/content` and `/content/` both request
 `/content/ipfs/{cid}?format=raw` with Accept `application/vnd.ipld.raw`.
 Gateway is an independent primary read backend: it never connects or falls back
@@ -76,7 +74,7 @@ redirects, corrupt CIDs and capacity violations fail explicitly.
 Responses are streamed with a 2 MiB/block limit and a 30-second timeout through
 body completion; preparation cancellation aborts reads. Existing verified UnixFS
 export, DAG, file and total protection limits remain in force.
-No local Kubo executable or management API is required in Gateway mode.
+No local Kubo executable or management API is required.
 Authors still import/write/pin with RPC; Gateway does not publish or promise
 availability/persistence. Engine-only and optional UI use the same read backend.
 
@@ -93,8 +91,8 @@ No configuration file or registration is automatically written.
 `--cwd` selects the effective CWD at either entry. CLI paths and the path passed
 to `--config` resolve there. File-provided paths resolve against that file's own
 directory, including paths in uiOptions; overriding another value does not move
-their anchor. Defaults are 127.0.0.1:3000, tasks.sqlite, RPC
-http://127.0.0.1:5001, scope local and UI off. Default UI is 127.0.0.1:4310 with
+their anchor. Defaults are 127.0.0.1:3000, tasks.sqlite,
+scope local and UI off, with no default content endpoint. Default UI is 127.0.0.1:4310 with
 task-favorites.json in effective CWD. Port 0 selects a free port; ready output
 reports actual Engine and optional UI URLs.
 
@@ -112,8 +110,19 @@ It never starts/stops Kubo, manages pins/GC/IPFS_PATH, replaces occupied listene
 or cancels Tasks when a browser closes. Windows forced process termination is
 not graceful cleanup. No system daemon or autostart is installed.
 
+**Breaking change:** service `ipfsRpcUrl`, `ipfsTransport`, the full user IDs
+`task-engine.ipfsRpcUrl` / `task-engine.ipfsTransport`, and CLI flags
+`--ipfs-rpc-url` / `--ipfs-transport` are retired. Remove them and supply a
+read-only Gateway using `ipfsGatewayUrl`, `task-engine.ipfsGatewayUrl` or
+`--ipfs-gateway-url`. Even previously valid or overridden old fields fail with
+migration guidance. No user files are automatically changed. Disabled user
+configuration is not read or validated; project service values remain excluded.
+Author Kubo write/import/pin APIs and programmatic `IpfsClient` injection remain
+available; this removal applies only to service configuration and assembly.
+
 The old `task-engine-server` binary and `.mjs` configuration import path are
-retired. Convert `IPFS_API` to `--ipfs-rpc-url` or `ipfsRpcUrl`,
+retired. Convert service `IPFS_API` usage to `--ipfs-gateway-url` or `ipfsGatewayUrl`
+with a Gateway endpoint (not a Kubo RPC URL),
 `TASK_SERVER_PORT` to `--port`, and `TASK_SERVER_DATABASE` to `--database`.
 Those old example environment variables are not read by the new command.
 The local CLI does not use `TASK_SERVER_TOKEN`; applications needing custom

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { userConfigPath } from "@potential-guide/cli-core";
+import { settingsPackagesPath, userConfigPath } from "@potential-guide/cli-core";
 import { parseArguments, resolveConfig } from "../src/config.js";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -29,46 +29,44 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
   );
   const config = join(directory, "files", "server.yaml");
   const load = (args: string[] = []) =>
-    resolveConfig(parseArguments(["--cwd", directory, ...args]));
+    resolveConfig(
+      parseArguments(["--cwd", directory, "--ipfs-gateway-url", "https://default.test", ...args]),
+    );
+  const missing = () => resolveConfig(parseArguments(["--cwd", directory]));
+  await assert.rejects(missing(), /requires an explicit ipfsGatewayUrl/);
   const initial = await load();
   assert.equal(initial.port, 3000);
   assert.equal(initial.database, join(directory, "tasks.sqlite"));
-  assert.equal(initial.ipfsTransport, "rpc");
-  assert.equal(initial.ipfsGatewayUrl, undefined);
-  assert.equal(
-    (await load(["--ipfs-gateway-url", "https://example.test/base"])).ipfsTransport,
-    "rpc",
-  );
-  await assert.rejects(load(["--ipfs-transport", "gateway"]), /requires ipfsGatewayUrl/);
+  assert.equal(initial.ipfsGatewayUrl, "https://default.test/");
   await writeFile(
     userPath,
     JSON.stringify({
-      "task-engine.ipfsTransport": "gateway",
       "task-engine.ipfsGatewayUrl": "https://user.test/base",
     }),
   );
-  assert.equal((await load()).ipfsGatewayUrl, "https://user.test/base");
+  assert.equal((await missing()).ipfsGatewayUrl, "https://user.test/base");
   await writeFile(
     config,
     JSON.stringify({
-      ipfsTransport: "rpc",
       ipfsGatewayUrl: "https://file.test/base",
     }),
   );
-  assert.equal((await load(["--config", config])).ipfsTransport, "rpc");
-  const gateway = await load([
-    "--config",
-    config,
-    "--ipfs-transport",
-    "gateway",
-    "--ipfs-gateway-url",
-    "https://cli.test/base",
-  ]);
-  assert.equal(gateway.ipfsTransport, "gateway");
+  assert.equal(
+    (await resolveConfig(parseArguments(["--cwd", directory, "--config", config]))).ipfsGatewayUrl,
+    "https://file.test/base",
+  );
+  const gateway = await resolveConfig(
+    parseArguments([
+      "--cwd",
+      directory,
+      "--config",
+      config,
+      "--ipfs-gateway-url",
+      "https://cli.test/base",
+    ]),
+  );
   assert.equal(gateway.ipfsGatewayUrl, "https://cli.test/base");
   for (const bad of [
-    { ipfsTransport: "auto" },
-    { ipfsTransport: null },
     { ipfsGatewayUrl: 1 },
     { ipfsGatewayUrl: "file:///gateway" },
     { ipfsGatewayUrl: "https://u:p@example.test" },
@@ -77,14 +75,7 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
     { ipfsGatewayUrl: "https://example.test/?" },
     { ipfsGatewayUrl: "https://example.test/#" },
   ]) {
-    const override = [
-      "--config",
-      config,
-      "--ipfs-transport",
-      "gateway",
-      "--ipfs-gateway-url",
-      "https://valid.test",
-    ];
+    const override = ["--config", config];
     await writeFile(
       userPath,
       JSON.stringify(
@@ -98,8 +89,65 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
     await writeFile(config, JSON.stringify(bad));
     await assert.rejects(load(override));
   }
-  await writeFile(userPath, '{"task-engine.ipfsTransport":"invalid"}');
-  assert.equal((await load(["--no-global-config"])).ipfsTransport, "rpc");
+  for (const key of ["ipfsTransport", "ipfsRpcUrl"]) {
+    for (const value of [
+      "rpc",
+      "gateway",
+      "auto",
+      "http://127.0.0.1:5001",
+      "",
+      null,
+      false,
+      1,
+      {},
+    ]) {
+      await writeFile(userPath, JSON.stringify({ [`task-engine.${key}`]: value }));
+      await assert.rejects(load(["--config", config]), /retired.*pguide user config/);
+      assert.equal((await load(["--no-global-config"])).ipfsGatewayUrl, "https://default.test/");
+      await writeFile(userPath, "{}");
+      await writeFile(config, JSON.stringify({ [key]: value }));
+      await assert.rejects(load(["--config", config]), /retired.*service file/);
+    }
+  }
+  for (const flag of ["--ipfs-transport", "--ipfs-rpc-url"]) {
+    for (const value of ["rpc", "gateway", "bad", ""])
+      assert.throws(() => parseArguments([`${flag}=${value}`]), /retired.*--ipfs-gateway-url/);
+    assert.throws(() => parseArguments([flag]), /retired/);
+  }
+  const registered = join(directory, "old-settings");
+  await mkdir(registered);
+  await writeFile(
+    join(registered, "package.json"),
+    JSON.stringify({
+      name: "@potential-guide/pguide-task-engine",
+      pguide: { settings: "./settings.json" },
+    }),
+  );
+  await writeFile(
+    join(registered, "settings.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      namespace: "task-engine",
+      settings: {
+        "task-engine.ipfsRpcUrl": { description: "Old RPC", schema: { type: "string" } },
+      },
+    }),
+  );
+  await writeFile(
+    settingsPackagesPath(),
+    JSON.stringify({
+      schemaVersion: 1,
+      packages: [
+        { name: "@potential-guide/pguide-task-engine", root: registered, namespace: "task-engine" },
+      ],
+    }),
+  );
+  await writeFile(userPath, '{"task-engine.ipfsRpcUrl":false}');
+  await assert.rejects(load(), /retired.*pguide user config/);
+  assert.equal((await load(["--no-global-config"])).port, 3000);
+  await writeFile(userPath, "{}");
+  await assert.rejects(load(), /settings registry/);
+  await rm(settingsPackagesPath());
   await writeFile(
     userPath,
     JSON.stringify({

@@ -423,24 +423,8 @@ export const builtInSettings = [
             "minLength": 1
           }
         },
-        "task-engine.ipfsRpcUrl": {
-          "description": "Kubo HTTP(S) RPC base URL, not a Gateway; no URL credentials.",
-          "schema": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "task-engine.ipfsTransport": {
-          "description": "Explicit read transport; defaults to rpc. A Gateway URL alone does not select gateway.",
-          "schema": {
-            "enum": [
-              "rpc",
-              "gateway"
-            ]
-          }
-        },
         "task-engine.ipfsGatewayUrl": {
-          "description": "Read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. Required for gateway transport.",
+          "description": "Required explicit read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. No default node.",
           "schema": {
             "type": "string",
             "minLength": 1
@@ -2229,62 +2213,10 @@ return errors === 0;
 }
 
 export const setting21 = validate31;
-const schema32 = {"enum":["rpc","gateway"]};
-
-function validate31(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
-let vErrors = null;
-let errors = 0;
-if(!((data === "rpc") || (data === "gateway"))){
-const err0 = {instancePath,schemaPath:"#/enum",keyword:"enum",params:{allowedValues: schema32.enum},message:"must be equal to one of the allowed values"};
-if(vErrors === null){
-vErrors = [err0];
-}
-else {
-vErrors.push(err0);
-}
-errors++;
-}
-validate31.errors = vErrors;
-return errors === 0;
-}
-
-export const setting22 = validate32;
-const schema33 = {"type":"string","minLength":1};
-
-function validate32(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
-let vErrors = null;
-let errors = 0;
-if(typeof data === "string"){
-if(func2(data) < 1){
-const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
-if(vErrors === null){
-vErrors = [err0];
-}
-else {
-vErrors.push(err0);
-}
-errors++;
-}
-}
-else {
-const err1 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
-if(vErrors === null){
-vErrors = [err1];
-}
-else {
-vErrors.push(err1);
-}
-errors++;
-}
-validate32.errors = vErrors;
-return errors === 0;
-}
-
-export const setting23 = validate33;
-const schema34 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
+const schema32 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
 const pattern14 = new RegExp("^[a-zA-Z0-9_-]{1,64}$", "u");
 
-function validate33(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+function validate31(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(typeof data === "string"){
@@ -2309,14 +2241,14 @@ vErrors.push(err1);
 }
 errors++;
 }
-validate33.errors = vErrors;
+validate31.errors = vErrors;
 return errors === 0;
 }
 
-export const setting24 = validate34;
-const schema35 = {"type":"boolean"};
+export const setting22 = validate32;
+const schema33 = {"type":"boolean"};
 
-function validate34(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+function validate32(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(typeof data !== "boolean"){
@@ -2329,14 +2261,14 @@ vErrors.push(err0);
 }
 errors++;
 }
-validate34.errors = vErrors;
+validate32.errors = vErrors;
 return errors === 0;
 }
 
-export const setting25 = validate35;
-const schema36 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
+export const setting23 = validate33;
+const schema34 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
 
-function validate35(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+function validate33(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(data && typeof data == "object" && !Array.isArray(data)){
@@ -2385,7 +2317,7 @@ errors++;
 if(data.host !== undefined){
 let data0 = data.host;
 if(!(((data0 === "127.0.0.1") || (data0 === "localhost")) || (data0 === "::1"))){
-const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema36.properties.host.enum},message:"must be equal to one of the allowed values"};
+const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema34.properties.host.enum},message:"must be equal to one of the allowed values"};
 if(vErrors === null){
 vErrors = [err4];
 }
@@ -2466,7 +2398,7 @@ vErrors.push(err10);
 }
 errors++;
 }
-validate35.errors = vErrors;
+validate33.errors = vErrors;
 return errors === 0;
 }
 
@@ -2491,10 +2423,8 @@ export const builtInValidators = {
   "task-engine.host": setting17,
   "task-engine.port": setting18,
   "task-engine.database": setting19,
-  "task-engine.ipfsRpcUrl": setting20,
-  "task-engine.ipfsTransport": setting21,
-  "task-engine.ipfsGatewayUrl": setting22,
-  "task-engine.scope": setting23,
-  "task-engine.ui": setting24,
-  "task-engine.uiOptions": setting25,
+  "task-engine.ipfsGatewayUrl": setting20,
+  "task-engine.scope": setting21,
+  "task-engine.ui": setting22,
+  "task-engine.uiOptions": setting23,
 };

@@ -14,16 +14,8 @@
       "description": "SQLite filename, relative to the source file directory.",
       "schema": { "type": "string", "minLength": 1 }
     },
-    "task-engine.ipfsRpcUrl": {
-      "description": "Kubo HTTP(S) RPC base URL, not a Gateway; no URL credentials.",
-      "schema": { "type": "string", "minLength": 1 }
-    },
-    "task-engine.ipfsTransport": {
-      "description": "Explicit read transport; defaults to rpc. A Gateway URL alone does not select gateway.",
-      "schema": { "enum": ["rpc", "gateway"] }
-    },
     "task-engine.ipfsGatewayUrl": {
-      "description": "Read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. Required for gateway transport.",
+      "description": "Required explicit read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. No default node.",
       "schema": { "type": "string", "minLength": 1 }
     },
     "task-engine.scope": {

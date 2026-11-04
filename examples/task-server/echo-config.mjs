@@ -1,4 +1,4 @@
-import { createIpfsClient } from "@potential-guide/task-engine";
+import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
 import { TaskError } from "@potential-guide/task-protocol";
 
 export default function configure() {
@@ -12,7 +12,9 @@ export default function configure() {
 }
 
 export async function configureTaskServer({ token, port = 0, database, ipfsClient }) {
-  ipfsClient ??= await createIpfsClient(process.env.IPFS_API ?? "http://127.0.0.1:5001");
+  if (!ipfsClient && !process.env.IPFS_GATEWAY)
+    throw new Error("Set IPFS_GATEWAY to a read-only Gateway URL or inject ipfsClient.");
+  ipfsClient ??= createIpfsGatewayClient(process.env.IPFS_GATEWAY);
   return {
     port,
     database,

@@ -33,7 +33,7 @@ function capture(entry: string, args: string[], cwd: string, env: NodeJS.Process
   });
 }
 test("standalone and pguide discovery, --config, --cwd, isolation and foreground shutdown", {
-  timeout: 120_000,
+  timeout: 180_000,
 }, async (t) => {
   await mkdir(join(root, ".cache"), { recursive: true });
   const directory = await mkdtemp(join(root, ".cache", "service-cli-"));
@@ -66,7 +66,7 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
   );
   await writeFile(
     join(cwd, "server.yaml"),
-    "port: 0\ndatabase: owned.sqlite\nipfsRpcUrl: http://127.0.0.1:1\n",
+    "port: 0\ndatabase: owned.sqlite\nipfsGatewayUrl: http://127.0.0.1:1\n",
   );
   for (const [entry, prefix] of [
     [cli, []],
@@ -82,17 +82,46 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
     assert.equal(help.code, 0, help.stderr + help.stdout);
     assert.equal(JSON.parse(help.stdout).globalConfig, userFile);
     assert.match(help.stdout, /Project service settings are never read/);
-    assert.match(help.stdout, /--ipfs-transport/);
+    assert.doesNotMatch(help.stdout, /ipfsTransport|ipfsRpcUrl|--ipfs-transport|--ipfs-rpc-url/);
     assert.match(help.stdout, /--ipfs-gateway-url/);
-    assert.equal(JSON.parse(help.stdout).defaults.ipfsTransport, "rpc");
+    assert.equal(JSON.parse(help.stdout).defaults.ipfsGatewayUrl, undefined);
     const matrix = join(cwd, "gateway.json");
+    for (const key of ["ipfsRpcUrl", "ipfsTransport"]) {
+      for (const value of ["rpc", "gateway", null, false]) {
+        for (const source of ["user", "file"]) {
+          await writeFile(
+            userFile,
+            JSON.stringify(source === "user" ? { [`task-engine.${key}`]: value } : {}),
+          );
+          await writeFile(matrix, JSON.stringify(source === "file" ? { [key]: value } : {}));
+          const result = await capture(
+            entry,
+            [
+              ...prefix,
+              "--cwd",
+              cwd,
+              "--config",
+              matrix,
+              "--ipfs-gateway-url",
+              "https://valid.test",
+            ],
+            directory,
+            env,
+          );
+          assert.notEqual(result.code, 0);
+          assert.match(result.stderr + result.stdout, /retired.*--ipfs-gateway-url/);
+          assert.doesNotMatch(result.stdout, /"event":"ready"/);
+          await assert.rejects(readFile(join(cwd, "tasks.sqlite")));
+        }
+      }
+    }
     for (const [userValues, fileValues, flags, expected] of [
-      [{}, {}, ["--ipfs-transport", "gateway"], /requires ipfsGatewayUrl/],
+      [{}, {}, [], /requires an explicit ipfsGatewayUrl/],
       [
         { "task-engine.ipfsTransport": "invalid" },
         {},
-        ["--ipfs-transport", "rpc"],
-        /configuration|config/,
+        ["--ipfs-gateway-url", "https://valid.test"],
+        /retired.*--ipfs-gateway-url/,
       ],
       [
         { "task-engine.ipfsGatewayUrl": "file:///bad" },
@@ -100,7 +129,16 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
         ["--ipfs-gateway-url", "https://valid.test"],
         /configuration|config/,
       ],
-      [{}, { ipfsTransport: "invalid" }, ["--ipfs-transport", "rpc"], /ipfsTransport/],
+      [{}, { ipfsTransport: "invalid" }, ["--ipfs-gateway-url", "https://valid.test"], /retired/],
+      [
+        { "task-engine.ipfsRpcUrl": "http://127.0.0.1:5001" },
+        {},
+        ["--ipfs-gateway-url", "https://valid.test"],
+        /retired/,
+      ],
+      [{}, { ipfsRpcUrl: null }, ["--ipfs-gateway-url", "https://valid.test"], /retired/],
+      [{}, {}, ["--ipfs-transport", "gateway"], /retired/],
+      [{}, {}, ["--ipfs-rpc-url", "http://127.0.0.1:5001"], /retired/],
       [
         {},
         { ipfsGatewayUrl: "https://user:password@example.test" },
@@ -120,6 +158,7 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
       assert.match(result.stderr + result.stdout, expected);
       assert.doesNotMatch(result.stdout, /"event":"ready"/);
       assert.doesNotMatch(result.stderr + result.stdout, /password@example/);
+      await assert.rejects(readFile(join(cwd, "tasks.sqlite")));
     }
     await writeFile(userFile, "{malformed");
     const invalid = await capture(
@@ -169,9 +208,9 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
     if (entry === pguide) {
       await writeFile(
         userFile,
-        '{"task-engine.database":"user-owned.sqlite","task-engine.port":3456}',
+        '{"task-engine.database":"user-owned.sqlite","task-engine.port":3456,"task-engine.ipfsGatewayUrl":"http://127.0.0.1:2"}',
       );
-      await writeFile(join(cwd, "server.yaml"), "port: 2345\nipfsRpcUrl: http://127.0.0.1:1\n");
+      await writeFile(join(cwd, "server.yaml"), "port: 2345\nipfsGatewayUrl: http://127.0.0.1:1\n");
     }
     const child = spawn(
       process.execPath,
@@ -298,6 +337,8 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
         String(engineAddress.port),
         "--database",
         "failed-startup.sqlite",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:1",
         "--ui",
         "--ui-options",
         JSON.stringify({ host: "127.0.0.1", port: address.port, favoritesFile: "favorites.json" }),

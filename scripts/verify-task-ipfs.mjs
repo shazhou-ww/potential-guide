@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { createIpfsClient } from "../packages/ipfs-content/dist/index.js";
+import { createIpfsClient, createIpfsGatewayClient } from "../packages/ipfs-content/dist/index.js";
 import { newId } from "../packages/task-engine/dist/index.js";
 import { MemoryStore } from "../packages/task-engine/dist/testing.js";
 import { TaskClient } from "../packages/task-engine-http/dist/index.js";
@@ -76,7 +76,7 @@ try {
   await rm(join(directory, "fixture.bin"));
   const options = {
     database: join(directory, "facts.sqlite"),
-    ipfsClient,
+    ipfsClient: createIpfsGatewayClient(gateway.href),
     port: 0,
     authorize: () => true,
     resolveCaller: () => ({ scope: "proof", subject: "local" }),
@@ -153,7 +153,7 @@ try {
       root,
       resourceBytes: resource.length,
       reproducibleImport: true,
-      rpcAndVerifiedGateway: true,
+      authorRpcAndGatewayReads: true,
       sourceIndependentWorker: true,
       streamChunks: task.result.chunks,
       durableHttpHistory: true,

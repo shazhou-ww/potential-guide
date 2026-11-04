@@ -240,12 +240,12 @@ prepare an ordinary application entry there (not a CLI configuration module):
 
 ```js
 import { TaskError } from "@potential-guide/task-protocol";
-import { createIpfsClient } from "@potential-guide/ipfs-content";
+import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 const service = await startTaskServer({
   host: "127.0.0.1", port: 3000,
   database: "operator-v5.sqlite",
-  ipfsClient: await createIpfsClient("http://127.0.0.1:5001"),
+  ipfsClient: createIpfsGatewayClient("http://127.0.0.1:8080"),
   logs: { enabled: true, entryBytes: 16384, runBytes: 1048576,
     runEntries: 2000, totalBytes: 67108864, maxRuns: 10000,
     retentionMs: 86400000, pageSize: 100, maxSubscriptions: 128 },

@@ -39,6 +39,7 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
   });
   const memory = new MemoryIpfsClient();
   await importTaskBundle(built.directory, memory);
+  assert.ok(memory.pins.has(built.cid), "Author import still pins the published root.");
   let gatewayReads = 0;
   let rpcReads = 0;
   const source = createServer((request, response) => {
@@ -66,12 +67,8 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
       directory,
       "--port",
       "0",
-      "--ipfs-transport",
-      "gateway",
       "--ipfs-gateway-url",
       `${url}/gateway`,
-      "--ipfs-rpc-url",
-      `${url}/rpc`,
       "--ui-options",
       '{"host":"127.0.0.1","port":0,"favoritesFile":"favorites.json"}',
     ]),
@@ -194,7 +191,7 @@ test("explicit local Caller scope and browser request policy", () => {
   );
 });
 
-test("RPC adapter uses configured Kubo, UI HTTP boundary and owned rollback/close", async (t) => {
+test("author RPC helper remains available; Gateway service keeps UI HTTP and owned rollback/close", async (t) => {
   await mkdir(join(root, ".cache"), { recursive: true });
   const directory = await mkdtemp(join(root, ".cache", "service-runtime-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -225,7 +222,7 @@ test("RPC adapter uses configured Kubo, UI HTTP boundary and owned rollback/clos
       directory,
       "--port",
       "0",
-      "--ipfs-rpc-url",
+      "--ipfs-gateway-url",
       rpc,
       "--ui-options",
       '{"host":"127.0.0.1","port":0,"favoritesFile":"favorites.json"}',
@@ -310,6 +307,24 @@ test("RPC adapter uses configured Kubo, UI HTTP boundary and owned rollback/clos
   const restarted = await startService(rollbackConfig);
   await Promise.all([restarted.close(), restarted.close()]);
   const invalidDatabase = join(directory, "must-not-open.sqlite");
+  const { ipfsGatewayUrl: _url, ...missingGateway } = config;
+  await assert.rejects(
+    startService({
+      ...missingGateway,
+      port: Number(new URL(engine.url).port),
+      database: invalidDatabase,
+    } as typeof config),
+    /requires an explicit ipfsGatewayUrl/,
+  );
+  await assert.rejects(access(invalidDatabase));
+  await assert.rejects(fetch(`${engine.url}/tasks`));
+  for (const key of ["ipfsRpcUrl", "ipfsTransport"]) {
+    await assert.rejects(
+      startService({ ...config, database: invalidDatabase, [key]: "rpc" }),
+      /retired/,
+    );
+    await assert.rejects(access(invalidDatabase));
+  }
   await assert.rejects(
     startService({
       ...config,

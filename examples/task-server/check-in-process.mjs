@@ -1,4 +1,5 @@
-import { createIpfsClient, createTaskEngine, newId } from "@potential-guide/task-engine";
+import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
+import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { parseBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 
@@ -8,10 +9,12 @@ if (!bundleReference || !url || !digest)
     "Usage: node check-in-process.mjs <bundle-cid-or-json> <checker-url> <checker-digest>",
   );
 const caller = { scope: "example", subject: "example" };
+const gatewayUrl = process.env.IPFS_GATEWAY;
+if (!gatewayUrl) throw new Error("Set IPFS_GATEWAY to an explicit read-only Gateway URL.");
 const store = new MemoryStore();
 const engine = createTaskEngine({
   store,
-  ipfsClient: await createIpfsClient(process.env.IPFS_API ?? "http://127.0.0.1:5001"),
+  ipfsClient: createIpfsGatewayClient(gatewayUrl),
   authorize: (who, _operation, scope) => who.scope === scope && who.subject === "example",
   limits: { maxPayloadBytes: 8 * 1024 * 1024 },
 });
