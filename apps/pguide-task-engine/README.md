@@ -25,3 +25,9 @@ The package depends on the public Web UI application package, including its
 server runtime and browser assets; no source-checkout/private-app dependency is
 required. Without `--ui` no UI listener is started. Engine/UI communicate through
 public HTTP, not an Engine object or SQLite access.
+
+The package-owned `objectives.yaml` permits `@potential-guide/task-sdk` only for
+the existing development dependency that authors standard Bundle fixtures in
+service tests, following the Web UI application's declaration. It is not a
+production dependency or a service runtime import; no repository-wide dependency
+exception is required.

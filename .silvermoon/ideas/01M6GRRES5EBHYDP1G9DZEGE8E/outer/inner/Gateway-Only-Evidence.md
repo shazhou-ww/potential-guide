@@ -149,3 +149,94 @@ alone is not a violation.`；归档和展开目录随后删除，未改动该技
 提交前 snapshot check 使用的共享本地 `origin/main` tracking ref 已推进到
 `a6067e7b9cf4a320cddae4a539f9ffb4d6b738da`；本 agent 没有 fetch、merge 或 push。
 代码与归档基线仍为本节列出的初始 HEAD，父层负责后续并发集成、同步与审阅。
+
+## 2026-11-04：补齐服务测试依赖的包所有者声明
+
+父层在 `47a75462aab35afb2732b4a92ff11b155cc5dcd4` 的完整检查中发现：
+原 skill 分类修复后，真实仓库 layer 2 显露本次新增的
+`apps/pguide-task-engine/package.json` devDependency `@potential-guide/task-sdk`
+未被包自己的 `allows` 声明。该遗漏属于本次 Gateway 测试装配，不能沿用上文
+skill 分类的历史基线将它放行。
+
+修复只在 `apps/pguide-task-engine/objectives.yaml` 的所有者意图中增加这一个
+精确目标，并说明 SDK 只供服务测试构建标准 Bundle。prior art 是同层
+`apps/task-engine-web-ui/objectives.yaml` 对其 SDK 测试依赖的所有者声明。
+包主体 schema 没有按 dependency kind 划分的 allows 字段；现有 devDependency
+保持原样，没有将 SDK 加入 production dependencies，也不增加根级
+`dependencyExceptions`、循环豁免或修改检查器/阈值。README 同步说明此边界。
+运行端源码、manifest、lockfile、settings 与生成 runtime 均未修改，不需要安装仓库依赖。
+
+先将四个 D-* 项重置为未完成，再补充本 Inner 证据；父层须重新同步并处理精确 Inner
+revision。已有 Outer JSON 的 sourceCommit 和结果未改写，仍只证明 `741e77ef...`。
+并发 main 的其他 Idea 契约通过普通 merge 保留，没有自行编辑其文件或事件。
+
+### 定向检查与剩余发现的归属
+
+执行：
+
+```powershell
+pnpm exec turbo run test --filter=@potential-guide/objective-monorepo-standard --filter=@potential-guide/pguide-task-engine --filter=@potential-guide/ipfs-content --filter=@potential-guide/task-sdk --filter=@potential-guide/task-engine-server --force
+```
+
+退出 1：30/32 tasks、0 cached，`1m1.926s`。真实仓库检查已经不再报告服务 SDK 方向，
+而在更后面的 `packages/task-engine` 上遇到另一条旧方向遗漏：
+production dependency `@potential-guide/ipfs-content` 未列入该包 `allows`。
+Objective 套件 59/60；IPFS 5/5、SDK 15/15、Server 15/15。
+Turbo 提前终止时服务套件尚无完整结果，不将这轮算作 40/40 通过。
+
+为避免“首个 assertion”掩盖后续问题，临时诊断逐个收集 37 个真实
+`checkPackage(wire, 2)` 的结果，不以诊断聚合器替代现有测试断言：
+服务包为 `pass`，35 包通过，仅 `task-engine` 和 `task-sdk` 各有同一条
+production `ipfs-content` 方向遗漏。未改动任何生产检查器。
+
+这两条剩余发现与本次服务测试依赖分开归属：
+
+```powershell
+git diff 2d4185605cb373d9748dc510363022e935bc1bd6 HEAD -- packages\task-engine\objectives.yaml packages\task-engine\package.json packages\task-sdk\objectives.yaml packages\task-sdk\package.json
+git blame -L 34,37 -- packages\task-engine\package.json
+git blame -L 42,44 -- packages\task-sdk\package.json
+```
+
+第一条无差异；后两条均将 `ipfs-content` 的加入定位到先于本任务基线的
+`6471f793045bec2f804b41c9458d85e93d60b697`（CID-addressed Bundle 实施）。
+因此不扩大此次修复去改其他包所有者声明，也不宣称剩余全库检查通过。
+
+随后先运行完整检查，再独立完成 Gateway/作者/API 回归，避免前轮 Turbo 取消的影响：
+
+```powershell
+pnpm check
+pnpm exec turbo run test --filter=@potential-guide/pguide-task-engine --filter=@potential-guide/ipfs-content --filter=@potential-guide/task-sdk --filter=@potential-guide/task-engine-server --force
+```
+
+定向回归退出 0：17/17 tasks、0 cached，`1m23.214s`；服务 5/5、IPFS 5/5、
+SDK 15/15、Server 15/15，共 40/40 实际重跑。`pnpm check` 本轮独立执行退出 1：
+build/layers、format、lint、typecheck 全部通过；Turbo test 69/74 tasks、
+68 cached、`58.32s`，唯一失败 task 为 `objective-monorepo-standard#test`，
+其首个 assertion 正是上述已有 `task-engine -> ipfs-content` 方向遗漏。
+完整串联命令因此没有进入后续全量 pack，不宣称它通过；原 skill 分类错误未复现。
+两条命令实际先执行完整检查、待结束后再重跑定向回归，没有同时进行构建/服务测试。
+
+### 本轮 packed 检查与确切缓存恢复
+
+在所有构建/测试结束后执行 `node scripts\check-packages.mjs --task-service`。
+首次退出 1：重新观察到已无对应源码的
+`packages/task-engine-server/dist/main.js`、`main.js.map`、`main.d.ts`、
+`main.d.ts.map` 共四个旧缓存产物；pack 检查在查找 `src/main.tsx` 时明确得到
+`ENOENT`，不是 Gateway 执行失败。本轮没有观察到 Windows `EPERM`。
+
+确认 `src/main.{ts,tsx,js,jsx}` 均不存在后，仅删除上述四个确切生成文件
+（删除数 4、剩余 0），不 clean workspace、不删除其他缓存或 consumer，
+然后重跑完全相同的 packed 命令：
+
+```powershell
+node scripts\check-packages.mjs --task-service
+```
+
+重试退出 0：5 selected / 22 internal packages；两个真实安装入口 ×
+用户/文件/CLI/禁用用户层均经 Gateway 执行 Bundle，Engine/UI HTTP assets、
+owned exit cleanup、无 RPC，以及既有作者/helper 断言通过。
+没有为缓存残留加入产品 workaround，也没有把首次失败计作成功。
+
+本轮实际变更仅为服务包 owner declaration、README、本 Inner 补充和 D-* 重置；
+历史 Outer 结果与其他 Idea 内容不变。本补充形成新的 Inner revision，
+由父层重新提交/验收并决定 Outer 复核范围；不追加事件、不 push。
