@@ -34,7 +34,8 @@
   "dependencies": {
     "@helia/http": "catalog:",
     "@helia/unixfs": "catalog:",
-    "helia": "catalog:",
+    "@helia/block-brokers": "catalog:",
+    "@helia/routers": "catalog:",
     "blockstore-core": "catalog:",
     "multiformats": "catalog:",
     "ipfs-unixfs-exporter": "catalog:",

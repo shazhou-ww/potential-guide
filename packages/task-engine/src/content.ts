@@ -1,7 +1,8 @@
-import { withHTTP } from "@helia/http";
+import { trustlessGateway } from "@helia/block-brokers";
+import { createHeliaHTTP } from "@helia/http";
+import { httpGatewayRouting } from "@helia/routers";
 import { unixfs } from "@helia/unixfs";
 import { MemoryBlockstore } from "blockstore-core";
-import { createHeliaLight } from "helia";
 import { exporter, type ExportContentOptions, type UnixFSEntry } from "ipfs-unixfs-exporter";
 import { CID } from "multiformats/cid";
 
@@ -11,6 +12,19 @@ export interface IpfsClient {
 }
 export interface GatewayClientOptions {
   timeoutMs?: number;
+}
+function isolatedNodeOptions() {
+  return {
+    libp2p: {
+      services: {},
+      addresses: { listen: [] },
+      transports: [],
+      connectionEncrypters: [],
+      streamMuxers: [],
+      peerDiscovery: [],
+    },
+    routers: [],
+  };
 }
 /** Only this configured gateway; no delegated routing, libp2p, public fallback or redirects. */
 export function createIpfsGatewayClient(
@@ -38,33 +52,22 @@ export function createIpfsGatewayClient(
           ...(request.signal ? [request.signal] : []),
         ]);
         signal.throwIfAborted();
-        // Helia 7.1.16's routing queue does not finish an empty primary-router list.
-        // This local empty provider source disables discovery without that deadlock.
-        const node = withHTTP(
-          createHeliaLight({
-            routers: [
-              {
-                name: "no-discovery",
-                async *findProviders() {
-                  yield* [];
-                },
-              },
-            ],
-          }),
-          {
-            delegatedRouters: [],
-            recursiveGateways: [endpoint.href],
-            allowInsecure: endpoint.protocol === "http:",
-            allowLocal: true,
-            transformRequestInit: (init) => ({
-              ...init,
-              redirect: "error",
-              credentials: "omit",
-              signal: AbortSignal.any([signal, ...(init.signal ? [init.signal] : [])]),
+        const node = await createHeliaHTTP({
+          ...isolatedNodeOptions(),
+          routers: [httpGatewayRouting({ gateways: [endpoint.href], shuffle: false })],
+          blockBrokers: [
+            trustlessGateway({
+              allowInsecure: endpoint.protocol === "http:",
+              allowLocal: true,
+              transformRequestInit: (init) => ({
+                ...init,
+                redirect: "error",
+                credentials: "omit",
+                signal: AbortSignal.any([signal, ...(init.signal ? [init.signal] : [])]),
+              }),
             }),
-          },
-        );
-        await node.start();
+          ],
+        });
         try {
           const parts: Uint8Array[] = [];
           for await (const part of node.blockstore.get(CID.parse(cid), { signal }))
@@ -97,7 +100,8 @@ export function contentStore(client: IpfsClient, options: ContentAccessOptions) 
         yield retained;
         return;
       }
-      const node = createHeliaLight({
+      const node = await createHeliaHTTP({
+        ...isolatedNodeOptions(),
         blockBrokers: [
           () => ({
             name: "caller-read-port",
@@ -111,7 +115,6 @@ export function contentStore(client: IpfsClient, options: ContentAccessOptions) 
           }),
         ],
       });
-      await node.start();
       let bytes: Uint8Array;
       try {
         const parts: Uint8Array[] = [];

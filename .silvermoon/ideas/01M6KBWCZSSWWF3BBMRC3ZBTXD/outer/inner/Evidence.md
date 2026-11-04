@@ -2,10 +2,10 @@
 
 ## 官方依赖与归属
 
-- 通过 npmx.dev 核对 `@helia/http@4.0.8`、`helia@7.1.16`、`@helia/unixfs@8.0.9` 的已发布版本及 API；版本统一进入 pnpm catalog。未使用 npm registry 做包研究。
+- 包研究仅使用 npmx.dev，实际安装采用普通 pnpm。最终锁定 `@helia/http@3.0.4`、`@helia/block-brokers@5.2.4`、`@helia/routers@4.0.6` 和 `@helia/unixfs@8.0.9`，版本统一进入 pnpm catalog。
 - Bundle 的 `src/car.ts` 直接使用官方 UnixFS、Helia CAR、IPLD CAR 和 multiformats；本地仅保留离线容量、完整 DAG、规范文件树和格式准入。没有节点、网络、上传或 pin 装配。
-- Engine 的 `src/content.ts` 使用 `withHTTP(createHeliaLight())` 和官方 UnixFS。静态 Gateway 是唯一网络来源，delegated routers 显式为空，无 libp2p、公共 fallback 或重定向。
-- Helia 7.1.16 在 primary router 列表为空时存在队列不结束的实际行为；本地空 provider router 只负责让官方路由器结束这个空发现阶段，不发现节点、不发网络请求。受控 Gateway 的成功、404、损坏、超大响应、取消及 Worker 测试均经过此真实链路。
+- Engine 的 `src/content.ts` 使用独立 `createHeliaHTTP` 工厂和官方 UnixFS。清空默认 delegated 服务、监听地址、libp2p transports、stream muxers 和 peer discovery，只使用静态 Gateway router 与 trustless broker。官方 HTTP-only 客户端内部仍有 libp2p 身份对象，但没有 P2P 传输、发现、公共 fallback 或重定向。
+- 首轮准确候选 CI [`41854155066`](https://github.com/shazhou-ww/potential-guide/actions/runs/41854155066) 发现完整 `helia@7.1.16` 根入口会加载未使用的 libp2p HTTP/undici 8，导致最低支持版本 Node 22.13 导入失败。因此改用独立官方 HTTP-only 工厂，而不是提升引擎要求或依赖仅在本仓库生效的 overrides。最初 Helia 7 空 primary router 的本地 workaround 随该试验实现一并移除。
 - `ipfs-content` 设为 private，只保留历史回归夹具；Bundle、Engine、service 和所有 packed 生产闭包均不依赖它。Engine 的显式离线测试夹具由官方 UnixFS 生成内容，不承担上传或 pin。
 
 ## 行为与迁移边界
@@ -24,12 +24,13 @@
 - Windows：`pnpm typecheck` 的 38 个 workspace 及根测试类型检查通过；生产依赖层检查通过。
 - Windows：Engine 全套 193 项测试通过，覆盖 Task 准入、取消、Worker 生命周期、缓存与官方 Gateway 读取；还验证了按需模式在资源缺失时 accepted 后 Run 失败并回收，完整预取则在 Task 创建前 rejected。
 - Windows：`node --test scripts/task-engine-contracts.test.mjs scripts/release-packages.test.mjs`，8 项通过。
+- Node 22 兼容性调整后，受控 Gateway/按需与预取/真实 Worker 的 8 项针对性测试重新通过，根类型检查与 8 项依赖及发布清单断言重新通过；Engine 生产依赖树不再包含 undici。
 - Windows：`node scripts/check-packages.mjs --task-service` 通过；真实 packed 安装的两个 CLI 入口分别经过 user/file/CLI/禁用 user 配置层，经受控 Gateway 执行自包含 Worker 并读取嵌套的 600000 字节资源，无 RPC。
 - Windows：`node scripts/check-packages.mjs --task-sdk` 通过；离线 CAR 构建、移除作者来源、依赖可见/不可见控制及无 node_modules Worker 消费通过。
 - Windows：`node scripts/check-packages.mjs --structure` 通过；候选不包含 ipfs-content 生产发布包。
 - Windows：`node scripts/check-packages.mjs --task-bundles` 通过；独立生产宿主执行自包含 Check/Probe，真实负业务结果、诊断、历史和证据保留通过，作者 node_modules 不可见。
 - Windows 原生 `pnpm check` 已实际执行，未跳过测试；Bundle 的 7 个既有符号链接场景在创建文件链接时遇到 `EPERM`。未修改断言或添加跳过规则。
-- 在仓库自有验证副本中，WSL 的 `pnpm --filter @potential-guide/pguide-task-bundle exec node --import tsx --test "test/*.test.ts"` 完整执行 Bundle 108 项断言，108 通过、0 跳过，包括上述全部符号链接场景。验证副本的 73 个候选文件与工作树逐一比较 SHA-256，未发现差异；副本及运行 scratch 已清理。
+- 在仓库自有验证副本中，WSL 的 `pnpm --filter @potential-guide/pguide-task-bundle exec node --import tsx --test "test/*.test.ts"` 完整执行 Bundle 108 项断言，108 通过、0 跳过，包括上述全部符号链接场景。当次验证副本的 73 个候选文件与工作树逐一比较 SHA-256，未发现差异；副本及运行 scratch 已清理。随后按最低 Node 版本 CI 反馈调整了 HTTP-only 工厂，最终候选以新的完整 CI 结果为准。
 - WSL/NTFS 仍不能替代原生 Linux 完整检查：大小写碰撞断言遇到大小写不敏感的挂载语义，tsx CLI 的 Unix socket 也不受该项目路径支持。没有修改系统权限、挂载或测试断言来伪造通过；完整 `pnpm check` 继续通过既有 Ubuntu CI 对准确候选 commit 验证，结果待补齐。
 - packed 验证期间 pnpm 共享 store 出现 SQLite 损坏错误；未删除或修复共享数据，改用已核实生效的项目本地 `pnpm_config_store_dir`/`pnpm_config_cache_dir` 后验证通过。恢复时不要使用 pnpm 11 已忽略的旧 `npm_config_*` 变量。
 
@@ -38,7 +39,7 @@
 | 文件 | SHA-256 |
 | --- | --- |
 | `packages/pguide-task-bundle/src/car.ts` | `d16d51199d58ef6ea459534b1fb94e99ee62c5b1c91a269d98c30fecd21d2b94` |
-| `packages/task-engine/src/content.ts` | `b76365768bd5d806604cf3db374196a2ef0593b717a6c9a26b94c8a8e76592ca` |
+| `packages/task-engine/src/content.ts` | `f6fc18dcc3bda1fdc45f4364cba42a4c762a68d9f18e746ef88507795b612e19` |
 | `packages/task-engine/src/bundle.ts` | `c11b82bcc9504a795e0d1d1bf11a9041221c6a7d6059f07325741cd2d0d289c3` |
 | `packages/task-engine/test/gateway-resources.test.ts` | `09bb1be435e9ccb1394fe4534865814ec4e8535d2d4672981c6ff858783f1201` |
 

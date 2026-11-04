@@ -6,7 +6,7 @@
 
 针对拟采用的已发布版本验证 HTTP-only Helia 与 UnixFS 文件读取，关闭非配置路由和公共回退。核对路径前缀、取消、流控、缓存及全量预取与按需读取的差异；不将现有附加策略自动视为必须保留的能力。
 
-采用 `@helia/http@4.0.8`、`helia@7.1.16` 和 `@helia/unixfs@8.0.9`。生产读取明确禁用 delegated routing、libp2p 和公共回退，拒绝重定向及带路径前缀的 Gateway 基址。默认按需读取资源后继块，显式 `bundlePrefetch: true` 保留完整预取选项；以受控请求记录验证实际网络行为而非仅比较最终字节。
+采用 `@helia/http@3.0.4`、`@helia/block-brokers@5.2.4`、`@helia/routers@4.0.6` 和 `@helia/unixfs@8.0.9`。使用独立 HTTP-only 工厂以保留 Node 22.13 兼容性，不导入完整 Helia 默认装配；显式清空 delegated 服务、libp2p 传输和 peer discovery，只配置静态 Gateway，拒绝重定向及带路径前缀的基址。默认按需读取资源后继块，显式 `bundlePrefetch: true` 保留完整预取选项；以受控请求记录验证实际网络行为而非仅比较最终字节。
 
 ### I-S02: 收敛 Bundle 与 Engine 职责
 

@@ -19,8 +19,11 @@ Web 工作台只提供 Task 和 Run 工作区，不提供缓存页或缓存管�
 IPFS 内容、pin 和垃圾回收应通过独立节点的管理工具处理，而不是通过 Task Engine。
 历史查询读取持久事实，不因 Engine 内存状态释放而失效；需要再次执行时仍按根 CID 获取并验证内容。
 
-生产 Gateway 客户端使用 `withHTTP(createHeliaLight())`、官方 trustless block broker 和 UnixFS。
-delegated routers 明确为空，静态配置之外没有发现或公共回退，HTTP 重定向被拒绝。
+生产 Gateway 客户端使用独立 `createHeliaHTTP`、官方静态 Gateway router、trustless broker 和 UnixFS。
+delegated 服务、监听地址、P2P transports 与 peer discovery 明确为空，
+静态配置之外没有发现或公共回退，HTTP 重定向被拒绝。
+独立 HTTP-only 工厂避免完整 Helia 默认装配引入 Node 22.13 不支持的未使用依赖；
+不依赖只对本仓库生效、但无法随发布包传递给消费者的 overrides。
 旧 `fetchIpfs` 自定义传输注入已移除；生产 HTTP 传输由官方客户端处理。
 `allowGateway(url)` 仍对 hint 的实际 `/ipfs/<CID>?format=raw` 请求 URL 授权，不改变为只检查基址。
 官方客户端按流限制每块最多 2 MiB；context 每次拉取至多读取一个 256 KiB 范围，

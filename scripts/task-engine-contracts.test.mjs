@@ -28,7 +28,8 @@ test("generic task production dependency graph is acyclic and business/adapter i
           ? [
               "@helia/http",
               "@helia/unixfs",
-              "helia",
+              "@helia/block-brokers",
+              "@helia/routers",
               "blockstore-core",
               "multiformats",
               "ipfs-unixfs-exporter",
