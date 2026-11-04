@@ -44,7 +44,7 @@ for (const failing of [false, true])
       });
     });
     const result = JSON.parse(
-      await readFile(join(directory, ".check-metrics", "fixture.json"), "utf8"),
+      await readFile(join(directory, ".cache", "check-metrics", "fixture.json"), "utf8"),
     );
     assert.equal(result.code, code);
     assert.equal(code === 0, !failing);

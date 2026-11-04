@@ -63,9 +63,9 @@ const result = {
   code,
   stages: timings.map(({ stage, seconds }) => ({ stage, seconds })),
 };
-await mkdir(resolve(directory, ".check-metrics"), { recursive: true });
+await mkdir(resolve(directory, ".cache", "check-metrics"), { recursive: true });
 await writeFile(
-  resolve(directory, ".check-metrics", `${label}.json`),
+  resolve(directory, ".cache", "check-metrics", `${label}.json`),
   `${JSON.stringify(result, null, 2)}\n`,
 );
 console.log(JSON.stringify(result));

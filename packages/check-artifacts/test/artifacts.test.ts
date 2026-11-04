@@ -379,6 +379,8 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
   const server = createServer(
     { cert: await readFile(cert), key: await readFile(key) },
     (request, response) => {
+      // Each child makes one request; pooled sockets must not extend its lifetime.
+      response.setHeader("connection", "close");
       if (request.url === "/redirect") {
         response.writeHead(302, { location: "/check.tgz" });
         response.end();
@@ -441,7 +443,6 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
     );
     await new Promise<void>((done, fail) => {
       server.close((error) => (error ? fail(error) : done()));
-      // Aborted /slow responses can remain active on Node 22 until its HTTP timeout.
       server.closeAllConnections();
     });
     assert.equal(
