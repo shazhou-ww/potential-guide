@@ -188,14 +188,16 @@ They are not sandboxes; do not check untrusted source. They bundle but do not
 execute the business callback. Artifact check/publish never evaluate source or
 load the author's contract, TypeBox modules or dependencies.
 
-All build paths precompile input, result and message validators using Ajv
-standalone. The Worker retains automatic validation, projection and payload
-budgets, but contains no general Ajv compiler (small required `ajv/runtime`
-helpers are bundled). Type-only contract imports do not load validators.
+All build paths validate the contracts and offline reference closure, then bind
+the declaration only. They do not generate or bind standalone validators.
+The Engine validates input/message before dispatch and result/checkpoint/failure
+evidence before acceptance. The Worker retains protocol and payload budgets, but
+has no automatic business validator, schema-runtime, Ajv or CID parser.
+Type-only contract imports do not load validators.
 Authors may explicitly import their own runtime validator, including Ajv; that
 is a business dependency, not SDK overhead. Explicit entries can call a local
 wrapper delegating to `runTask` without changing build configuration: the
-builder binds immutable declaration/validator data, never selects wrappers or
+builder binds immutable declaration data, never selects wrappers or
 calls `runTask` again. It does not implement `runCheck` or `runProbe`.
 
 ## Selection, output and identity

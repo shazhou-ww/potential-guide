@@ -1,0 +1,257 @@
+{
+  "checkoutHead": "a38bfa625ff504fcd56993705cc0f10c0ca6e4a1",
+  "node": "v24.11.1",
+  "esbuild": "0.28.2",
+  "lockSha256": "bfc208ba28dfcbfe4efaa440b49ab19e1493d87371796ed87b196ade531eccdb",
+  "cases": [
+    {
+      "name": "default",
+      "cid": "bafybeigyfdoerpqjg2ixsw64w75ugkvwrbxlyuw3hejqpngrzd2wafl7ca",
+      "workerBytes": 11196,
+      "workerSha256": "b2d341beeb94aa6b96b09331d66d6fc1ff007d4d4b85810d7595dcbf65caa1ff",
+      "totalBytes": 11959,
+      "carBytes": 12604,
+      "files": {
+        "schemas/0.json": 167,
+        "schemas/1.json": 168,
+        "schemas/2.json": 64,
+        "worker.cjs": 11196,
+        "task.yaml": 364
+      },
+      "contributions": {
+        "packages/task-sdk/dist/index.js": 7448,
+        "packages/task-protocol/dist/json.js": 1661,
+        "packages/task-protocol/dist/worker.js": 0,
+        "packages/task-protocol/dist/logs.js": 802,
+        "packages/task-protocol/dist/run.js": 576,
+        "packages/task-protocol/dist/task-schema-uri.js": 84,
+        "packages/task-sdk/dist/binding.js": 508,
+        ".schema-measure/default/src/main.ts": 42
+      },
+      "source": "import type { Static } from \"@sinclair/typebox\";\nimport { runTask } from \"@potential-guide/task-sdk\";\nimport type contract from \"./contract.js\";\n\nrunTask(async function echo(\n  input: Static<typeof contract.input>,\n): Promise<Static<typeof contract.result>> {\n  return { text: input.text };\n});\n",
+      "contractSource": "import { Type } from \"@sinclair/typebox\";\n\nexport default {\n  input: Type.Object({ text: Type.String() }),\n  result: Type.Object({ text: Type.String() }),\n  message: Type.Never(),\n};\n",
+      "manifest": {
+        "private": true,
+        "type": "module",
+        "dependencies": {
+          "@sinclair/typebox": "0.34.52",
+          "@potential-guide/task-sdk": "0.1.0-rc.0"
+        },
+        "scripts": {
+          "build": "pguide task-bundle build task.build.yaml",
+          "clean": "node -e \"for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })\""
+        }
+      }
+    },
+    {
+      "name": "repeat",
+      "cid": "bafybeigyfdoerpqjg2ixsw64w75ugkvwrbxlyuw3hejqpngrzd2wafl7ca",
+      "workerBytes": 11196,
+      "workerSha256": "b2d341beeb94aa6b96b09331d66d6fc1ff007d4d4b85810d7595dcbf65caa1ff",
+      "totalBytes": 11959,
+      "carBytes": 12604,
+      "files": {
+        "schemas/0.json": 167,
+        "schemas/1.json": 168,
+        "schemas/2.json": 64,
+        "worker.cjs": 11196,
+        "task.yaml": 364
+      },
+      "contributions": {
+        "packages/task-sdk/dist/index.js": 7448,
+        "packages/task-protocol/dist/json.js": 1661,
+        "packages/task-protocol/dist/worker.js": 0,
+        "packages/task-protocol/dist/logs.js": 802,
+        "packages/task-protocol/dist/run.js": 576,
+        "packages/task-protocol/dist/task-schema-uri.js": 84,
+        "packages/task-sdk/dist/binding.js": 508,
+        ".schema-measure/repeat/src/main.ts": 42
+      },
+      "source": "import type { Static } from \"@sinclair/typebox\";\nimport { runTask } from \"@potential-guide/task-sdk\";\nimport type contract from \"./contract.js\";\n\nrunTask(async function echo(\n  input: Static<typeof contract.input>,\n): Promise<Static<typeof contract.result>> {\n  return { text: input.text };\n});\n",
+      "contractSource": "import { Type } from \"@sinclair/typebox\";\n\nexport default {\n  input: Type.Object({ text: Type.String() }),\n  result: Type.Object({ text: Type.String() }),\n  message: Type.Never(),\n};\n",
+      "manifest": {
+        "private": true,
+        "type": "module",
+        "dependencies": {
+          "@sinclair/typebox": "0.34.52",
+          "@potential-guide/task-sdk": "0.1.0-rc.0"
+        },
+        "scripts": {
+          "build": "pguide task-bundle build task.build.yaml",
+          "clean": "node -e \"for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })\""
+        }
+      }
+    },
+    {
+      "name": "representative",
+      "cid": "bafybeiea7j2nbtl5vkdxlmodf5i2hcmlav3pd2leocrtjdrjili6qbqzh4",
+      "workerBytes": 11363,
+      "workerSha256": "12baf2a21273425bc57b5daaaa2bef6a04a8a60d39782a2d08443078efd63857",
+      "totalBytes": 12540,
+      "carBytes": 13272,
+      "files": {
+        "schemas/0.json": 463,
+        "schemas/1.json": 187,
+        "schemas/2.json": 64,
+        "schemas/3.json": 80,
+        "worker.cjs": 11363,
+        "task.yaml": 383
+      },
+      "contributions": {
+        "packages/task-sdk/dist/index.js": 7448,
+        "packages/task-protocol/dist/json.js": 1661,
+        "packages/task-protocol/dist/worker.js": 0,
+        "packages/task-protocol/dist/logs.js": 802,
+        "packages/task-protocol/dist/run.js": 576,
+        "packages/task-protocol/dist/task-schema-uri.js": 84,
+        "packages/task-sdk/dist/binding.js": 675,
+        ".schema-measure/representative/src/main.ts": 42
+      },
+      "source": "import type { Static } from \"@sinclair/typebox\";\nimport { runTask } from \"@potential-guide/task-sdk\";\nimport type contract from \"./contract.js\";\n\nrunTask(async function echo(\n  input: Static<typeof contract.input>,\n): Promise<Static<typeof contract.result>> {\n  return { text: input.text };\n});\n",
+      "contractSource": "import { Type } from \"@sinclair/typebox\";\nconst text = Type.String({$id: \"https://example.test/text\", maxLength: 12});\nexport default {\n  input: Type.Intersect([Type.Object({text: Type.String({minLength: 2})}), Type.Object({text: Type.Ref(text)})]),\n  result: Type.Object({text: Type.Ref(text)}),\n  message: Type.Never(), schemas: [text],\n};\n",
+      "manifest": {
+        "private": true,
+        "type": "module",
+        "dependencies": {
+          "@sinclair/typebox": "0.34.52",
+          "@potential-guide/task-sdk": "0.1.0-rc.0"
+        },
+        "scripts": {
+          "build": "pguide task-bundle build task.build.yaml",
+          "clean": "node -e \"for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })\""
+        }
+      }
+    },
+    {
+      "name": "author-validator",
+      "cid": "bafybeifrcgch2d2k3y2t2nl3yfos3ur5cpuszbqxdzz543vw23h26xysom",
+      "workerBytes": 154833,
+      "workerSha256": "628eb5c425496258c5b5beebab31edf51dea02c904a3b4361ee883057c2dc91b",
+      "totalBytes": 155596,
+      "carBytes": 156243,
+      "files": {
+        "schemas/0.json": 167,
+        "schemas/1.json": 168,
+        "schemas/2.json": 64,
+        "worker.cjs": 154833,
+        "task.yaml": 364
+      },
+      "contributions": {
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/code.js": 2551,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/scope.js": 2585,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/codegen/index.js": 11758,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/util.js": 3570,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/names.js": 629,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/errors.js": 3104,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/boolSchema.js": 672,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/rules.js": 570,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/applicability.js": 480,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/dataType.js": 4111,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/defaults.js": 680,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/code.js": 3106,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/keyword.js": 2961,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/subschema.js": 1978,
+        "node_modules/.pnpm/fast-deep-equal@3.1.3/node_modules/fast-deep-equal/index.js": 736,
+        "node_modules/.pnpm/json-schema-traverse@1.0.0/node_modules/json-schema-traverse/index.js": 1246,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/resolve.js": 2087,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/validate/index.js": 10181,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/validation_error.js": 206,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/ref_error.js": 323,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/compile/index.js": 4688,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/data.json": 358,
+        "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/utils.js": 7229,
+        "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/lib/schemes.js": 2526,
+        "node_modules/.pnpm/fast-uri@3.1.8/node_modules/fast-uri/index.js": 7145,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/uri.js": 155,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/core.js": 12267,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/id.js": 195,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/ref.js": 2379,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/core/index.js": 213,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitNumber.js": 666,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/multipleOf.js": 551,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js": 301,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitLength.js": 629,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/pattern.js": 706,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitProperties.js": 549,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/required.js": 1400,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitItems.js": 510,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/equal.js": 157,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js": 1499,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/const.js": 439,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/enum.js": 921,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/index.js": 381,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js": 1090,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items.js": 1075,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js": 227,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/items2020.js": 530,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/contains.js": 1734,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependencies.js": 1565,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js": 630,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js": 1741,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/properties.js": 992,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js": 1168,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/not.js": 435,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/anyOf.js": 229,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/oneOf.js": 912,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/allOf.js": 407,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/if.js": 1105,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/thenElse.js": 278,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/index.js": 462,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js": 724,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js": 726,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js": 276,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js": 192,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/dynamic/index.js": 178,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/dependentRequired.js": 226,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js": 208,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/validation/limitContains.js": 305,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/next.js": 159,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js": 1141,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js": 828,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/unevaluated/index.js": 140,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/format.js": 1927,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/format/index.js": 121,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/metadata.js": 308,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/draft2020.js": 294,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/types.js": 181,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/vocabularies/discriminator/index.js": 2288,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/schema.json": 1753,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json": 1076,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json": 423,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json": 418,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json": 987,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json": 382,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json": 531,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json": 1542,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/refs/json-schema-2020-12/index.js": 344,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js": 1691,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/standalone/index.js": 2095,
+        "packages/task-sdk/dist/index.js": 7536,
+        "packages/task-protocol/dist/json.js": 1769,
+        "packages/task-protocol/dist/worker.js": 0,
+        "packages/task-protocol/dist/logs.js": 803,
+        "packages/task-protocol/dist/run.js": 579,
+        "packages/task-protocol/dist/task-schema-uri.js": 85,
+        "packages/task-sdk/dist/binding.js": 509,
+        "packages/task-protocol/dist/schema.js": 986,
+        "packages/task-protocol/dist/schema-runtime.js": 6391,
+        ".schema-measure/author-validator/src/main.ts": 88
+      },
+      "source": "import {runTask} from \"@potential-guide/task-sdk\";\nimport {compileJsonSchema} from \"@potential-guide/task-protocol\";\nimport type {Static} from \"@sinclair/typebox\";\nimport type contract from \"./contract.js\";\nconst authorValidator = compileJsonSchema({type: \"string\", minLength: 5});\nrunTask(async (input: Static<typeof contract.input>) => {\n  authorValidator.validate(input.text);\n  return {text: input.text};\n});\n",
+      "contractSource": "import { Type } from \"@sinclair/typebox\";\n\nexport default {\n  input: Type.Object({ text: Type.String() }),\n  result: Type.Object({ text: Type.String() }),\n  message: Type.Never(),\n};\n",
+      "manifest": {
+        "private": true,
+        "type": "module",
+        "dependencies": {
+          "@sinclair/typebox": "0.34.52",
+          "@potential-guide/task-sdk": "0.1.0-rc.0",
+          "@potential-guide/task-protocol": "0.1.0-rc.0"
+        },
+        "scripts": {
+          "build": "pguide task-bundle build task.build.yaml",
+          "clean": "node -e \"for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })\""
+        }
+      }
+    }
+  ]
+}

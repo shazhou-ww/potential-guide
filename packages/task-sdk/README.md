@@ -11,12 +11,46 @@ complete self-contained artifact. The SDK has no author-build scripts, tool subp
 or author examples; tooling fixtures live with the author CLI.
 
 New entries explicitly `import { runTask } from "@potential-guide/task-sdk"`
-and call `runTask(callback)`. The builder binds the verified declaration and
-standalone validators into the SDK, not through author configuration or
+and call `runTask(callback)`. The builder binds the verified declaration
+into the SDK, not through author configuration or
 `workerData`. A custom wrapper may delegate to `runTask` without builder
 recognition or configuration changes.
-Input/result/message validators are precompiled by the author CLI. The Worker
-runtime executes those bound functions without importing the Schema compiler.
+The Engine validates input and business messages before dispatch, and validates
+checkpoint, complete and RunFailure result evidence before acceptance or storage.
+The Worker trusts those input/message checks; it contains no automatic business
+Schema validator, schema-runtime, projection engine, or Ajv dependency.
+Build-time contract, reference and budget checks remain in the author tools.
+
+The Engine also checks JSON shape, nesting/node and byte limits, and log/progress
+payloads. The SDK forwards host-validated input/messages and sends author outputs
+without walking or normalizing their payloads. Queue bounds, generation/Run routing,
+declaration equality, cancellation and resource streams remain in the SDK.
+Startup declaration comparison still uses canonical JSON; it is not business
+payload validation.
+
+IPC uses Node's structured clone: sendable non-JSON values (such as cycles,
+BigInt and Date) are rejected by the host. Values that cannot be cloned, such as
+functions, reject locally with `invalid_payload`; failed sends do not consume
+message IDs or pending credits. Structured clone may evaluate getters and normalize
+custom objects before the host sees them. Authors should send plain JSON data;
+the host validates the received representation, not the original object descriptors.
+Receiver byte limits govern acceptance, not the memory allocated while cloning
+or transporting a message.
+A rejected checkpoint remains a failed output even if the callback catches its
+promise. Rejected completion becomes a failure report; rejected failure evidence
+is re-reported using the host's error without that evidence. Normal completion or
+failure release follows an acknowledged terminal fact; cancellation retains its
+stopping/release path, and an unavailable terminal channel reports uncertainty.
+Custom hosts must implement the same full validation and negative-ACK lifecycle,
+not simply acknowledge every frame. Authors may import their own validators;
+those business dependencies remain bundled and are separately attributable.
+
+The host owns CID parsing, supported codec/hash checks, DAG verification and
+Bundle-relative path resolution. The Worker treats the host-verified CID as an
+opaque, nonempty string of at most 256 characters and echoes it in the ready
+handshake; it does not import a CID parser. Declaration equality is still checked
+against the build-locked binding, and the host must match the handshake against
+its verified Bundle before dispatching a Run.
 
 `context.log({level, message, fields?})` provides async typed diagnostic receipts,
 independent of business outputs. The sole **v1** declaration includes its dedicated

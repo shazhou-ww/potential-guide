@@ -123,6 +123,7 @@ class RunWorker {
     | { kind: "failed"; error: ErrorFact; result?: Json }
     | undefined;
   private loss: ErrorFact | undefined;
+  private rejectedOutput: ErrorFact | undefined;
   private verifications = new Map<
     number,
     { resolve(value: Json): void; reject(error: unknown): void }
@@ -418,12 +419,11 @@ class RunWorker {
                   })
                 : { state: "dropped", reason: "capacity" };
             } else {
-              value = this.channel.log?.(
-                context.runId,
-                generation,
-                context.scope,
-                validateRunLog(message.value),
-              ) ?? { state: "unavailable", reason: "disabled" };
+              const entry = validateRunLog(message.value);
+              value = this.channel.log?.(context.runId, generation, context.scope, entry) ?? {
+                state: "unavailable",
+                reason: "disabled",
+              };
             }
           } catch (failure) {
             if (failure instanceof TaskError && failure.code.startsWith("invalid_log"))
@@ -533,18 +533,31 @@ class RunWorker {
     this.inFlight.add(operation);
     this.pendingOperations++;
     let resourceContext: ResourceContext | undefined;
+    const rejectOutput = () => {
+      if (this.rejectedOutput)
+        throw new TaskError(this.rejectedOutput.code, this.rejectedOutput.message);
+    };
+    const validateResult = (value: Json): Json => {
+      try {
+        return compileJsonSchema(this.registration.resultSchema, {
+          maxInputBytes: this.limits.maxPayloadBytes,
+        }).validate(value);
+      } catch (error) {
+        this.rejectedOutput ??= {
+          code: error instanceof TaskError ? error.code : "invalid_input",
+          message: error instanceof Error ? error.message : "Invalid Run result.",
+        };
+        throw error;
+      }
+    };
     try {
       const value = json(message.value, this.limits.maxPayloadBytes);
       switch (message.kind) {
         case "checkpoint":
+          rejectOutput();
           if (!this.channel.checkpoint)
             throw new TaskError("invalid_type", "宿主未配置结构化证据通道。");
-          await this.channel.checkpoint(
-            runId,
-            compileJsonSchema(this.registration.resultSchema, {
-              maxInputBytes: this.limits.maxPayloadBytes,
-            }).validate(value),
-          );
+          await this.channel.checkpoint(runId, validateResult(value));
           break;
         case "resource": {
           if (
@@ -583,11 +596,10 @@ class RunWorker {
           break;
         case "complete": {
           if (this.outcome) throw new TaskError("run_finished", "Run 已提交可靠结果。");
+          rejectOutput();
           const completed = {
             kind: "completed",
-            value: compileJsonSchema(this.registration.resultSchema, {
-              maxInputBytes: this.limits.maxPayloadBytes,
-            }).validate(value),
+            value: validateResult(value),
           } as const;
           await this.channel.outcome?.(runId, { kind: "completed", result: completed.value });
           this.outcome = completed;
@@ -603,15 +615,14 @@ class RunWorker {
           )
             throw new TaskError("invalid_payload", "类型错误事实无效。");
           if (this.outcome) throw new TaskError("run_finished", "Run 已提交可靠结果。");
+          const evidence = value.result === undefined ? undefined : validateResult(value.result);
           const failed = {
             kind: "failed",
-            error: { code: value.code, message: value.message },
-            ...(value.result === undefined
+            error: this.rejectedOutput ?? { code: value.code, message: value.message },
+            ...(evidence === undefined || this.rejectedOutput
               ? {}
               : {
-                  result: compileJsonSchema(this.registration.resultSchema, {
-                    maxInputBytes: this.limits.maxPayloadBytes,
-                  }).validate(value.result),
+                  result: evidence,
                 }),
           } as const;
           await this.channel.outcome?.(runId, {
@@ -647,6 +658,13 @@ class RunWorker {
       }
       reply();
     } catch (error) {
+      if (
+        !this.outcome &&
+        ["checkpoint", "complete", "failed"].includes(message.kind as string) &&
+        error instanceof TaskError &&
+        ["invalid_payload", "payload_too_large"].includes(error.code)
+      )
+        this.rejectedOutput ??= { code: error.code, message: error.message };
       if (
         resourceContext &&
         error instanceof TaskError &&
@@ -886,6 +904,13 @@ class RunWorker {
       operation.reject(new TaskError("type_unavailable", "复验 Worker 已退出。"));
     this.verifications.clear();
     try {
+      if (this.rejectedOutput && !this.outcome && runIds.length) {
+        await this.channel.outcome?.(runIds[0]!, {
+          kind: "failed",
+          error: this.rejectedOutput,
+        });
+        this.outcome = { kind: "failed", error: this.rejectedOutput };
+      }
       for (const id of runIds) {
         if (this.outcome?.kind === "completed") await this.channel.complete(id, this.outcome.value);
         else if (this.outcome?.kind === "failed")

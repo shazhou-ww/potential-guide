@@ -57,7 +57,7 @@ runTask(async (input: Static<typeof contract.input>) => {
     const analyzed = await compileTaskBundle(await readTaskBuild(initialized.buildFile));
     if (process.argv.includes("--expanded") && name !== "author-validator") {
       const inputs = Object.keys(analyzed.metafile.inputs).map((path) => path.replaceAll("\\", "/"));
-      assert.ok(!inputs.some((path) => /(?:ajv\/dist\/(?!runtime\/)|fast-uri)/.test(path)), inputs.join("\n"));
+      assert.ok(!inputs.some((path) => /(?:ajv\/|fast-uri|multiformats|schema-runtime|task-validator:)/.test(path)), inputs.join("\n"));
       assert.ok(!inputs.some((path) => path.endsWith("/contract.ts")));
     }
     const worker = await readFile(join(built.directory, "worker.cjs"));
@@ -70,6 +70,7 @@ runTask(async (input: Static<typeof contract.input>) => {
       name, cid: built.cid, workerBytes: worker.length,
       workerSha256: createHash("sha256").update(worker).digest("hex"),
       totalBytes: [...analyzed.contents.values()].reduce((sum, bytes) => sum + bytes.length, 0),
+      ...(built.car ? {carBytes: (await readFile(built.car)).length} : {}),
       files: Object.fromEntries([...analyzed.contents].map(([path, bytes]) => [path, bytes.length])),
       contributions,
       source: await readFile(join(directory, "src/main.ts"), "utf8"),

@@ -4,10 +4,11 @@ import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { taskSchemaUri } from "@potential-guide/task-protocol";
+import { type Json, taskSchemaUri } from "@potential-guide/task-protocol";
 import { buildTaskBundle, compileTaskBundle } from "../src/build.js";
 import { checkTaskArtifact } from "../src/artifact.js";
 import { precompileCases } from "../../task-protocol/test/precompile-fixtures.js";
+import { TypeSupervisor } from "../../task-engine/src/type-supervisor.js";
 
 const declaration = {
   $schema: taskSchemaUri,
@@ -40,11 +41,8 @@ async function fixture(action: (directory: string) => Promise<void>) {
 }
 function assertRuntimeOnly(metafile: Awaited<ReturnType<typeof compileTaskBundle>>["metafile"]) {
   const paths = Object.keys(metafile.inputs).map((path) => path.replaceAll("\\", "/"));
-  assert.ok(paths.some((path) => path.includes("task-validator:input")));
-  assert.ok(
-    !paths.some((path) => /(?:ajv\/dist\/(?!runtime\/)|fast-uri)/.test(path)),
-    paths.join("\n"),
-  );
+  assert.ok(!paths.some((path) => /schema-runtime|task-validator:/.test(path)));
+  assert.ok(!paths.some((path) => /(?:ajv\/|fast-uri|multiformats)/.test(path)), paths.join("\n"));
   assert.ok(!paths.some((path) => /contract\.ts$/.test(path)));
   for (const output of Object.values(metafile.outputs))
     assert.ok(
@@ -53,11 +51,101 @@ function assertRuntimeOnly(metafile: Awaited<ReturnType<typeof compileTaskBundle
       ),
     );
 }
-async function execute(
+async function executeWithEngine(
   built: Awaited<ReturnType<typeof buildTaskBundle>>,
   input: unknown,
   message?: unknown,
 ) {
+  const { resolved } = await checkTaskArtifact(built.directory);
+  const source = await readFile(join(built.directory, "worker.cjs"), "utf8");
+  const frames: { kind: string; value?: unknown }[] = [];
+  let release!: () => void,
+    fail!: (error: Error) => void,
+    exited = false;
+  const done = new Promise<void>((resolve, reject) => {
+    release = resolve;
+    fail = reject;
+  });
+  const timer = setTimeout(() => fail(new Error("Engine Worker timed out.")), 10000);
+  const supervisor = new TypeSupervisor(
+    {
+      type: built.cid,
+      version: "1",
+      environment: "authoring-test",
+      ...resolved,
+      bundle: { cid: built.cid, declaration: resolved },
+      getBundleSource: () => source,
+      async readBundle() {
+        throw new Error("No resources in this fixture.");
+      },
+      module: "",
+      exportName: "",
+      configuration: {},
+    },
+    {
+      async dispatch() {
+        frames.push({ kind: "ready" });
+      },
+      async progress() {},
+      async checkpoint() {},
+      async complete(_id, result) {
+        frames.push({ kind: "complete", value: result });
+      },
+      async failed(_id, error) {
+        frames.push({ kind: "failed", value: error });
+      },
+      async confirm() {},
+      async exited() {
+        exited = true;
+      },
+      released() {
+        release();
+      },
+      lost(_ids, error) {
+        fail(new Error(error.message));
+      },
+    },
+    { heartbeatMs: 20, healthMs: 5000, maxInFlight: 8, maxPayloadBytes: 65536 },
+  );
+  try {
+    try {
+      await supervisor.run("run", input as Json, "scope");
+    } catch (error) {
+      frames.push({
+        kind: "failed",
+        value: { code: (error as { code: string }).code, message: (error as Error).message },
+      });
+      return frames;
+    }
+    if (message !== undefined) {
+      try {
+        supervisor.message("run", {
+          messageId: "message",
+          taskId: "task",
+          caller: { scope: "scope", subject: "actor" },
+          payload: message as Json,
+        });
+      } catch (error) {
+        supervisor.cancel("run");
+        await done;
+        throw error;
+      }
+    }
+    await done;
+    assert.equal(exited, true);
+    return frames;
+  } finally {
+    clearTimeout(timer);
+    await supervisor.close();
+  }
+}
+async function execute(
+  built: Awaited<ReturnType<typeof buildTaskBundle>>,
+  input: unknown,
+  message?: unknown,
+  bundleOverride: { cid?: unknown; declaration?: unknown } = {},
+) {
+  if (!Object.keys(bundleOverride).length) return executeWithEngine(built, input, message);
   const generation = randomUUID();
   const { resolved } = await checkTaskArtifact(built.directory);
   const worker = new Worker(join(built.directory, "worker.cjs"), {
@@ -67,7 +155,7 @@ async function execute(
       generation,
       maxInFlight: 8,
       maxPayloadBytes: 65536,
-      bundle: { cid: built.cid, declaration: resolved },
+      bundle: { cid: built.cid, declaration: resolved, ...bundleOverride },
     },
   });
   const frames: { kind: string; value?: unknown }[] = [];
@@ -100,6 +188,7 @@ async function execute(
               },
             });
         }
+
         if (frame.id !== undefined) worker.postMessage({ generation, kind: "ack", id: frame.id });
         if (frame.kind === "released") finish();
       });
@@ -109,6 +198,43 @@ async function execute(
   }
   return frames;
 }
+
+test("Worker treats the host-verified Bundle identity as opaque but checks configuration and declaration", async () => {
+  await fixture(async (directory) => {
+    const entry = join(directory, "main.ts");
+    await writeFile(
+      entry,
+      `import {runTask} from "@potential-guide/task-sdk"; runTask(async input => input);`,
+    );
+    const built = await buildTaskBundle({
+      declaration,
+      entry,
+      entryMode: "explicit",
+      outDirectory: join(directory, "bundle"),
+    });
+    const cid = "host-verified-opaque-bundle-identity";
+    const frames = await execute(built, { text: "okay" }, undefined, { cid });
+    assert.deepEqual(frames.find((frame) => frame.kind === "ready")?.value, {
+      $schema: declaration.$schema,
+      cid,
+      inputSchema: declaration.inputSchema,
+      resultSchema: declaration.resultSchema,
+      messageSchema: declaration.messageSchema,
+    });
+    assert.deepEqual(frames.find((frame) => frame.kind === "complete")?.value, { text: "okay" });
+    for (const invalid of [undefined, null, 1, false, {}, "", "x".repeat(257)])
+      await assert.rejects(execute(built, { text: "okay" }, undefined, { cid: invalid }), {
+        message: "Invalid trusted Task Worker configuration.",
+      });
+    await assert.rejects(
+      execute(built, { text: "okay" }, undefined, {
+        cid,
+        declaration: { ...declaration, name: "Different declaration" },
+      }),
+      { message: "Task Worker declaration differs from verified Bundle." },
+    );
+  });
+});
 
 test("explicit public SDK entry and arbitrary delegated wrapper start once and preserve validation", async () => {
   await fixture(async (directory) => {
@@ -168,7 +294,7 @@ custom(async input => {appendFileSync(${JSON.stringify(marker)}, "called\\n"); r
   });
 });
 
-test("precompiled result and business-message validators reject illegal values, including Never", async () => {
+test("Engine rejects illegal results and messages, including Never, and the Worker releases", async () => {
   await fixture(async (directory) => {
     const entry = join(directory, "main.ts");
     await writeFile(
@@ -347,7 +473,7 @@ test("the author's separately installed public SDK copy receives the same locked
 });
 
 for (const scenario of precompileCases)
-  test(`ordinary/standalone/Worker shared expected data: ${scenario.name}`, async () => {
+  test(`Engine-validated Worker shared expected data: ${scenario.name}`, async () => {
     await fixture(async (directory) => {
       const wrapper = {
         type: "object",

@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import type { Worker } from "node:worker_threads";
-import type { Json, TypeWorkerRegistration } from "@potential-guide/task-protocol";
+import {
+  type Json,
+  type ResolvedTaskBundle,
+  type TypeWorkerRegistration,
+  taskSchemaUri,
+} from "@potential-guide/task-protocol";
 import {
   type RunWorkerExit,
   type SupervisorLimits,
@@ -91,6 +96,55 @@ async function until(predicate: () => boolean) {
     await delay(5);
   }
 }
+
+test("Bundle host rejects a different handshake CID or Schema before dispatch", async () => {
+  const f = fixture();
+  const declaration: ResolvedTaskBundle = {
+    $schema: taskSchemaUri,
+    name: "Verified Bundle",
+    runtime: { type: "node", minVersion: "22.13.0" },
+    entry: "worker.cjs",
+    include: ["task.yaml", "worker.cjs"],
+    inputSchema: f.registration.inputSchema,
+    resultSchema: f.registration.resultSchema,
+    messageSchema: f.registration.messageSchema,
+  };
+  let dispatched = false;
+  f.channel.dispatch = async () => {
+    dispatched = true;
+  };
+  for (const mismatch of [{ cid: "different-bundle" }, { inputSchema: { type: "string" } }]) {
+    const supervisor = new TypeSupervisor(
+      {
+        ...f.registration,
+        bundle: { cid: "host-verified-bundle", declaration },
+        getBundleSource: () => `
+const {parentPort,workerData}=require("node:worker_threads");
+const {$schema,inputSchema,resultSchema,messageSchema}=workerData.bundle.declaration;
+parentPort.postMessage({
+  generation:workerData.generation,
+  kind:"ready",
+  value:{$schema,cid:workerData.bundle.cid,inputSchema,resultSchema,messageSchema,...${JSON.stringify(mismatch)}},
+});`,
+        readBundle: async () => {
+          throw new Error("No resources should be read before handshake.");
+        },
+      },
+      f.channel,
+      { heartbeatMs: 20, healthMs: 5000, maxInFlight: 8, maxPayloadBytes: 65_536 },
+    );
+    try {
+      await assert.rejects(supervisor.run("mismatched", {}, "scope"), {
+        code: "unsupported_contract",
+      });
+      assert.equal(dispatched, false);
+      assert.equal(f.results.size, 0);
+    } finally {
+      await supervisor.close();
+    }
+  }
+  await f.supervisor.close();
+});
 
 test("每个完整 Run 使用独立 Worker，指定 Run 取消不影响同类型其他 Run", async () => {
   const f = fixture();

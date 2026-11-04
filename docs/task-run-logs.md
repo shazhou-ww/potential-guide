@@ -69,6 +69,11 @@ Invalid levels, unknown input keys, non-object fields, undefined/non-finite/
 cyclic/non-JSON data, and input above the absolute 1 MiB validation ceiling reject
 with `TaskError("invalid_log", ...)`. Valid entries exceeding the much smaller
 configured entry budget return `dropped/entry_too_large`.
+For SDK Workers these checks run on the Engine after IPC, and errors return through
+the diagnostic ACK. Uncloneable values (for example functions) instead reject at
+send time with `invalid_payload`, without consuming a diagnostic sequence number.
+Validation applies to the received structured-clone representation; getters and
+custom prototypes are not preserved as original descriptors across IPC.
 Acknowledgment timeout means **unknown write outcome**, not proof of loss.
 There is no automatic retry. At most `min(16, maxInFlight)` diagnostic requests
 are pending per SDK Worker, separate from the required-output queue and IDs;

@@ -1,8 +1,6 @@
 import { parentPort, workerData } from "node:worker_threads";
 import {
   canonical,
-  createInputContract,
-  createJsonContract,
   type Json,
   json,
   type ResolvedTaskBundle,
@@ -14,9 +12,6 @@ import {
   type RunProgress,
   TaskError,
   taskSchemaUri,
-  validateBundleReference,
-  validateRunLog,
-  validateRunProgress,
 } from "@potential-guide/task-protocol/worker";
 import { binding } from "./binding.js";
 
@@ -77,7 +72,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   callback: TaskCallback<Input, Result, Message>,
 ): void {
   if (!binding) throw new Error("Task SDK requires a build-locked Bundle binding.");
-  const { declaration, validators } = binding;
+  const { declaration } = binding;
   const port = parentPort;
   if (!port || declaration.$schema !== taskSchemaUri) throw new Error("Unsupported Task Worker.");
   const config = workerData as {
@@ -93,32 +88,17 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     config.maxInFlight <= 0 ||
     !Number.isSafeInteger(config.maxPayloadBytes) ||
     config.maxPayloadBytes <= 0 ||
-    typeof config.bundle?.cid !== "string"
+    typeof config.bundle?.cid !== "string" ||
+    !config.bundle.cid ||
+    config.bundle.cid.length > 256
   )
     throw new Error("Invalid trusted Task Worker configuration.");
-  validateBundleReference(config.bundle.cid);
   if (
     !config.bundle ||
     canonical(json(config.bundle.declaration, 1_048_576)) !==
       canonical(json(declaration, 1_048_576))
   )
     throw new Error("Task Worker declaration differs from verified Bundle.");
-  const schemaLimits = { maxInputBytes: config.maxPayloadBytes };
-  const input = createInputContract<Input>(
-    declaration.inputSchema,
-    () => validators.input,
-    schemaLimits,
-  );
-  const result = createJsonContract(
-    declaration.resultSchema,
-    () => validators.result,
-    schemaLimits,
-  );
-  const messages = createJsonContract(
-    declaration.messageSchema,
-    () => validators.message,
-    schemaLimits,
-  );
   const controller = new AbortController();
   const inbox = new Inbox(config.maxInFlight);
   const tasks = new Map<string, AbortController>();
@@ -129,6 +109,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   let queued = 0;
   let cleanupUncertain = false;
   let output = Promise.resolve();
+  let outputError: unknown;
   let readSequence = 0;
   const reads = new Map<
     number,
@@ -293,14 +274,13 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     logPending.clear();
   }
   async function log(value: RunLogInput): Promise<RunLogReceipt> {
-    const parsed = validateRunLog(value);
     if (finishing || controller.signal.aborted) return { state: "unavailable", reason: "channel" };
     if (logPending.size >= Math.min(config.maxInFlight, 16)) {
       droppedLogs = Math.min(Number.MAX_SAFE_INTEGER, droppedLogs + 1);
       scheduleDroppedLogs();
       return { state: "dropped", reason: "capacity" };
     }
-    const id = ++logSequence;
+    const id = logSequence + 1;
     return new Promise<RunLogReceipt>((resolve, reject) => {
       const timer = setTimeout(() => {
         logPending.delete(id);
@@ -313,33 +293,53 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
           runId,
           kind: "log",
           logId: id,
-          value: parsed,
+          value,
         });
-      } catch {
+        logSequence = id;
+      } catch (error) {
         clearTimeout(timer);
         logPending.delete(id);
-        resolve({ state: "unavailable", reason: "channel" });
+        if (error instanceof Error && error.name === "DataCloneError")
+          reject(new TaskError("invalid_payload", "Task payload cannot be cloned for IPC."));
+        else resolve({ state: "unavailable", reason: "channel" });
       }
     });
   }
   function request(kind: string, value: unknown): Promise<void> {
     if (pending.size >= config.maxInFlight)
       return Promise.reject(new Error("Task channel capacity exceeded."));
-    const id = ++sequence;
+    const id = sequence + 1;
     const operation = new Promise<void>((resolve, reject) => {
       pending.set(id, { resolve, reject });
     });
-    port!.postMessage({ generation: config.generation, runId, id, kind, value });
+    try {
+      port!.postMessage({ generation: config.generation, runId, id, kind, value });
+      sequence = id;
+    } catch (error) {
+      pending
+        .get(id)
+        ?.reject(
+          error instanceof Error && error.name === "DataCloneError"
+            ? new TaskError("invalid_payload", "Task payload cannot be cloned for IPC.")
+            : error instanceof Error
+              ? error
+              : new Error("Task send failed."),
+        );
+      pending.delete(id);
+    }
     return operation;
   }
   function enqueue(kind: string, value: unknown): Promise<void> {
     if (finishing) return Promise.reject(new TaskError("run_finished", "Task is finishing."));
-    const parsed = json(value, config.maxPayloadBytes);
     if (queued >= config.maxInFlight)
       return Promise.reject(new Error("Task channel capacity exceeded."));
     queued++;
     const operation = output
-      .then(() => request(kind, parsed))
+      .then(() => request(kind, value))
+      .catch((error: unknown) => {
+        outputError ??= error;
+        throw error;
+      })
       .finally(() => {
         queued--;
       });
@@ -443,7 +443,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
           taskId: message.taskId,
           caller: Object.freeze(message.caller),
           signal: task.signal,
-          payload: messages.validate(message.payload),
+          payload: message.payload,
           accept: () => confirm("accepted"),
           reject: (reason: string) => confirm("rejected", reason),
         }),
@@ -461,78 +461,75 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
       signal: controller.signal,
       messages: inbox,
       bundle: Object.freeze({ read: readBundle }),
-      progress: (value: RunProgress) =>
-        enqueue("progress", validateRunProgress(value, config.maxPayloadBytes)),
-      checkpoint: (value: Json) => enqueue("checkpoint", result.validate(value)),
+      progress: (value: RunProgress) => enqueue("progress", value),
+      checkpoint: (value: Json) => enqueue("checkpoint", value),
       log,
     });
-    const reportFailure = async (error: unknown) => {
-      cleanupUncertain =
+    const reportFailure = async (reason: unknown) => {
+      const error = reason;
+      cleanupUncertain ||=
         error instanceof TaskError &&
         ["reclamation_failed", "reclamation_unknown"].includes(error.code);
-      let evidence: Json | undefined;
-      if (error instanceof RunFailure) {
-        try {
-          evidence = result.validate(error.result);
-        } catch {
-          /* Invalid evidence stays local. */
-        }
-      }
-      await request("failed", {
-        code: error instanceof TaskError ? error.code.slice(0, 128) : "run_failed",
-        message: error instanceof Error ? error.message.slice(0, 512) : "Task callback failed.",
-        ...(evidence === undefined ? {} : { result: evidence }),
+      const evidence = error instanceof RunFailure ? error.result : undefined;
+      const failure = (reason: unknown, result?: Json) => ({
+        code: reason instanceof TaskError ? reason.code.slice(0, 128) : "run_failed",
+        message: reason instanceof Error ? reason.message.slice(0, 512) : "Task callback failed.",
+        ...(result === undefined ? {} : { result }),
       });
+      try {
+        await request("failed", failure(error, evidence));
+      } catch (rejected) {
+        // A rejected evidence frame is not a terminal fact. Report the host's
+        // rejection without the rejected evidence before requesting release.
+        await request("failed", failure(rejected));
+      }
     };
-    void Promise.resolve()
-      .then(() => callback(input.validate(envelope.input), context as TaskContext<Message>))
-      .then(
-        async (value) => {
-          finishing = true;
-          finishDroppedLogs();
-          await output;
-          let validated: Json;
-          try {
-            validated = result.validate(value);
-          } catch (error) {
-            await reportFailure(error);
-            return;
-          }
-          await request("complete", validated);
-        },
-        async (error) => {
-          finishing = true;
-          finishDroppedLogs();
-          await output.catch(() => {});
-          if (
-            controller.signal.aborted &&
-            (error?.name === "AbortError" || ["ABORT_ERR", "run_canceled"].includes(error?.code))
-          )
-            return;
-          await reportFailure(error);
-        },
-      )
-      .then(
-        () => {
-          inbox.close();
-          controller.abort();
-          settleLogs();
-          for (const task of tasks.values()) task.abort();
-          port.postMessage({
-            generation: config.generation,
-            runId,
-            kind: cleanupUncertain ? "uncertain" : "released",
-          });
-          port.close();
-        },
-        () => {
-          inbox.close();
-          controller.abort();
-          settleLogs();
-          for (const task of tasks.values()) task.abort();
-          port.postMessage({ generation: config.generation, runId, kind: "uncertain" });
-          port.close();
-        },
-      );
+    void (async () => {
+      try {
+        const value = await callback(envelope.input as Input, context as TaskContext<Message>);
+        finishing = true;
+        finishDroppedLogs();
+        await output;
+        if (outputError !== undefined) throw outputError;
+        await request("complete", value);
+      } catch (caught) {
+        finishing = true;
+        finishDroppedLogs();
+        await output.catch(() => {});
+        cleanupUncertain ||=
+          caught instanceof TaskError &&
+          ["reclamation_failed", "reclamation_unknown"].includes(caught.code);
+        const error = outputError ?? caught;
+        if (
+          controller.signal.aborted &&
+          error instanceof Error &&
+          (error.name === "AbortError" ||
+            (error instanceof TaskError && ["ABORT_ERR", "run_canceled"].includes(error.code)))
+        )
+          return;
+        await reportFailure(error);
+      }
+    })().then(
+      () => {
+        inbox.close();
+        controller.abort();
+        settleLogs();
+        for (const task of tasks.values()) task.abort();
+        port.postMessage({
+          generation: config.generation,
+          runId,
+          kind: cleanupUncertain ? "uncertain" : "released",
+        });
+        port.close();
+      },
+      () => {
+        inbox.close();
+        controller.abort();
+        settleLogs();
+        for (const task of tasks.values()) task.abort();
+        port.postMessage({ generation: config.generation, runId, kind: "uncertain" });
+        port.close();
+      },
+    );
   });
 }

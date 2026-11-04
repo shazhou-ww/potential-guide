@@ -1,0 +1,71 @@
+{
+  "baseCommit": "a38bfa625ff504fcd56993705cc0f10c0ca6e4a1",
+  "normalization": "Original build + SDK with parent CID opaque-identity delta; protocol runtime contract APIs retained.",
+  "node": "v24.11.1",
+  "typescript": "5.9.3",
+  "esbuild": "0.28.2",
+  "lockSha256": "bfc208ba28dfcbfe4efaa440b49ab19e1493d87371796ed87b196ade531eccdb",
+  "sdkSourceSha256": "93d1224d77cc6bf3b8adb5b5d7a9bb74aba046742f11c2f611900bc9fa73e50c",
+  "cases": [
+    {
+      "name": "default",
+      "cid": "bafybeife4iq7mypqinnz3mlupuwnccgbujvlnr2ndtrrsy62eoerft27ve",
+      "workerBytes": 20784,
+      "workerSha256": "06d0b2010764cd309cc2e1e122b6bd490cfa0e8eaba493166cc3c47c98a3c5b2",
+      "totalBytes": 21547,
+      "carBytes": 22194,
+      "files": {
+        "schemas/0.json": 167,
+        "schemas/1.json": 168,
+        "schemas/2.json": 64,
+        "worker.cjs": 20784,
+        "task.yaml": 364
+      },
+      "contributions": {
+        "task-validator:input": 994,
+        "task-validator:result": 994,
+        "task-validator:message": 447,
+        ".cache/task-schema-cid-baseline/sdk/dist/index.js": 7300,
+        "packages/task-protocol/dist/json.js": 1764,
+        "packages/task-protocol/dist/worker.js": 0,
+        "packages/task-protocol/dist/logs.js": 803,
+        "packages/task-protocol/dist/run.js": 578,
+        "packages/task-protocol/dist/task-schema-uri.js": 85,
+        ".cache/task-schema-cid-baseline/protocol/worker.js": 0,
+        "packages/task-protocol/dist/schema-runtime.js": 6512,
+        ".cache/task-schema-cid-baseline/sdk/dist/binding.js": 618,
+        ".cache/task-schema-cid-baseline/default/src/main.ts": 43
+      }
+    },
+    {
+      "name": "repeat",
+      "cid": "bafybeife4iq7mypqinnz3mlupuwnccgbujvlnr2ndtrrsy62eoerft27ve",
+      "workerBytes": 20784,
+      "workerSha256": "06d0b2010764cd309cc2e1e122b6bd490cfa0e8eaba493166cc3c47c98a3c5b2",
+      "totalBytes": 21547,
+      "carBytes": 22194,
+      "files": {
+        "schemas/0.json": 167,
+        "schemas/1.json": 168,
+        "schemas/2.json": 64,
+        "worker.cjs": 20784,
+        "task.yaml": 364
+      },
+      "contributions": {
+        "task-validator:input": 994,
+        "task-validator:result": 994,
+        "task-validator:message": 447,
+        ".cache/task-schema-cid-baseline/sdk/dist/index.js": 7300,
+        "packages/task-protocol/dist/json.js": 1764,
+        "packages/task-protocol/dist/worker.js": 0,
+        "packages/task-protocol/dist/logs.js": 803,
+        "packages/task-protocol/dist/run.js": 578,
+        "packages/task-protocol/dist/task-schema-uri.js": 85,
+        ".cache/task-schema-cid-baseline/protocol/worker.js": 0,
+        "packages/task-protocol/dist/schema-runtime.js": 6512,
+        ".cache/task-schema-cid-baseline/sdk/dist/binding.js": 618,
+        ".cache/task-schema-cid-baseline/repeat/src/main.ts": 43
+      }
+    }
+  ]
+}

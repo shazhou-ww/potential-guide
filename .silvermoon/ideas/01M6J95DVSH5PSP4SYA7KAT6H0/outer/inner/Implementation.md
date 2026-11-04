@@ -1,56 +1,66 @@
 # Implementation
 
+用户已明确授权 Engine 独占完整业务契约校验。此前预编译/Worker 校验契约及
+[Evidence.md](Evidence.md) 中的数据是保留的历史，不作为本边界的验收证明。
+本轮实际结果见 [Engine-Validation-Evidence.md](Engine-Validation-Evidence.md)。
+
 ## Steps
 
-### I-S01: 确认显式入口与预编译边界
+### I-S01: 明确宿主与显式入口边界
 
-梳理 compileTaskBundle、buildTaskBundle 及 author check/build 到 Worker 的完整路径，确认 input、result、message 契约的生成位置，以及协议模块初始化带来的间接依赖。评估 Ajv standalone 或等价方案，不在本契约中预先绑定具体实现。
+保留 init 入口的公开 SDK runTask 值导入、contract 类型导入、依赖版本/包字段保留，
+以及 callback/exportName 兼容、自定义委托封装、独立 SDK 副本。构建/制品/发布工具
+属于 pguide-task-bundle；SDK 只提供 Worker 运行时。
 
-本次边界是 Task Bundle 构建链及作者显式引入的 Worker 运行时，不要求从构建工具、Task Engine 或其他独立 Schema 消费者中移除 Ajv。作者主动引入的业务依赖不属于 SDK 固定开销；不得用默认模板未引入这些依赖来掩盖 SDK 的间接引入。
+构建期仍检查 Schema 合法性、闭包、引用、预算及受管理输出安全；仅绑定声明，
+不生成或绑定三份 standalone validator，不执行业务入口，不替显式入口再启动。
+保留其他宿主消费者仍使用的普通/standalone 协议能力；移除的是 Worker 对
+schema-runtime 的依赖，不是无关公共 API。
 
-默认模板的主入口必须显式从公开 Task SDK 导入 runTask，并在作者代码中调用它封装业务函数，而不再仅导出一个回调并由构建器隐式启动。输入、结果和消息类型仍可通过 import type 使用 contract，不应为获得类型而引入运行时 validator。作者主动导入 validator 的代码及其 Ajv 依赖允许随包交付，须与 SDK 固定开销分开归因。
+### I-S02: 接入 Engine 统一校验与拒绝 ACK 生命周期
 
-### I-S02: 接入显式启动与构建期校验器生成
+Engine 在 run/message 投递前验证 input/message，在 checkpoint/complete/failed.result
+接纳和持久化前验证 result。宿主确认 CID、codec/hash、DAG 及完整声明握手；
+Worker 仅检查有界 opaque CID 配置、声明一致性及原有消息身份/队列预算。
 
-在构建时完成契约解析、引用闭包检查及校验器生成；Worker 只执行已生成的校验函数及必要辅助代码，不再根据 Schema 创建编译器或动态生成校验代码。覆盖所有现有构建入口，避免只优化 CLI 默认模板。
+Worker 不做业务 Schema 校验，也不遍历或规范化业务/日志/进度载荷；Engine 统一
+检查收到的 JSON、结构深度/节点、字节限制及日志/进度形状。无法通过 structured
+clone 的值在发送端明确失败，且不消耗消息序号或在途额度；Engine 的限制是接纳
+限制，不是 IPC 分配内存前的保护。启动声明的 canonical JSON 比较仍保留。
+complete 拒绝必须转成失败报告；checkpoint 拒绝即使被回调捕获也不能成功；
+非法 RunFailure 证据的拒绝须以宿主错误重新报告且不携带被拒证据。
+Engine 记住拒绝状态，不能被随后的合法 complete 覆盖；即使自定义 Worker 忽略
+NACK 后退出，也不能丢失明确失败。成功回收必须在物理退出及既有资源证明之后。
+自定义宿主须承担同样的验证与确认职责，不能用全 ACK mock 证明任务合格。
 
-构建器负责打包和绑定构建锁定的契约/校验产物，不替作者选择启动封装，也不再次调用 runTask。SDK 的实际公开签名及契约绑定机制在实施时确定；作者入口必须能直接看出所选封装及其依赖来源，不能把隐式启动搬到另一个生成入口中。
+### I-S03: 补齐真实 Engine 回归及体积证据
 
-同步更新 init 的 Task SDK 依赖声明、模板类型检查、公开示例及构建说明；保留已有包字段和用户依赖版本的初始化规则。实施前明确旧 callback/exportName 构建路径的兼容或迁移策略并覆盖测试，不默认授权破坏性移除，也不把兼容旧入口作为新模板继续隐式启动的理由。
-
-未来 runCheck/runProbe 或作者自定义封装应能复用同一显式入口和契约绑定机制；本次只验证可替换性，不要求实现或发布这些高级 API，也不为它们引入额外配置框架。替换封装不能绕过声明绑定及协议约束。
-
-运行时仍保留不可信数据的检查、输入大小及资源预算、错误报告、声明一致性和现有 Worker 协议。若生成产物改变 Bundle 字节或 CID，应明确记录；不要求新旧 CID 相同，也不得静默接纳已经不受支持的旧产物。
-
-### I-S03: 补齐回归和体积证据
-
-围绕以下验收标准补充自动化测试和可复现证据，更新直接相关文档。实施证据只证明仓库内实现；真实包消费和隔离执行环境的验收由 [Deployment.md](../Deployment.md) 单独定义。
-
-实现选择、兼容策略、实际测试与逐依赖体积证据见 [Evidence.md](Evidence.md)、
-[Baseline.json](Baseline.json)、[Current.json](Current.json) 和可复现的
-[Measure.mjs](Measure.mjs)。这些是本契约的主体世界证据，不代表部署验收。
+真实 Engine/TypeSupervisor、持久事实和真实 Worker 联合验证数据与 ACK 生命周期；
+覆盖高级 JSON Schema、Never、引用/siblings、原型字段和既有资源/日志/取消。
+使用实际 init、正式构建参数及 metafile 复测，不把失败、负控制或代理测试当通过。
+保留共享未知修改，本轮不提交、推送、发布或记录接受事件。
 
 ## Acceptance criteria
 
-### I-AC01: 显式入口与运行期依赖隔离
+### I-AC01: 显式入口与轻量依赖成立
 
-- 默认 init 生成的主入口包含真实 SDK 值导入和作者编写的 runTask 调用；contract 类型通过 import type 使用。模板项目显式声明所需 SDK 依赖，独立 TypeScript 类型检查通过，作者能从源码和依赖图追踪所选封装。author check/build 只打包、不执行入口业务代码。
-- 通过真实 Worker 测试证明作者入口负责启动，构建器没有隐藏的 runTask 注入或双重启动；用一个委托 runTask 的自定义封装替换入口导入/调用后，构建器无需新增封装名称分支或切换启动模式，同一任务仍按协议执行。该测试不等于新增 runCheck/runProbe API。旧 callback/exportName 路径按明确记录的兼容或迁移策略验证。
-- input、result、message 的非法契约、未解析引用及不受支持的 Schema 在 author check/build 中明确失败；author check 保持无产物写入。构建失败不得破坏已有受管理输出。
-- 对真实默认 init 模板和包含共享引用、组合约束的代表性任务检查 esbuild metafile。SDK 引入的代码不得包含 Ajv 通用入口、core、compile/codegen、vocabularies、元 Schema 或 fast-uri；不得以 external、动态加载、旁路下载或共享全局依赖绕开检查。允许按需打入的 ajv/runtime 小型辅助函数，并逐项记录来源和字节贡献。
-- 通过真实 Worker 启动及多次数据处理测试证明执行的是预生成函数，不在启动或请求处理中重新编译 Schema；静态依赖图与执行证据共同验收，不能仅搜索产物中的字符串或只验证一次成功返回。
-- 对照类型导入和作者主动导入运行时 validator 的案例：前者不带入 contract 的运行时代码，后者正确保留并执行显式依赖，其体积单独归因。此处不取消 SDK 既有自动数据校验；若另行决定由宿主独占完整校验职责，须先调整构想及校验验收边界，不得作为本次入口改造的隐含变更。
+真实 init 的 SDK 依赖、类型检查、单次启动、自定义委托、旧 callback 和 SDK 副本有效；
+默认及共享引用/组合任务的 Worker 图没有 schema-runtime、task-validator、任何 Ajv
+或 multiformats。类型导入不引入 contract 运行时；作者主动 validator 确实执行并单独
+归因。构建不执行入口，错误契约/引用/预算失败不破坏旧输出，产物不 external 非内置代码。
 
-### I-AC02: 数据校验与协议语义保持一致
+### I-AC02: 宿主校验、拒绝及物理回收有效
 
-以现有协议 Schema 校验为对照，同一组有效和无效数据分别经过原校验路径、预生成路径及真实 Worker；记录预期结果，不能只比较两者是否都没有抛错。
+同一明确有效/无效数据集经过普通宿主校验及真实 Engine/Worker；非法 input/message
+不调用/投递回调，不持久化消息。非法结果、checkpoint（包括被回调捕获的拒绝）、
+RunFailure 证据不持久化，最终 Run 失败而非成功或悬挂，exit 和 reclaimed 事实可观察。
+自定义 Worker 忽略 NACK 不能绕过宿主。有效证据、opaque CID/声明握手、投影/revision、
+错误代码、字节与 Schema 预算、日志、取消和资源流保持有效。定向测试及 pnpm check
+须记录实际结果，未通过不勾选、不伪造验收。
 
-- 数据边界：输入在业务回调执行前校验；非法输入不得调用回调。回调结果及业务消息仍按各自契约校验，Never 消息不得因预编译而被放行。保留对外错误代码、错误结构及已有稳定错误文本，不要求内部生成函数名或栈位置一致。
-- Schema 边界：覆盖现有支持的 required/optional、类型和数值/字符串约束、数组与 tuple、record/patternProperties、additional/unevaluated 属性或元素、组合约束、布尔 Schema、共享和局部引用及引用的同级约束、原型名称字段。以 [schema.test.ts](../../../../../packages/task-protocol/test/schema.test.ts)、[bundle.test.ts](../../../../../packages/task-sdk/test/bundle.test.ts) 和 [authoring.test.ts](../../../../../packages/pguide-task-bundle/test/authoring.test.ts) 的既有行为为下限；不新增 Schema 方言、远程引用、格式语义或静默降级。
-- 行为边界：不得新增类型强制转换、默认值填充、字段删除或输入变异；输入投影、等价关系及 revision 语义保持一致。现有载荷和 Schema 预算、声明绑定、消息、日志、进度、取消和资源流回归继续通过。定向测试及 pnpm check 通过。
+### I-AC03: 可复现真实交付体积下降
 
-### I-AC03: 体积改善与可复现交付
-
-- 使用真实 init 默认 Echo 模板，不手写更小的替代任务。改动前后固定依赖锁定版本、Node/esbuild 版本和构建参数，记录基线提交、测量命令、Worker 原始字节数、Bundle 文件总字节数及逐依赖贡献。gzip 大小只能作为补充，不能替代实际交付体积。
-- 当前观察基线是 Worker 167,151 字节、Bundle 文件合计 167,914 字节；实施时从记录的基线提交复测并解释环境差异。相同环境下新 Worker 和 Bundle 文件总量都必须小于基线，同时满足 I-AC01 的编译器移除标准；不能只把代码搬到另一个随包文件。此阶段不承诺未经验证的固定 KiB 或降幅百分比。
-- 分析用构建与正式构建的 Worker 字节一致；相同作者输入在独立目录构建得到相同 Worker 字节和 CID。生成校验代码不得引入绝对路径、时间戳或构建机器状态，所有非内置运行依赖仍随 Bundle 完整交付。
+固定 Node/esbuild/lock 和构建参数，记录真实 init 的原始 Worker 与全部文件字节、
+逐依赖贡献、分析/正式构建一致性及独立目录 Worker/CID 一致性。以本轮共享工作树
+CID 精简后的 20784/21547 为直接对照，34148/34911 及更早数据仅作历史；
+新 Worker 与总量均下降且不转移至旁路文件。声明与引用文件仍完整交付。

@@ -33,9 +33,16 @@ Schema URL 明确拒绝，不作为 v1 别名。禁用日志和自定义宿主�
 ```
 
 `declaration` 是同一已验证文件树离线解析后的三份 Schema 与原声明字段。
-生成入口调用 `runTask(callback, buildLockedDeclaration)`，
-先核对宿主声明与构建锁定声明，再发送 ready。
+作者入口显式调用 `runTask(callback)`；构建器只绑定声明，不生成或绑定业务 validator。
+Worker 先核对宿主声明与构建锁定声明，再发送 ready。
 宿主仍须独立核对握手与已验证 `task.yaml`，不能信任 Worker 自述。
+
+CID 解析、规范化、codec/hash 限制和内容哈希/DAG 校验属于宿主准入。
+Worker 仅检查 `bundle.cid` 是长度为 1 至 256 的字符串，将其作为不透明标识
+原样放入 ready，不解析 CID，也不解释 DAG-PB/raw 编码。宿主必须将 ready
+中的 CID 和三份 Schema 与当前已验证 Bundle 比较，匹配后才投递 Run。
+资源读取只传 Bundle 相对路径，由宿主绑定当前根 CID、检查路径并解析内容；
+Worker 不能通过资源消息选择另一个 CID。
 
 所有消息带 `generation`；不同 generation 的消息无效。
 每个 Worker 最多接收一个 Run；宿主在投递 run 前已持久确立开始事实。
@@ -76,6 +83,29 @@ Worker → 宿主：
 宿主按相同 id ack，错误 ack 拒绝相应操作。不重用旧通道或重复确认身份。
 进度、checkpoint 和业务消息确认通过同一有界输出队列排空，之后才报告结果。
 三份业务 Schema 都在同一构建内固定，运行中不联网补引用。
+
+完整业务校验统一属于 Engine：input/message 在投递前验证，checkpoint、
+complete 和 failed.result 在任何接纳或持久化前验证。Worker 不执行业务 Schema
+或输入投影。JSON 形状、结构深度/节点和字节限制、日志/进度载荷也由 Engine
+在接纳前检查，Worker 不重复遍历或规范化业务载荷；仍保留队列、身份、启动声明
+一致性、ACK/NACK、取消和资源流控制。
+
+不能通过 Node structured clone 的值在发送端以 `invalid_payload` 拒绝；
+发送失败不消耗消息序号或在途额度，仍能发送失败报告。可克隆但非 JSON 或超限的
+值由宿主 NACK 拒绝。structured clone 可能执行 getter 并将自定义对象转换为普通
+对象；宿主验证收到的表示，不保证检查作者原对象的描述符。作者应传普通 JSON。
+启动声明比较仍使用 canonical JSON，不属于本次移动的业务载荷校验。
+SDK 固定依赖不包含 schema-runtime、自动 validators、Ajv 或 CID 解析器；
+作者主动导入 validator 是另外的业务依赖。
+
+错误 ACK 不代表终态已提交。SDK 在 complete 被拒后报告 failed；checkpoint
+被拒后，即使业务捕获异常也不能改成成功；failed.result 被拒后，使用宿主错误
+重新报告不带被拒证据的 failed。Engine 记住拒绝状态，不允许后续 complete
+覆盖它；自定义 Worker 忽略 NACK 后退出，也必须形成失败而非丢失结果。
+非取消路径须在终态 ACK 成功后请求正常 released；取消保留 stopping/release 路径。
+真正回收仍须等物理退出与资源清理证明。
+无法确认终态通道时报告 uncertain，不假装成功。自定义宿主须实现上述责任，
+不能仅用 permissive ACK mock 声称完整验证通过。
 
 诊断消息另用从 1 起严格递增的 `logId`；log 与 log-drop 共用该序列，
 不占用业务 `id` 或业务输出队列。宿主验证 generation、当前 Run 和可信 scope，

@@ -12,7 +12,6 @@ import {
 import { encodeContentCar, importContent } from "@potential-guide/ipfs-content/codec";
 import {
   type JsonObject,
-  precompileSchema,
   resolveBundleSchemas,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
@@ -86,11 +85,6 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
   if (!/^(?:default|[A-Za-z_$][A-Za-z0-9_$]*)$/.test(exportName))
     throw new Error("Invalid callback export name.");
   const runtime = fileURLToPath(import.meta.resolve("@potential-guide/task-sdk"));
-  const validators = {
-    input: precompileSchema(resolved.inputSchema, true),
-    result: precompileSchema(resolved.resultSchema),
-    message: precompileSchema(resolved.messageSchema),
-  };
   if (options.entryMode === "explicit" && options.exportName !== undefined)
     throw new Error("Explicit Task entries cannot select a callback export.");
   const bindingPath = fileURLToPath(
@@ -157,24 +151,10 @@ runTask(async (input, context) => {
                 return undefined;
             }
             return {
-              contents: `import input from "task-validator:input";
-import result from "task-validator:result";
-import message from "task-validator:message";
-export const binding={declaration:JSON.parse(${JSON.stringify(JSON.stringify(resolved))}),validators:{input,result,message}};`,
+              contents: `export const binding={declaration:JSON.parse(${JSON.stringify(JSON.stringify(resolved))})};`,
               loader: "js",
             };
           });
-          plugin.onResolve({ filter: /^task-validator:/ }, (args) => ({
-            path: args.path.slice("task-validator:".length),
-            namespace: "task-validator",
-          }));
-          plugin.onLoad({ filter: /.*/, namespace: "task-validator" }, (args) => ({
-            contents: validators[args.path as keyof typeof validators],
-            loader: "js",
-            resolveDir: dirname(
-              fileURLToPath(import.meta.resolve("@potential-guide/task-protocol")),
-            ),
-          }));
         },
       },
     ],
