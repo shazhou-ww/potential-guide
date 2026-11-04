@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
@@ -181,7 +182,21 @@ await writeFile(join(root,"blocks.json"),JSON.stringify([...ipfsClient.blocks].m
     console.log(await run(process.execPath, [join(author, "build.mjs")], author));
     for (const name of ["check-task.ts", "probe-task.ts", "check-task.yaml", "probe-task.yaml"])
       await rm(join(author, name));
-    await rename(join(author, "node_modules"), join(author, "author_modules"));
+    // Windows may briefly retain directory handles after the author process exits.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename(join(author, "node_modules"), join(author, "author_modules"));
+        break;
+      } catch (error) {
+        if (
+          process.platform !== "win32" ||
+          !["EACCES", "EBUSY", "EPERM"].includes(error.code) ||
+          attempt >= 5
+        )
+          throw error;
+        await delay(100 * (attempt + 1));
+      }
+    }
     await writeFile(
       join(runtime, "consume.mjs"),
       `

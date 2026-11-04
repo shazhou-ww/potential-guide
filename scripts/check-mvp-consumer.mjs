@@ -191,8 +191,8 @@ async function exercise(url,requestBody=body){
  const resumed=await fetch(url+"/events?taskId="+initial.taskId,{headers:{...headers,"Last-Event-ID":cursor}});
  const resumedReader=resumed.body.getReader();await resumedReader.read();await resumedReader.cancel();
  let final;
- for(let i=0;i<500;i++){final=await (await fetch(url+"/tasks/"+initial.taskId,{headers})).json();if(final.stage==="completed")break;await new Promise(r=>setTimeout(r,10))}
- assert.equal(final.stage,"completed");
+ for(let i=0;i<500;i++){final=await (await fetch(url+"/tasks/"+initial.taskId,{headers})).json();if(final.termination)break;await new Promise(r=>setTimeout(r,10))}
+ assert.equal(final.stage,"completed",JSON.stringify({request:requestBody,task:final}));
  ${label === "mvp-check" ? `assert.equal(final.result.result.ok,false);assert.ok(final.result.evidence.prepared.checker.digest);` : `assert.deepEqual(final.result,{text:"packed"});`}
  let next;let events=0;
  do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();assert.ok(page.events.every(event=>!event.type.startsWith("run.")));events+=page.events.length;next=page.next}while(next);
