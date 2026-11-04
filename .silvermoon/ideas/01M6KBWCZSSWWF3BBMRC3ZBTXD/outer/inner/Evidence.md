@@ -31,7 +31,10 @@
 - Windows：`node scripts/check-packages.mjs --task-bundles` 通过；独立生产宿主执行自包含 Check/Probe，真实负业务结果、诊断、历史和证据保留通过，作者 node_modules 不可见。
 - Windows 原生 `pnpm check` 已实际执行，未跳过测试；Bundle 的 7 个既有符号链接场景在创建文件链接时遇到 `EPERM`。未修改断言或添加跳过规则。
 - 在仓库自有验证副本中，WSL 的 `pnpm --filter @potential-guide/pguide-task-bundle exec node --import tsx --test "test/*.test.ts"` 完整执行 Bundle 108 项断言，108 通过、0 跳过，包括上述全部符号链接场景。当次验证副本的 73 个候选文件与工作树逐一比较 SHA-256，未发现差异；副本及运行 scratch 已清理。随后按最低 Node 版本 CI 反馈调整了 HTTP-only 工厂，最终候选以新的完整 CI 结果为准。
-- WSL/NTFS 仍不能替代原生 Linux 完整检查：大小写碰撞断言遇到大小写不敏感的挂载语义，tsx CLI 的 Unix socket 也不受该项目路径支持。没有修改系统权限、挂载或测试断言来伪造通过；完整 `pnpm check` 继续通过既有 Ubuntu CI 对准确候选 commit 验证，结果待补齐。
+- WSL/NTFS 仍不能替代原生 Linux 完整检查：大小写碰撞断言遇到大小写不敏感的挂载语义，tsx CLI 的 Unix socket 也不受该项目路径支持。没有修改系统权限、挂载或测试断言来伪造通过；准确候选的完整检查结果以如下原生 Ubuntu CI 为准。
+- 最终代码 commit 为 `7e06699b8cf78fb7ca5d42ea2f0345f57f422c7d`。既有 CI [`41858975838`](https://github.com/shazhou-ww/potential-guide/actions/runs/41858975838) 已在 [Node 22.13.0](https://github.com/shazhou-ww/potential-guide/actions/runs/41858975838/job/126675228371) 和 [Node 24.11.1](https://github.com/shazhou-ww/potential-guide/actions/runs/41858975838/job/126675228636) 上分别完整执行 `pnpm check` 并成功。未过滤、跳过或放宽现有测试断言。
+- 同一准确 commit 的 [Windows packed CLI](https://github.com/shazhou-ww/potential-guide/actions/runs/41858975838/job/126675228557) 和 [Ubuntu packed CLI](https://github.com/shazhou-ww/potential-guide/actions/runs/41858975838/job/126675228662) 均成功，包含真实 tarball 消费与 Worker 执行。macOS packed CLI [任务 126675228938](https://github.com/shazhou-ww/potential-guide/actions/runs/41858975838/job/126675228938) 仍在等待 GitHub runner，不能声称整个五任务工作流已完成；双 Node 的完整检查结果已满足 I-AC03，macOS 排队作为额外跨平台验证限制保留给上游评审。
+- 首轮 Node 24 CI 还观察到既有 Probe 低预算物理回收场景失败；没有改变该生命周期逻辑或断言，最终候选的完整 Node 24 检查已通过。
 - packed 验证期间 pnpm 共享 store 出现 SQLite 损坏错误；未删除或修复共享数据，改用已核实生效的项目本地 `pnpm_config_store_dir`/`pnpm_config_cache_dir` 后验证通过。恢复时不要使用 pnpm 11 已忽略的旧 `npm_config_*` 变量。
 
 ## 关键内容指纹
