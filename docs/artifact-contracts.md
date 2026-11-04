@@ -176,7 +176,7 @@ typed Objective HTTPS references and preserves exact dependency bindings.
 ## Repository verification
 
 `pnpm consumers:check` (also included in `pnpm deployment:verify`) includes an
-isolated `artifact-hosts` packed consumer. It installs
+isolated `artifact-contracts` packed consumer. It installs
 the actual tarballs, uses the public author/build APIs, mounts both services,
 and executes real workers through the Checker v3 and Objective SDKs. This is
 local implementation evidence, not publication or external deployment acceptance.
