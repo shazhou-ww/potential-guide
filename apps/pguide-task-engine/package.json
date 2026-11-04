@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@potential-guide/cli-core": "workspace:^",
-    "@potential-guide/ipfs-content": "workspace:^",
+    "@potential-guide/task-engine": "workspace:^",
     "@potential-guide/task-engine-server": "workspace:^",
     "@potential-guide/task-engine-web-ui": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",

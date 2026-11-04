@@ -7,17 +7,14 @@ import {
   formatCommandHelp,
   type GlobalOptions,
   helpMetadata,
-  loadConfig,
-  setting,
   writeResult,
 } from "@potential-guide/cli-core";
 import { checkTaskArtifact } from "./artifact.js";
-import { createIpfsClient, importTaskBundle } from "./publish.js";
 
 const help: CommandHelp = {
-  description: "Initialize, check, build and publish complete TypeBox Task Bundles.",
+  description: "Initialize, check and build complete TypeBox Task Bundles offline.",
   usage:
-    "pguide task-bundle init [directory] | check author <task.build.yaml> | check artifact <bundle.car|directory> | build <task.build.yaml> | publish <bundle.car|directory> [--ipfs-rpc <url>]",
+    "pguide task-bundle init [directory] | check author <task.build.yaml> | check artifact <bundle.car|directory> | build <task.build.yaml>",
   sections: [
     {
       title: "Commands",
@@ -26,14 +23,12 @@ const help: CommandHelp = {
         "  check author <file>     Compile trusted author input in memory; no output writes or network publishing.",
         "  check artifact <path>   Validate a CAR or directory: exact manifest, Schema, block hashes and complete DAG.",
         "  build <file>            Emit the final <outDirectory>.car and a local Worker directory; offline.",
-        "  publish <path>          Import a checked CAR and explicitly pin its root; never build or execute Tasks.",
       ],
     },
     {
       title: "Configuration",
       lines: [
-        "  --ipfs-rpc overrides task-bundle.ipfsRpc from pguide user -> nearest project config.jsonc.",
-        "  No default node, daemon startup or global configuration writes. Only publish uses RPC.",
+        "  All commands are offline. Upload, import and pin with an external tool of your choice.",
       ],
     },
     {
@@ -51,7 +46,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       {
         schemaVersion: 1,
         command: "task-bundle",
-        subcommands: ["init", "check", "build", "publish"],
+        subcommands: ["init", "check", "build"],
         ...helpMetadata(help),
       },
       globals.format,
@@ -77,25 +72,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     if (args.length !== 1 || args[0]!.startsWith("-"))
       throw new CliError("Use build <task.build.yaml>.");
     result = await (await import("./authoring.js")).buildTask(resolve(globals.cwd, args[0]!));
-  } else if (command === "publish") {
-    if (
-      !(args.length === 1 || (args.length === 3 && args[1] === "--ipfs-rpc")) ||
-      args[0]!.startsWith("-")
-    )
-      throw new CliError("Use publish <bundle.car|directory> [--ipfs-rpc <url>].");
-    const directory = resolve(globals.cwd, args[0]!);
-    await checkTaskArtifact(directory);
-    const config = await loadConfig(globals.cwd, ["task-bundle"]);
-    const rpc = args[2] ?? setting<string>(config.value, "task-bundle.ipfsRpc");
-    if (typeof rpc !== "string" || !/^https?:\/\//.test(rpc))
-      throw new CliError(
-        "Publish requires --ipfs-rpc or task-bundle.ipfsRpc (an HTTP(S) Kubo RPC URL).",
-      );
-    const url = new URL(rpc);
-    if (url.username || url.password || url.search || url.hash)
-      throw new CliError("IPFS RPC URL must not embed credentials, query or fragment.");
-    result = await importTaskBundle(directory, await createIpfsClient(url.href));
-  } else throw new CliError("Unknown task-bundle command; use init, check, build or publish.");
+  } else throw new CliError("Unknown task-bundle command; use init, check or build.");
   writeResult(
     { schemaVersion: 1, command: `task-bundle ${command}`, status: "ok", result },
     globals.format,

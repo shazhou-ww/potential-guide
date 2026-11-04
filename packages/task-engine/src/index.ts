@@ -1,4 +1,4 @@
-export { createIpfsGatewayClient, type IpfsClient } from "@potential-guide/ipfs-content/read";
+export { createIpfsGatewayClient, type IpfsClient } from "./content.js";
 export {
   createTaskEngine,
   defaultEngineLimits,

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createServer } from "node:http";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
 import { BundleCache, inspectTaskBundle } from "../src/bundle.js";
@@ -38,7 +39,7 @@ test("standard UnixFS imports are reproducible; full admission and verified chun
   const cid = await client.import(tree);
   const alias = (await client.pin.add(cid)).toV0().toString();
   assert.equal(await client.import(new Map([...tree].reverse())), cid);
-  const cache = new BundleCache({ ipfsClient: client });
+  const cache = new BundleCache({ ipfsClient: client, prefetch: true });
   try {
     const [a, b] = await Promise.all([
       cache.acquire(cid),
@@ -80,10 +81,32 @@ test("standard UnixFS imports are reproducible; full admission and verified chun
     await cache.close();
   }
 });
-test("gateway raw blocks are CID verified, ordered and subject to host access policy", async () => {
+test("gateway raw blocks are CID verified, ordered and subject to host access policy", async (t) => {
   const source = new MemoryIpfsClient();
   const cid = await source.import(files());
   const visited: string[] = [];
+  const urls = await Promise.all(
+    ["blocked", "corrupt", "good"].map(async (name) => {
+      const server = createServer((request, response) => {
+        visited.push(name);
+        assert.equal(request.method, "GET");
+        const url = new URL(request.url!, "http://localhost");
+        assert.match(url.pathname, /^\/ipfs\//);
+        assert.equal(url.search, "?format=raw");
+        const bytes =
+          name === "corrupt"
+            ? Uint8Array.of(0)
+            : source.blocks.get(url.pathname.split("/").at(-1)!);
+        response.writeHead(bytes ? 200 : 404, { "content-type": "application/vnd.ipld.raw" });
+        response.end(bytes);
+      });
+      await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+      t.after(() => new Promise<void>((done) => server.close(() => done())));
+      const address = server.address();
+      assert.ok(address && typeof address !== "string");
+      return `http://127.0.0.1:${address.port}`;
+    }),
+  );
   const cache = new BundleCache({
     ipfsClient: {
       block: {
@@ -92,27 +115,20 @@ test("gateway raw blocks are CID verified, ordered and subject to host access po
         },
       },
     },
-    allowGateway: (url) => url.hostname !== "blocked.test",
-    fetch: async (input) => {
-      const url = new URL(String(input));
-      visited.push(url.hostname);
-      const headers = { "content-type": "application/vnd.ipld.raw" };
-      if (url.hostname === "corrupt.test") return new Response(new Uint8Array([0]), { headers });
-      const block = source.blocks.get(url.pathname.split("/").at(-1)!);
-      return new Response(block ? Uint8Array.from(block) : null, {
-        status: block ? 200 : 404,
-        headers,
-      });
+    allowGateway: (url) => {
+      assert.match(url.pathname, /^\/ipfs\//);
+      assert.equal(url.search, "?format=raw");
+      return url.origin !== urls[0];
     },
   });
   try {
     const bundle = await cache.acquire({
       cid,
-      hint: ["http://blocked.test", "http://corrupt.test", "http://good.test"],
+      hint: urls,
     });
     assert.equal(bundle.cid, cid);
-    assert.deepEqual(visited.slice(0, 2), ["corrupt.test", "good.test"]);
-    assert.equal(visited.includes("blocked.test"), false);
+    assert.deepEqual(visited.slice(0, 2), ["corrupt", "good"]);
+    assert.equal(visited.includes("blocked"), false);
     bundle.release();
   } finally {
     await cache.close();
@@ -143,7 +159,7 @@ test("missing/corrupt blocks, non-directory roots, invalid files, incomplete sch
     [files(), { retainedBytes: 100 }, "capacity_exceeded"],
   ] as const) {
     const root = await client.import(tree);
-    const cache = new BundleCache({ ipfsClient: client, limits });
+    const cache = new BundleCache({ ipfsClient: client, limits, prefetch: true });
     await assert.rejects(cache.acquire(root), { code });
     await cache.close();
   }
@@ -155,7 +171,7 @@ test("missing/corrupt blocks, non-directory roots, invalid files, incomplete sch
   await assert.rejects(fileRoot.acquire(leaf[0]), { code: "invalid_bundle" });
   await fileRoot.close();
   client.blocks.delete(leaf[0]);
-  const missingLeaf = new BundleCache({ ipfsClient: client });
+  const missingLeaf = new BundleCache({ ipfsClient: client, prefetch: true });
   await assert.rejects(missingLeaf.acquire(cid), { code: "bundle_fetch_failed" });
   await missingLeaf.close();
   client.blocks.delete(cid);
@@ -196,7 +212,11 @@ test("the total Engine-owned retention budget is bounded and reclaimed by explic
   const client = new MemoryIpfsClient();
   const cid = await client.import(files());
   const other = await client.import(files({ "resources/extra": Buffer.from("another root") }));
-  const cache = new BundleCache({ ipfsClient: client, limits: { retainedBytes: 500_000 } });
+  const cache = new BundleCache({
+    ipfsClient: client,
+    prefetch: true,
+    limits: { retainedBytes: 500_000 },
+  });
   try {
     const first = await cache.acquire(cid);
     await assert.rejects(cache.acquire(other), { code: "capacity_exceeded" });

@@ -117,4 +117,53 @@ export class VirtualClock implements Clock {
     return this.timers.size;
   }
 }
-export { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
+/** Offline fixture, not a publisher or production storage backend. */
+export class MemoryIpfsClient {
+  readonly blocks = new Map<string, Uint8Array>();
+  readonly block = {
+    get: async (cid: string, options?: { signal?: AbortSignal }) => {
+      options?.signal?.throwIfAborted();
+      const bytes = this.blocks.get(cid);
+      if (!bytes) throw new Error("IPFS block is unavailable.");
+      return Uint8Array.from(bytes);
+    },
+  };
+  async import(files: ReadonlyMap<string, Uint8Array>) {
+    const [{ unixfs }, { MemoryBlockstore }, { fixedSize }, { balanced }] = await Promise.all([
+      import("@helia/unixfs"),
+      import("blockstore-core"),
+      import("ipfs-unixfs-importer/chunker"),
+      import("ipfs-unixfs-importer/layout"),
+    ]);
+    const blockstore = new MemoryBlockstore();
+    const store = blockstore.put.bind(blockstore);
+    blockstore.put = async (cid, bytes, options) => {
+      const chunks: Uint8Array[] = [];
+      if (bytes instanceof Uint8Array) chunks.push(bytes);
+      else for await (const chunk of bytes) chunks.push(chunk);
+      const value = Buffer.concat(chunks);
+      this.blocks.set(cid.toString(), value);
+      return store(cid, value, options);
+    };
+    let cid: string | undefined;
+    for await (const entry of unixfs({ blockstore }).addAll(
+      [...files]
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([path, content]) => ({ path, content })),
+      {
+        cidVersion: 1,
+        rawLeaves: true,
+        wrapWithDirectory: true,
+        reduceSingleLeafToSelf: true,
+        shardSplitThresholdBytes: Number.MAX_SAFE_INTEGER,
+        fileImportConcurrency: 1,
+        blockWriteConcurrency: 4,
+        chunker: fixedSize({ chunkSize: 262_144 }),
+        layout: balanced({ maxChildrenPerNode: 174 }),
+      },
+    ))
+      cid = entry.cid.toString();
+    if (!cid) throw new Error("Cannot import an empty fixture.");
+    return cid;
+  }
+}

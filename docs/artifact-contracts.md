@@ -24,8 +24,8 @@ The Task namespace has its own declaration and Worker protocol:
 Authors use [`pguide task-bundle`](../packages/pguide-task-bundle/README.md)
 to generate the declaration and its required exact file manifest from TypeBox
 contracts and `task.build.yaml`. The low-level compiler is
-`@potential-guide/pguide-task-bundle/build`; publishing an existing artifact uses
-`@potential-guide/pguide-task-bundle/publish`, never the build entry. It does not extend the
+`@potential-guide/pguide-task-bundle/build`; offline artifact checks use `/artifact`.
+Upload and pin use independently chosen external tools; `/publish` has been removed. It does not extend the
 Checker/Objective Host authorization or business APIs. The remaining sections
 below describe Checker/Objective artifacts and their existing Host services.
 

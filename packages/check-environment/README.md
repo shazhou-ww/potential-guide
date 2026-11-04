@@ -109,21 +109,18 @@ Changing the business result contract changes the Bundle CID. Rebuild and
 use the new reference from `references.json`; existing CID-addressed content
 retain their original contracts.
 
-After building, import the directory to a private/local IPFS endpoint and submit its root CID. The Engine
+After building, import the emitted CAR using an external tool of your choice and submit its root CID. The Engine
 is assumed to be started and authorized; normal task observation is unchanged:
 
 ```js
 import {readFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
-import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
 
 const directory = resolve("packages", "check-environment", "dist", "bundles");
 const refs = JSON.parse(await readFile(join(directory, "references.json"), "utf8"));
-const published = await importTaskBundle(join(directory, refs.tools.directory), ipfsClient);
-if (published.cid !== refs.tools.cid) throw new Error("Import parameters differ.");
 await engine.submit({
   requestId,
-  bundle: published.cid,
+  bundle: refs.tools.cid,
   tools: [{command: process.execPath, args: ["--version"], minimumVersion: "22.13.0"}],
   timeoutMs: 5000
 }, caller);

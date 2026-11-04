@@ -38,17 +38,21 @@ Facts/SQLite v5 明确拒绝 v4 等旧格式；操作者必须显式选择新域
 宿主可配置 `bundleLimits`、`bundleConcurrency`（默认 4）及通用 Engine limits。
 `maxPreparing` 默认 1000，`maxWaitMs` 默认 30,000ms，
 `requestResultRetentionMs` 默认 86,400,000ms。队列等待不构成 preparation 超时。
-完整 DAG、声明、Schema 闭包、路径和容量校验在 Task 创建前完成。
+目录、精确清单、声明、Schema 闭包、路径和文件尺寸校验在 Task 创建前完成；
+默认按需读取资源后继块，`bundlePrefetch: true` 才在准入时验证完整资源内容。
+因此 Gateway 后续不可用可使已受理 Run 的首次资源读取失败；已缓存的块仍可复用。
 内部内存复用使用有界 verified blocks 及租约保护在途准备/运行，不提供公开缓存管理 API；
 Engine 不维护额外的 Bundle 文件缓存目录，持久内容、pin 与 GC 由独立 IPFS 节点管理。
 `bundleLimits.retainedBytes` 默认 256 MiB，是所有内存保留块的总量预算；超限明确拒绝。
-完整 DAG 遍历/去重由官方 `multiformats/traversal.walk` 承担，
-UnixFS 解码与 SHA-256 校验也使用官方库；本地只保留节点策略和容量边界。
+Helia 验证块，官方 UnixFS 解析路径及提供字节流；本地只保留 Task 准入、容量与租约边界。
+每次拉取使用至多 256 KiB 的 UnixFS 范围，避免官方 exporter 的整文件预读队列。
 旧 `protectedBytes` 已改名为 `retainedBytes`，内存保留/租约不是持久 IPFS pin。
 Engine 入口只重导出 `createIpfsGatewayClient`，不再暴露 RPC 工厂；
-独立作者发布使用 `@potential-guide/ipfs-content/publish`。
+作者只离线生成 CAR；上传、导入、pin 交由用户选择的外部工具，ipfs-content 不再发布。
 Engine 不启动/停止节点、不关闭共享 client，也不删除共享或发布者 pin。
-gateway 默认禁止访问；宿主通过 `allowGateway(url)` 明确授权，所有 gateway 块仍须 CID 校验。
+配置的 Gateway 可直接读取；Request hint 默认禁止，宿主通过 `allowGateway(url)` 明确授权候选。
+客户端只使用官方 HTTP-only Helia，无 delegated routing、libp2p、公共 fallback 或重定向。
+Gateway URL 必须是根 origin，拒绝旧路径前缀；详见[缓存与迁移语义](../../docs/task-bundle-cache.md)。
 
 原 Input 判等包含合法额外字段；实际提前退出可使 terminates 匹配失效，
 纯 now 回拨及 recovery stopped 不触发该例外。失效和后续匹配沿源 revision 观察。

@@ -245,7 +245,7 @@ prepare an ordinary application entry there (not a CLI configuration module):
 
 ```js
 import { TaskError } from "@potential-guide/task-protocol";
-import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
+import { createIpfsGatewayClient } from "@potential-guide/task-engine";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 const service = await startTaskServer({
   host: "127.0.0.1", port: 3000,
@@ -281,13 +281,13 @@ Provide a private token in that process environment and start
 Use a new database domain for a new candidate, not an old-format database.
 Do not commit the private module, token, SQLite files or favorites.
 
-The installed SDK tarball contains `examples\check-diagnostics`: copy its
+The installed Bundle tarball contains `examples\low-level\check-diagnostics`: copy its
 `task.yaml`, `callback.ts`, and `build.mjs` into an author directory with the
 local SDK/Protocol tarball graph (restore the retained author's `author_modules`
 to `node_modules` only for authoring). Run
 `node .\build.mjs .\artifacts\diagnostic-check`. It prints the exact
-offline `{directory,cid}` result, or set `IPFS_API` to the independently managed
-private/local endpoint to import and pin it there. Submit the printed root CID
+offline `{directory,car,cid}` result. Import/upload and pin that CAR with an
+external tool of your choice. Submit the printed root CID
 (optionally `{cid,hint}` for host-authorized gateway fallback) with fresh ULID and
 `checks: [{name:"identity", expected:"v1", actual:"v1"},
 {name:"readiness", expected:"ready", actual:"not-ready"}]`.

@@ -1,5 +1,11 @@
 # @potential-guide/ipfs-content
 
+**Private regression fixtures only; not published or installed by production consumers.**
+Production CAR code lives in `pguide-task-bundle/car`; Gateway/UnixFS reads live in
+`task-engine`. Existing legacy adapter tests remain here to preserve migration
+vectors. Active Task fixtures use checked artifact bytes and explicit memory import, without RPC or pin.
+The historical API description below applies only to these test fixtures.
+
 Thin local policy adapters for official Helia/IPLD, not a second IPFS implementation
 or Task Bundle interpreter. There is one support package, with independent codec,
 read, write and pin operations. No operation starts a node or enables discovery.

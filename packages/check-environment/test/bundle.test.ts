@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import {
@@ -31,7 +31,10 @@ test("all three directory bundles run through the Engine using verified root CID
   const clock = new VirtualClock();
   const ipfsClient = new MemoryIpfsClient();
   for (const ref of Object.values(refs)) {
-    assert.equal((await importTaskBundle(join(bundles, ref.directory), ipfsClient)).cid, ref.cid);
+    assert.equal(
+      await ipfsClient.import((await readTaskArtifact(join(bundles, ref.directory))).files),
+      ref.cid,
+    );
   }
   const engine = createTaskEngine({
     store,

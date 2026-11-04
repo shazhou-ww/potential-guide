@@ -5,10 +5,9 @@ import { createServer, get } from "node:http";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createIpfsClient } from "@potential-guide/ipfs-content/publish";
-import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
 import { parseArguments, resolveConfig } from "../src/config.js";
 import { localPolicy, startService } from "../src/service.js";
@@ -49,19 +48,19 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
     outDirectory: join(directory, "bundle"),
   });
   const memory = new MemoryIpfsClient();
-  await importTaskBundle(built.directory, memory);
-  assert.ok(memory.pins.has(built.cid), "Author import still pins the published root.");
+  await memory.import((await readTaskArtifact(built.car)).files);
   let gatewayReads = 0;
   let rpcReads = 0;
+  let unavailable = false;
   const source = createServer((request, response) => {
-    if (!request.url!.startsWith("/gateway/ipfs/")) {
+    if (!request.url!.startsWith("/ipfs/")) {
       if (request.url!.startsWith("/rpc")) rpcReads++;
       response.writeHead(500).end();
       return;
     }
     gatewayReads++;
     const url = new URL(request.url!, "http://localhost");
-    const bytes = memory.blocks.get(url.pathname.split("/").at(-1)!);
+    const bytes = unavailable ? undefined : memory.blocks.get(url.pathname.split("/").at(-1)!);
     response.writeHead(bytes ? 200 : 404, { "content-type": "application/vnd.ipld.raw" });
     response.end(bytes);
   });
@@ -79,7 +78,7 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
       "--port",
       "0",
       "--ipfs-gateway-url",
-      `${url}/gateway`,
+      url,
       "--ui-options",
       '{"host":"127.0.0.1","port":0,"favoritesFile":"favorites.json"}',
     ]),
@@ -137,14 +136,23 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
     }
     await assert.rejects(fetch(`${service.url}/tasks`));
     if (service.uiUrl) await assert.rejects(fetch(service.uiUrl));
-    assert.equal((await fetch(`${url}/gateway/ipfs/${built.cid}?format=raw`)).status, 200);
+    assert.equal((await fetch(`${url}/ipfs/${built.cid}?format=raw`)).status, 200);
   }
   assert.ok(gatewayReads > 4);
   assert.equal(rpcReads, 0);
+  await assert.rejects(
+    startService({
+      ...config,
+      database: join(directory, "prefix.sqlite"),
+      ipfsGatewayUrl: `${url}/gateway`,
+    }),
+    /Gateway base URL/,
+  );
+  unavailable = true;
   const failed = await startService({
     ...config,
     database: join(directory, "failed.sqlite"),
-    ipfsGatewayUrl: `${url}/missing`,
+    ipfsGatewayUrl: url,
   });
   try {
     const requestId = currentRequestId();
@@ -202,30 +210,22 @@ test("explicit local Caller scope and browser request policy", () => {
   );
 });
 
-test("author RPC helper remains available; Gateway service keeps UI HTTP and owned rollback/close", async (t) => {
+test("Gateway service keeps UI HTTP and owned rollback/close without reading content at startup", async (t) => {
   await mkdir(join(root, ".cache"), { recursive: true });
   const directory = await mkdtemp(join(root, ".cache", "service-runtime-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  let rpcRequests = 0;
-  const kubo = createServer((request, response) => {
-    rpcRequests++;
-    assert.match(request.url!, /^\/api\/v0\/block\/get\?arg=/);
-    response.end(Buffer.from("fixture"));
+  let gatewayRequests = 0;
+  const gateway = createServer((request, response) => {
+    gatewayRequests++;
+    assert.match(request.url!, /^\/ipfs\//);
+    response.writeHead(404).end();
   });
-  kubo.listen(0, "127.0.0.1");
-  await once(kubo, "listening");
-  t.after(() => new Promise<void>((done) => kubo.close(() => done())));
-  const address = kubo.address();
+  gateway.listen(0, "127.0.0.1");
+  await once(gateway, "listening");
+  t.after(() => new Promise<void>((done) => gateway.close(() => done())));
+  const address = gateway.address();
   assert.ok(address && typeof address === "object");
-  const rpc = `http://127.0.0.1:${address.port}`;
-  const client = await createIpfsClient(rpc);
-  assert.equal(
-    Buffer.from(
-      await client.block.get("bafkreigh2akiscaildcx3muflssxfgcpk2wf75l7vx7iw4umq36aywgyki"),
-    ).toString(),
-    "fixture",
-  );
-  assert.equal(rpcRequests, 1);
+  const endpoint = `http://127.0.0.1:${address.port}`;
   const config = await resolveConfig(
     parseArguments([
       "--no-global-config",
@@ -234,12 +234,13 @@ test("author RPC helper remains available; Gateway service keeps UI HTTP and own
       "--port",
       "0",
       "--ipfs-gateway-url",
-      rpc,
+      endpoint,
       "--ui-options",
       '{"host":"127.0.0.1","port":0,"favoritesFile":"favorites.json"}',
     ]),
   );
   const engine = await startService(config);
+  assert.equal(gatewayRequests, 0);
   try {
     assert.equal(engine.uiUrl, undefined);
     assert.equal((await fetch(`${engine.url}/tasks`)).status, 200);
@@ -299,7 +300,7 @@ test("author RPC helper remains available; Gateway service keeps UI HTTP and own
   }
   await assert.rejects(fetch(combined.uiUrl!));
   await assert.rejects(fetch(`${combined.url}/tasks`));
-  // Occupied UI port belongs to the test's Kubo fixture, never to the composition.
+  // Occupied UI port belongs to the test's Gateway fixture, never to the composition.
   const rollbackConfig = { ...config, port: Number(new URL(engine.url).port) };
   await assert.rejects(
     startService({
@@ -309,12 +310,8 @@ test("author RPC helper remains available; Gateway service keeps UI HTTP and own
     }),
   );
   await assert.rejects(fetch(`${engine.url}/tasks`));
-  assert.equal(
-    Buffer.from(
-      await client.block.get("bafkreigh2akiscaildcx3muflssxfgcpk2wf75l7vx7iw4umq36aywgyki"),
-    ).toString(),
-    "fixture",
-  );
+  assert.equal((await fetch(`${endpoint}/ipfs/fixture?format=raw`)).status, 404);
+  assert.equal(gatewayRequests, 1, "Composition close never closes the caller's Gateway.");
   const restarted = await startService(rollbackConfig);
   await Promise.all([restarted.close(), restarted.close()]);
   const invalidDatabase = join(directory, "must-not-open.sqlite");

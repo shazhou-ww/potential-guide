@@ -10,7 +10,7 @@ pguide task-bundle init [directory]
 pguide task-bundle check author task.build.yaml
 pguide task-bundle build task.build.yaml
 pguide task-bundle check artifact dist.car
-pguide task-bundle publish dist.car --ipfs-rpc http://127.0.0.1:5001
+# Import/upload and pin dist.car with an external tool of your choice.
 ```
 
 The independent executable takes the same arguments. All commands support the
@@ -21,7 +21,7 @@ There is **no include command**. `check` requires an explicit `author` or
 With `--format json`, successful operations return
 `{schemaVersion: 1, command: "task-bundle <operation>", status: "ok", result}`.
 Check results contain `declaration`, `resolved`, `cid` and exact `files`;
-build returns `directory`, `car`, `cid` and `declaration`; publish returns only `cid`.
+build returns `directory`, `car`, `cid` and `declaration`. Upload and pin are not provided.
 The final distribution artifact is `<outDirectory>.car`; the directory remains
 available for local Worker execution and backwards-compatible directory inputs.
 Help and discovery use the existing CLI metadata contracts. Errors and exit
@@ -155,15 +155,16 @@ the complete offline reference closure. Every shared resource needs an absolute
 three generated root schemas receive stable IDs unless the author supplies them
 and are stored under `schemas/`. The generated YAML references their actual
 Bundle-relative paths: `schemas/0.json`, `schemas/1.json` and `schemas/2.json`.
-Artifact checking, publishing and Engine loading resolve those files offline;
+Artifact checking and Engine loading resolve those files offline;
 their `$id` values still resolve shared references within the Schema documents.
 
 ### Low-level tooling API
 
 Repository tools that already supply a declaration and callback can use
 `buildTaskBundle`/`compileTaskBundle` from `@potential-guide/pguide-task-bundle/build`,
-`checkTaskArtifact` from `/artifact`, and `createIpfsClient`/`importTaskBundle`
-from `/publish`. These are author tools, never Worker runtime entrypoints.
+`checkTaskArtifact` from `/artifact`, and offline CAR codecs from `/car`.
+The `/publish` export, `publish` command and `task-bundle.ipfsRpc` setting have been removed.
+These are author tools, never Worker runtime entrypoints.
 Prefer the build-file CLI workflow for new tasks; see `examples/echo`.
 The migrated `examples/low-level/echo` and `examples/low-level/check-diagnostics`
 fixtures demonstrate the declaration-based API.
@@ -185,7 +186,7 @@ fragments fail without network resolution.
 
 Author check/build **evaluate the trusted contract module** in the local process.
 They are not sandboxes; do not check untrusted source. They bundle but do not
-execute the business callback. Artifact check/publish never evaluate source or
+execute the business callback. Artifact checks never evaluate source or
 load the author's contract, TypeBox modules or dependencies.
 
 All build paths validate the contracts and offline reference closure, then bind
@@ -238,19 +239,14 @@ nodes, empty directories, unsafe paths and capacity overruns fail closed.
 A previous CAR sibling must match the validated previous directory before replacement;
 unmanaged or corrupt CAR siblings are preserved and refused.
 
-Publish accepts the CAR alone (no author inputs, npm dependencies or extracted
-directory required). Directory input remains supported and is encoded offline first.
-It reads one immutable snapshot, imports the admitted CAR through Kubo `dag/import`
-with `pin-roots=false`, then separately confirms a recursive root pin.
-It never uploads custom `block/put` frames or relies on daemon chunking defaults.
-The node must already exist and belongs to
-the publisher; success does not imply public reachability or durable replicas.
-`--ipfs-rpc` overrides `task-bundle.ipfsRpc` from pguide's normal
-user → nearest project `config.jsonc`. No default endpoint is assumed. The package
-provides static `settings.json`; register it with `pguide config packages register`
-when the normal installation discovery does not find it. Never store credentials
-in the RPC URL. Publish does not rebuild, edit the artifact, create a Task or
-start/stop Kubo. Execution is a separate Engine consumer's responsibility.
+The CAR alone needs no author inputs, npm dependencies or extracted directory.
+Choose an external CAR importer, upload destination and retention/pin policy.
+Build and artifact checks never connect to RPC, upload, pin, start/stop Kubo or create Tasks.
+Remove old `task-bundle.ipfsRpc` configuration and any manually registered settings entry.
+The canonical UnixFS layout (CIDv1, raw leaves, 256 KiB chunks, balanced 174-child nodes)
+is unchanged; existing valid CAR roots remain compatible.
+Engine resource reads are now on demand by default; see
+[cache behavior and migration](../../docs/task-bundle-cache.md).
 
 ## Repository verification (no npm publish)
 

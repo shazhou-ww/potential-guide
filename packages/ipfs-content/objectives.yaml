@@ -7,7 +7,7 @@ objectives:
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["npm"], "runtime": "node", "allows": [],
+        "roles": ["tool"], "runtime": "node", "allows": [],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],
-        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}, {"id": "developer-commands", "kind": "cli"}]
+        "joins": []
       }

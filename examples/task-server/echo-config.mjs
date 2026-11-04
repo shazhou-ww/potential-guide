@@ -1,4 +1,4 @@
-import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
+import { createIpfsGatewayClient } from "@potential-guide/task-engine";
 import { TaskError } from "@potential-guide/task-protocol";
 
 export default function configure() {

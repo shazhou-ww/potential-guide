@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import type { RegisteredType } from "@potential-guide/task-protocol";
@@ -115,7 +115,7 @@ export default (input,context)=>type.run(input,context);`,
       entry: callback,
       outDirectory: join(source, "bundle"),
     });
-    bundles[type.type] = (await importTaskBundle(built.directory, ipfsClient)).cid;
+    bundles[type.type] = await ipfsClient.import((await readTaskArtifact(built.car)).files);
   }
   return {
     types,

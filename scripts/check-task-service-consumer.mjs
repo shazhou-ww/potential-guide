@@ -16,10 +16,10 @@ import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {createServer} from "node:http";
 import {delimiter,resolve} from "node:path";
 import {pathToFileURL} from "node:url";
-import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
-import {createIpfsGatewayClient,openContent} from "@potential-guide/ipfs-content";
+import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
+import {createIpfsGatewayClient} from "@potential-guide/task-engine";
 import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
-import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
+import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
 import {configureTaskServer} from "./echo-config.mjs";
 const cli=resolve("node_modules/@potential-guide/pguide-task-engine/dist/main.js");
 const pguide=resolve("node_modules/pguide/dist/bin.js");
@@ -40,11 +40,11 @@ await writeFile("task.yaml",JSON.stringify({
  name:"Packed Gateway",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",
  inputSchema:{type:"object"},resultSchema:true,messageSchema:false
 }));
-await writeFile("callback.ts","export default async input=>input;");
-const built=await buildTaskBundle({declaration:resolve("task.yaml"),entry:resolve("callback.ts"),outDirectory:resolve("bundle")});
+await writeFile("resource.bin",Buffer.alloc(600000,42));
+await writeFile("callback.ts",'export default async(input,context)=>{let bytes=0,sum=0;for await(const chunk of context.bundle.read("resources/nested/value.bin")){bytes+=chunk.length;for(const byte of chunk)sum+=byte}if(bytes!==600000||sum!==25200000)throw Error("Nested Gateway resource mismatch.");return input;}');
+const built=await buildTaskBundle({declaration:resolve("task.yaml"),entry:resolve("callback.ts"),resources:{"resources/nested/value.bin":resolve("resource.bin")},outDirectory:resolve("bundle")});
 const memory=new MemoryIpfsClient();
-await importTaskBundle(built.directory,memory);
-assert.ok(memory.pins.has(built.cid));
+assert.equal(await memory.import((await readTaskArtifact(built.car)).files),built.cid);
 delete process.env.IPFS_GATEWAY;
 await assert.rejects(configureTaskServer({token:"fixture"}),/Set IPFS_GATEWAY/);
 assert.equal((await configureTaskServer({token:"fixture",ipfsClient:memory})).ipfsClient,memory);
@@ -54,18 +54,18 @@ const gateway=createServer((request,response)=>{
  assert.equal(request.method,"GET");
  assert.equal(request.headers.accept,"application/vnd.ipld.raw");
  const url=new URL(request.url,"http://localhost");
- assert.match(url.pathname,/^\\/base\\/ipfs\\//);
+ assert.match(url.pathname,/^\\/ipfs\\//);
  assert.equal(url.search,"?format=raw");
  const bytes=memory.blocks.get(url.pathname.split("/").at(-1));
  response.writeHead(bytes?200:404,{"content-type":"application/vnd.ipld.raw"});response.end(bytes);
 });
 gateway.listen(0,"127.0.0.1");await once(gateway,"listening");
-const gatewayUrl="http://127.0.0.1:"+gateway.address().port+"/base";
+const gatewayUrl="http://127.0.0.1:"+gateway.address().port;
 try {
 process.env.IPFS_GATEWAY=gatewayUrl;
-assert.ok(await openContent((await configureTaskServer({token:"fixture"})).ipfsClient,built.cid,{signal:new AbortController().signal}));
+assert.ok(await (await configureTaskServer({token:"fixture"})).ipfsClient.block.get(built.cid));
 delete process.env.IPFS_GATEWAY;
-assert.ok(await openContent(createIpfsGatewayClient(gatewayUrl),built.cid,{signal:new AbortController().signal}));
+assert.ok(await createIpfsGatewayClient(gatewayUrl).block.get(built.cid));
 for(const combined of [false,true])for(const layer of ["user","file","cli","isolated"]){
  const database=(combined?"combined":"engine")+"-"+layer+".sqlite";
  await writeFile(resolve(home,"pguide/config.jsonc"),JSON.stringify(layer==="isolated"

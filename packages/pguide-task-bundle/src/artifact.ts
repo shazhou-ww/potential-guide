@@ -8,8 +8,6 @@ import {
   readArtifactFiles,
   safePath,
 } from "@potential-guide/artifact-files";
-import { importContent, validateContentCar } from "@potential-guide/ipfs-content/codec";
-import { openContent } from "@potential-guide/ipfs-content/read";
 import {
   type JsonObject,
   resolveBundleSchemas,
@@ -17,6 +15,8 @@ import {
   validateTaskBundleFiles,
 } from "@potential-guide/task-protocol";
 import { CID } from "multiformats/cid";
+import { exporter } from "ipfs-unixfs-exporter";
+import { computeContentCid, validateContentCar } from "./car.js";
 
 export async function inspectTaskArtifact(files: ReadonlyMap<string, Buffer>) {
   if (
@@ -41,7 +41,7 @@ export async function inspectTaskArtifact(files: ReadonlyMap<string, Buffer>) {
     ),
     schemas.map(([path]) => path),
   );
-  const cid = await importContent(files, async () => {});
+  const cid = await computeContentCid(files);
   return { declaration, resolved, cid, files: [...files.keys()].sort() };
 }
 
@@ -122,15 +122,6 @@ export async function readTaskArtifact(path: string) {
     maxCarBytes: artifactLimits.archiveBytes,
   });
   const signal = new AbortController().signal;
-  const client = {
-    block: {
-      async get(key: string) {
-        const parts: Buffer[] = [];
-        for await (const part of blockstore.get(CID.parse(key))) parts.push(Buffer.from(part));
-        return Buffer.concat(parts);
-      },
-    },
-  };
   const files = new Map<string, Buffer>();
   const paths = new Set<string>();
   let total = 0;
@@ -141,7 +132,7 @@ export async function readTaskArtifact(path: string) {
       paths.add(path.toLowerCase());
       if (paths.size > artifactLimits.paths) throw new Error("Task CAR exceeds path capacity.");
     }
-    const entry = await openContent(client, root, { signal });
+    const entry = await exporter(CID.parse(root), blockstore, { signal });
     if (entry.type === "directory") {
       let children = 0;
       for await (const child of entry.entries({ signal })) {

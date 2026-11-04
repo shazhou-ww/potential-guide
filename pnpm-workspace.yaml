@@ -48,6 +48,8 @@ catalog:
   yaml: 2.9.1
   kubo-rpc-client: 7.1.0
   "@helia/unixfs": 8.0.9
+  "@helia/http": 4.0.8
+  helia: 7.1.16
   "@helia/car": 6.0.9
   "@ipld/car": 5.4.6
   "@ipld/dag-pb": 4.1.7

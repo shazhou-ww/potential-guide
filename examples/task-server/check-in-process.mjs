@@ -1,4 +1,4 @@
-import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
+import { createIpfsGatewayClient } from "@potential-guide/task-engine";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
 import { parseBundleReference } from "@potential-guide/task-protocol/bundle-reference";

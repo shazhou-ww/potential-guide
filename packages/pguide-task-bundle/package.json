@@ -1,7 +1,7 @@
 {
   "name": "@potential-guide/pguide-task-bundle",
   "version": "0.1.0-rc.0",
-  "description": "TypeBox Task Bundle authoring and artifact-only publishing for pguide.",
+  "description": "Offline TypeBox Task Bundle authoring and CAR inspection for pguide.",
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -21,20 +21,16 @@
       "types": "./dist/artifact.d.ts",
       "import": "./dist/artifact.js"
     },
-    "./publish": {
-      "types": "./dist/publish.d.ts",
-      "import": "./dist/publish.js"
+    "./car": {
+      "types": "./dist/car.d.ts",
+      "import": "./dist/car.js"
     }
   },
   "bin": {
     "pguide-task-bundle": "./dist/bin.js"
   },
-  "pguide": {
-    "settings": "./settings.json"
-  },
   "files": [
     "dist",
-    "settings.json",
     "README.md",
     "examples"
   ],
@@ -57,7 +53,14 @@
     "esbuild": "catalog:",
     "multiformats": "catalog:",
     "@potential-guide/artifact-files": "workspace:^",
-    "@potential-guide/ipfs-content": "workspace:^",
+    "@helia/unixfs": "catalog:",
+    "@helia/car": "catalog:",
+    "@ipld/car": "catalog:",
+    "@ipld/dag-pb": "catalog:",
+    "@libp2p/logger": "catalog:",
+    "blockstore-core": "catalog:",
+    "ipfs-unixfs-exporter": "catalog:",
+    "ipfs-unixfs-importer": "catalog:",
     "yaml": "catalog:"
   },
   "publishConfig": {

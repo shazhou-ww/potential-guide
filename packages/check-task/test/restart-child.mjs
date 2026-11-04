@@ -7,7 +7,7 @@ import {
 import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
@@ -85,7 +85,7 @@ export default(input,context)=>type.run(input,context);`,
 }
 const bundle = JSON.parse(await readFile(referenceFile, "utf8"));
 const ipfsClient = new MemoryIpfsClient();
-await importTaskBundle(join(root, "task-bundle"), ipfsClient);
+await ipfsClient.import((await readTaskArtifact(join(root, "task-bundle"))).files);
 const server = await startTaskServer({
   database,
   port: 0,

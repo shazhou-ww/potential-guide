@@ -132,7 +132,7 @@ authentication/callbacks must use the unchanged programmatic assembly below.
 
 Pass `authorize`, `resolveCaller`, and a caller-owned generic `ipfsClient`
 (for example `await createIpfsClient(rpcUrl)` or
-`createIpfsGatewayClient(gatewayUrl)` from `@potential-guide/ipfs-content`); optional
+`createIpfsGatewayClient(gatewayUrl)` from `@potential-guide/task-engine`); optional
 `bundleLimits` and `bundleConcurrency` govern preparation. Registry options
 `types`, `currentVersions`, and `allocationLimits` are rejected.
 `resolveCaller` authenticates every HTTP request (including SSE reconnect);

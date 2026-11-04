@@ -32,11 +32,18 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "@potential-guide/ipfs-content": "workspace:^",
+    "@helia/http": "catalog:",
+    "@helia/unixfs": "catalog:",
+    "helia": "catalog:",
+    "blockstore-core": "catalog:",
+    "multiformats": "catalog:",
+    "ipfs-unixfs-exporter": "catalog:",
+    "ipfs-unixfs-importer": "catalog:",
     "@potential-guide/task-protocol": "workspace:^",
     "@potential-guide/check-artifacts": "workspace:^"
   },
   "devDependencies": {
+    "@potential-guide/ipfs-content": "workspace:^",
     "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/pguide-task-bundle": "workspace:^"
   },

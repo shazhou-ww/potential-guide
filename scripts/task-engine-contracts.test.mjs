@@ -8,7 +8,6 @@ import ts from "typescript";
 const root = fileURLToPath(new URL("..", import.meta.url));
 test("generic task production dependency graph is acyclic and business/adapter independent", async () => {
   for (const name of [
-    "ipfs-content",
     "task-protocol",
     "task-engine",
     "task-engine-http",
@@ -27,26 +26,19 @@ test("generic task production dependency graph is acyclic and business/adapter i
           ]
         : name === "task-engine"
           ? [
-              "@potential-guide/ipfs-content",
+              "@helia/http",
+              "@helia/unixfs",
+              "helia",
+              "blockstore-core",
+              "multiformats",
+              "ipfs-unixfs-exporter",
+              "ipfs-unixfs-importer",
               "@potential-guide/task-protocol",
               "@potential-guide/check-artifacts",
             ]
           : name === "task-protocol"
             ? ["multiformats", "ajv"]
-            : name === "ipfs-content"
-              ? [
-                  "@helia/unixfs",
-                  "@helia/car",
-                  "@ipld/car",
-                  "@ipld/dag-pb",
-                  "@libp2p/logger",
-                  "blockstore-core",
-                  "kubo-rpc-client",
-                  "ipfs-unixfs-exporter",
-                  "ipfs-unixfs-importer",
-                  "multiformats",
-                ]
-              : ["@potential-guide/task-protocol"];
+            : ["@potential-guide/task-protocol"];
     assert.deepEqual(Object.keys(manifest.dependencies ?? {}), dependencies);
     const files = await readdir(join(directory, "src"), { recursive: true });
     for (const file of files.filter((entry) => entry.endsWith(".ts"))) {

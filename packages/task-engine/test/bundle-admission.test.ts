@@ -6,7 +6,7 @@ import test from "node:test";
 import { readArtifactFiles } from "@potential-guide/check-artifacts/files";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { type SubmissionResult, taskSchemaUri } from "@potential-guide/task-protocol";
 import { createTaskEngine, newId } from "../src/index.js";
 import { MemoryStore, VirtualClock } from "../src/testing.js";
@@ -78,7 +78,7 @@ export default async (input, context) => {
       resources: { "resources/data.bin": join(directory, "data.bin") },
     });
     const client = new MemoryIpfsClient();
-    const { cid } = await importTaskBundle(built.directory, client);
+    const cid = await client.import((await readTaskArtifact(built.car)).files);
     const tree = await readArtifactFiles(built.directory);
     await rm(entry);
     await rm(built.directory, { recursive: true });

@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { bundleCid, parseBundleReference, taskSchemaUri } from "@potential-guide/task-protocol";
 
 /** Author-side only. The server never imports this module or business packages. */
@@ -17,7 +17,6 @@ export async function buildExampleBundle({
   checkBundle,
   ipfsClient,
 }) {
-  ipfsClient ??= await createIpfsClient(process.env.IPFS_API ?? "http://127.0.0.1:5001");
   await mkdir(directory, { recursive: true });
   let inputSchema = { type: "object" };
   let resultSchema = true;
@@ -90,7 +89,12 @@ children(scope){return{service:client,caller:{scope,subject:"example"},waitForTa
     resources,
     outDirectory: join(directory, `${kind}-bundle`),
   });
-  return (await importTaskBundle(built.directory, ipfsClient)).cid;
+  if (ipfsClient) {
+    // Explicit offline integration fixture only; the CLI never uploads.
+    if (typeof ipfsClient.import !== "function") throw Error("Expected an offline fixture.");
+    return await ipfsClient.import((await readTaskArtifact(built.car)).files);
+  }
+  return built;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

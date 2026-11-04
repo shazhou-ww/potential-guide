@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
@@ -36,7 +36,7 @@ test("built standalone UI (without installed UI dependencies) proxies real SDK d
       outDirectory: join(directory, "bundle"),
     });
     const ipfsClient = new MemoryIpfsClient();
-    await importTaskBundle(built.directory, ipfsClient);
+    await ipfsClient.import((await readTaskArtifact(built.car)).files);
     backend = await startTaskServer({
       port: 0,
       store: new MemoryStore(),

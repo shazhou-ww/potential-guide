@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 
 const directory = resolve(process.argv[2] ?? ".cache/check-diagnostics");
 const built = await buildTaskBundle({
@@ -9,8 +8,4 @@ const built = await buildTaskBundle({
   entry: fileURLToPath(new URL("./callback.ts", import.meta.url)),
   outDirectory: directory,
 });
-if (process.env.IPFS_API)
-  console.log(
-    (await importTaskBundle(built.directory, await createIpfsClient(process.env.IPFS_API))).cid,
-  );
-else console.log(JSON.stringify({ directory: built.directory, cid: built.cid }));
+console.log(JSON.stringify({ directory: built.directory, car: built.car, cid: built.cid }));

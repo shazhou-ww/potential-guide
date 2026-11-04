@@ -1,5 +1,6 @@
 {
   "name": "@potential-guide/ipfs-content",
+  "private": true,
   "version": "0.1.0-rc.0",
   "description": "Bounded policy adapters for official Helia UnixFS, IPLD CAR and verified Gateway reads.",
   "type": "module",

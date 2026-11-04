@@ -11,10 +11,10 @@ export async function checkBundleAuthoringConsumer(directory, cid, tarballs, man
     `
 import assert from "node:assert/strict";
 import {writeFile} from "node:fs/promises";
-import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
-import {importTaskBundle} from "@potential-guide/pguide-task-bundle/publish";
+import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
+import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
 const client=new MemoryIpfsClient();
-assert.equal((await importTaskBundle("bundle",client)).cid,${JSON.stringify(cid)});
+assert.equal(await client.import((await readTaskArtifact("bundle.car")).files),${JSON.stringify(cid)});
 await writeFile("blocks.json",JSON.stringify([...client.blocks].map(([key,bytes])=>[key,Buffer.from(bytes).toString("hex")])));
 `,
   );
@@ -54,6 +54,7 @@ await writeFile("blocks.json",JSON.stringify([...client.blocks].map(([key,bytes]
       "@sinclair/typebox",
       "@potential-guide/pguide-task-bundle",
       "@potential-guide/task-sdk",
+      "@potential-guide/ipfs-content",
     ])
       assert.ok(!names.has(name), `Production host must not install ${name}.`);
     await writeFile(

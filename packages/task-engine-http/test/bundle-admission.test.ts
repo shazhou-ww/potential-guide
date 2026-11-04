@@ -4,7 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
@@ -74,7 +74,7 @@ test("V03/V05/V10: HTTP client observes Request preparation separately; disconne
     outDirectory: join(directory, "bundle"),
   });
   const ipfs = new MemoryIpfsClient();
-  await importTaskBundle(built.directory, ipfs);
+  await ipfs.import((await readTaskArtifact(built.car)).files);
   const engine = createTaskEngine({
     store,
     clock,

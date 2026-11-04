@@ -9,7 +9,7 @@ import {
   inspectContractFiles,
 } from "@potential-guide/check-artifacts/contracts";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
@@ -462,7 +462,7 @@ export default(input,context)=>type.run(input,context);`,
     outDirectory: join(directory, "bundle"),
   });
   const ipfsClient = new MemoryIpfsClient();
-  const bundle = (await importTaskBundle(built.directory, ipfsClient)).cid;
+  const bundle = await ipfsClient.import((await readTaskArtifact(built.car)).files);
   const server = await startTaskServer({
     ipfsClient,
     store,

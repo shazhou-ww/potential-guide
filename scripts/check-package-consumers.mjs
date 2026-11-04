@@ -27,14 +27,13 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/pguide-task-bundle",
         "@potential-guide/task-sdk",
         "@potential-guide/task-protocol",
-        "@potential-guide/ipfs-content",
+        "@potential-guide/task-engine",
       ],
     ],
     [
       "probe-task",
       [
         "@potential-guide/pguide-task-bundle",
-        "@potential-guide/ipfs-content",
         "@potential-guide/probe-task",
         "@potential-guide/check-task",
         "@potential-guide/check-artifacts",
@@ -49,7 +48,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-server",
       [
-        "@potential-guide/ipfs-content",
         "@potential-guide/task-engine-server",
         "@potential-guide/task-engine",
         "@potential-guide/task-protocol",
@@ -59,7 +57,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       "mvp-check",
       [
         "@potential-guide/pguide-task-bundle",
-        "@potential-guide/ipfs-content",
         "@potential-guide/task-sdk",
         "@potential-guide/check-task",
         "@potential-guide/task-engine-server",
@@ -101,7 +98,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/pguide-task-bundle",
         "pguide",
         "@potential-guide/pguide-task-engine",
-        "@potential-guide/ipfs-content",
+        "@potential-guide/task-engine",
         "@potential-guide/task-protocol",
         "@potential-guide/task-sdk",
       ],
@@ -112,7 +109,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "pguide",
         "@potential-guide/pguide-task-bundle",
         "@potential-guide/task-sdk",
-        "@potential-guide/ipfs-content",
+        "@potential-guide/task-engine",
       ],
     ],
     [
@@ -255,7 +252,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
           env,
         ),
       );
-      assert.deepEqual(help.subcommands, ["init", "check", "build", "publish"]);
+      assert.deepEqual(help.subcommands, ["init", "check", "build"]);
       const initialized = JSON.parse(
         await run(
           process.execPath,

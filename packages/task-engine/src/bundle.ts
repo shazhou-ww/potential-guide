@@ -5,7 +5,7 @@ import {
   parseArtifactYaml,
   safePath,
 } from "@potential-guide/check-artifacts/files";
-import { type IpfsClient, openContent, retainContent } from "@potential-guide/ipfs-content/read";
+import { createIpfsGatewayClient, type IpfsClient, openContent } from "./content.js";
 import {
   type BundleReference,
   bundleCid,
@@ -119,10 +119,10 @@ export function inspectTaskBundle(
 }
 export interface BundleCacheOptions {
   ipfsClient: IpfsClient;
+  prefetch?: boolean;
   concurrency?: number;
   limits?: Partial<BundleLimits>;
   allowGateway?: (url: URL) => boolean;
-  fetch?: typeof globalThis.fetch;
 }
 
 /** Bounded verified load results and leases, never a distribution service or owner of shared pins. */
@@ -139,10 +139,7 @@ export class BundleCache {
   constructor(private readonly options: BundleCacheOptions) {
     if (typeof options.ipfsClient?.block?.get !== "function")
       throw new TaskError("invalid_config", "A caller-owned IPFS content client is required.");
-    if (
-      (options.allowGateway !== undefined && typeof options.allowGateway !== "function") ||
-      (options.fetch !== undefined && typeof options.fetch !== "function")
-    )
+    if (options.allowGateway !== undefined && typeof options.allowGateway !== "function")
       throw new TaskError("invalid_config", "Invalid IPFS gateway access policy or transport.");
     this.concurrency = options.concurrency ?? 4;
     if (!Number.isSafeInteger(this.concurrency) || this.concurrency <= 0)
@@ -229,24 +226,39 @@ export class BundleCache {
         : typeof reference.hint === "string"
           ? [reference.hint]
           : reference.hint;
+    const fallbacks = new Map<string, IpfsClient>();
+    const client: IpfsClient = {
+      block: {
+        get: async (key, options) => {
+          let failure: unknown;
+          options?.signal?.throwIfAborted();
+          try {
+            return await this.options.ipfsClient.block.get(key, options);
+          } catch (error) {
+            failure = error;
+          }
+          for (const base of gateways) {
+            options?.signal?.throwIfAborted();
+            const target = new URL(`${base.replace(/\/+$/, "")}/ipfs/${key}?format=raw`);
+            if (!this.options.allowGateway?.(target)) continue;
+            try {
+              const candidate = fallbacks.get(base) ?? createIpfsGatewayClient(base);
+              fallbacks.set(base, candidate);
+              return await candidate.block.get(key, options);
+            } catch (error) {
+              failure = error;
+            }
+          }
+          throw failure;
+        },
+      },
+    };
     const access = (signal: AbortSignal) => ({
       signal: AbortSignal.any([signal, this.lifetime.signal]),
-      gateways,
-      ...(this.options.allowGateway ? { allowGateway: this.options.allowGateway } : {}),
-      ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
-      maxBlockBytes: Math.min(this.limits.bytes, 2 * 1024 * 1024),
+      maxBlockBytes: 2 * 1024 * 1024,
       retainedBlocks,
-      maxRetainedBytes: this.limits.bytes * 2,
       retentionBudget: this.retentionBudget,
       maxDagBlocks: this.limits.blocks,
-      maxFileBytes: this.limits.fileBytes,
-      inspectNode: (entry: Awaited<ReturnType<typeof openContent>>) => {
-        if (entry.type === "file" && !["file", "raw"].includes(entry.unixfs.type))
-          throw new TaskError(
-            "invalid_bundle",
-            "Bundle requires regular files, not UnixFS symlink or metadata nodes.",
-          );
-      },
     });
     const files = new Map<string, Buffer>();
     const logicalPaths = new Set<string>();
@@ -274,19 +286,27 @@ export class BundleCache {
           if (!child.name || child.name.includes("/") || child.name.includes("\\"))
             throw new TaskError("invalid_bundle", "Unsafe IPFS directory name.");
           await walk(
-            await openContent(
-              this.options.ipfsClient,
-              child.cid.toString(),
-              access(this.lifetime.signal),
-            ),
+            await openContent(client, child.cid.toString(), access(this.lifetime.signal)),
             path ? `${path}/${child.name}` : child.name,
           );
         }
         if (path && !entries)
           throw new TaskError("invalid_bundle", "Empty Bundle directories are not supported.");
       } else if (entry.type === "file" || entry.type === "raw") {
+        if (entry.type === "file" && !["file", "raw"].includes(entry.unixfs.type))
+          throw new TaskError("invalid_bundle", "Bundle requires regular UnixFS files.");
         if (!path || files.size >= this.limits.files)
           throw new TaskError("capacity_exceeded", "Bundle file capacity exceeded.");
+        if (
+          entry.size > BigInt(this.limits.fileBytes) ||
+          BigInt(total) + entry.size > BigInt(this.limits.bytes)
+        )
+          throw new TaskError("capacity_exceeded", "Bundle byte capacity exceeded.");
+        if (path.startsWith("resources/") && !this.options.prefetch) {
+          total += Number(entry.size);
+          files.set(path, Buffer.alloc(0));
+          return;
+        }
         const chunks: Buffer[] = [];
         let size = 0;
         for await (const chunk of entry.content({ signal: this.lifetime.signal })) {
@@ -302,8 +322,7 @@ export class BundleCache {
         throw new TaskError("invalid_bundle", "Bundle requires regular UnixFS files/directories.");
     };
     try {
-      await retainContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
-      const root = await openContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
+      const root = await openContent(client, cid, access(this.lifetime.signal));
       if (root.type !== "directory")
         throw new TaskError("invalid_bundle", "Bundle CID must identify a directory.");
       await walk(root, "");
@@ -311,17 +330,16 @@ export class BundleCache {
       const allowed = new Set(files.keys());
       return {
         ...inspected,
+        bytes: total,
         cid,
         source: files.get("worker.cjs")!.toString("utf8"),
-        retainedBytes: [...retainedBlocks.values()].reduce((sum, block) => sum + block.length, 0),
+        get retainedBytes() {
+          return [...retainedBlocks.values()].reduce((sum, block) => sum + block.length, 0);
+        },
         read: async (path, signal) => {
           if (!safePath(path) || !allowed.has(path))
             throw new TaskError("invalid_bundle", "Bundle path is absent or outside its root.");
-          const entry = await openContent(
-            this.options.ipfsClient,
-            `${cid}/${path}`,
-            access(signal),
-          );
+          const entry = await openContent(client, `${cid}/${path}`, access(signal));
           if (entry.type !== "file" && entry.type !== "raw")
             throw new TaskError("invalid_bundle", "Bundle path is not a regular file.");
           const combined = access(signal).signal;

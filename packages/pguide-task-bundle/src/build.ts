@@ -9,7 +9,7 @@ import {
   readArtifactFiles,
   safePath,
 } from "@potential-guide/artifact-files";
-import { encodeContentCar, importContent } from "@potential-guide/ipfs-content/codec";
+import { computeContentCid, encodeContentCar } from "./car.js";
 import {
   type JsonObject,
   resolveBundleSchemas,
@@ -264,7 +264,7 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
       await mkdir(dirname(target), { recursive: true, mode: 0o700 });
       await writeFile(target, bytes, { flag: "wx", mode: 0o600 });
     }
-    if ((await importContent(await readArtifactFiles(staging), async () => {})) !== compiled.cid)
+    if ((await computeContentCid(await readArtifactFiles(staging))) !== compiled.cid)
       throw new Error("Task Bundle changed during build.");
     const archive = await encodeContentCar(compiled.contents);
     if (archive.cid !== compiled.cid) throw new Error("Task CAR root differs from its file tree.");

@@ -6,7 +6,6 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
 import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/artifact-files";
-import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import {
   compileInputSchema,
   resolveBundleSchemas,
@@ -14,7 +13,7 @@ import {
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
 import { buildTaskBundle } from "../src/build.js";
-import { importTaskBundle } from "../src/publish.js";
+import { checkTaskArtifact } from "../src/artifact.js";
 
 const declaration = {
   $schema: taskSchemaUri,
@@ -83,8 +82,7 @@ export default async (input, context) => {
       schemas,
       outDirectory: join(directory, "bundle"),
     });
-    const published = await importTaskBundle(built.directory, new MemoryIpfsClient());
-    assert.equal(published.cid, built.cid);
+    assert.equal((await checkTaskArtifact(built.directory)).cid, built.cid);
     const files = await readArtifactFiles(built.directory);
     assert.equal([...files.keys()].filter((name) => name.startsWith("schemas/")).length, 3);
     const resolved = resolveBundleSchemas(
@@ -282,7 +280,7 @@ test("removed Task v2 and future schemas cannot build or import Workers", async 
         }),
         { code: "invalid_bundle" },
       );
-      await assert.rejects(importTaskBundle(bundle, new MemoryIpfsClient()), {
+      await assert.rejects(checkTaskArtifact(bundle), {
         code: "invalid_bundle",
       });
       assert.equal(existsSync(join(directory, version)), false);

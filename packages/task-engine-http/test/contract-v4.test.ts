@@ -6,7 +6,7 @@ import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
 import type {
@@ -73,7 +73,7 @@ const type=createType({messageSchema:true});export default (input,context)=>type
     outDirectory: join(root, "bundle"),
   });
   const ipfsClient = new MemoryIpfsClient();
-  const bundle = (await importTaskBundle(built.directory, ipfsClient)).cid;
+  const bundle = await ipfsClient.import((await readTaskArtifact(built.car)).files);
   const caller = { scope: "scope", subject: "http" };
   const engine = createTaskEngine({
     store,

@@ -31,6 +31,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
   const root = resolve(".cache", `workbench-races-${randomUUID()}`);
   await mkdir(root, { recursive: true });
   const nativeFetch = globalThis.fetch;
+  const hostCustomEvent = globalThis.CustomEvent;
   const env = `UI_RACE_${randomBytes(8).toString("hex")}`,
     token = randomBytes(32).toString("hex");
   process.env[env] = token;
@@ -115,7 +116,7 @@ test("actual browser entry ignores delayed real favorites responses and paginate
         { waitMs: 1000 },
         { scope: "one", subject: "ui" },
       );
-    assert.equal(result.status, "accepted");
+    assert.equal(result.status, "accepted", JSON.stringify(result));
     if (result.status !== "accepted") throw Error("Expected accepted.");
     const task = backend.engine.getTask(result.taskId, { scope: "one", subject: "ui" });
     await until(
@@ -213,9 +214,13 @@ test("actual browser entry ignores delayed real favorites responses and paginate
     control.click();
   };
   try {
+    // Prime the host's Helia lifecycle before browser code runs with DOM event globals.
+    const browserCustomEvent = globalThis.CustomEvent;
+    globalThis.CustomEvent = hostCustomEvent;
     const a = await create("A"),
       b = await create("B"),
       c = await create("C");
+    globalThis.CustomEvent = browserCustomEvent;
     const legacy = await local("/api/favorites", "POST", {
       name: "保留旧模板",
       endpoint: bootstrap.endpoints[0],

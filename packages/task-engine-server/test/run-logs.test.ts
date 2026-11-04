@@ -4,7 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
@@ -101,7 +101,7 @@ export default async (input, context) => {
       entry,
       outDirectory: join(directory, "bundle"),
     });
-    await importTaskBundle(built.directory, ipfsClient);
+    await ipfsClient.import((await readTaskArtifact(built.car)).files);
     await rm(entry);
     await run({
       directory,

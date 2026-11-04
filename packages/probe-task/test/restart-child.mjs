@@ -7,7 +7,7 @@ import {
 } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
@@ -68,7 +68,7 @@ const source = {
 const ipfsClient = new MemoryIpfsClient();
 for (const kind of ["check-task", "probe-task"]) {
   try {
-    await importTaskBundle(join(dirname(database), kind), ipfsClient);
+    await ipfsClient.import((await readTaskArtifact(join(dirname(database), kind))).files);
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
@@ -117,7 +117,7 @@ const source={authorize(){},async resolve(ref){return ref.kind==="objective"?roo
       entry,
       outDirectory: join(dirname(database), kind),
     });
-    return (await importTaskBundle(built.directory, ipfsClient)).cid;
+    return await ipfsClient.import((await readTaskArtifact(built.car)).files);
   }
   const checkType = createCheckTaskType({ source, directory });
   const checkBundle = await build(

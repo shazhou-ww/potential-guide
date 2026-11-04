@@ -1,4 +1,4 @@
-import type { IpfsClient } from "@potential-guide/ipfs-content/read";
+import type { IpfsClient } from "./content.js";
 import {
   at,
   bundleCid,
@@ -28,8 +28,8 @@ export interface EngineOptions
   ipfsClient: IpfsClient;
   bundleLimits?: Partial<BundleLimits>;
   bundleConcurrency?: number;
+  bundlePrefetch?: boolean;
   allowGateway?: (url: URL) => boolean;
-  fetchIpfs?: typeof globalThis.fetch;
 }
 function failure(error: unknown): ErrorFact {
   return {
@@ -82,7 +82,7 @@ export class TaskEngine implements TaskService {
         : {}),
       ...(options.bundleLimits ? { limits: options.bundleLimits } : {}),
       ...(options.allowGateway ? { allowGateway: options.allowGateway } : {}),
-      ...(options.fetchIpfs ? { fetch: options.fetchIpfs } : {}),
+      ...(options.bundlePrefetch !== undefined ? { prefetch: options.bundlePrefetch } : {}),
     });
     this.core = new Coordinator({
       store: options.store,

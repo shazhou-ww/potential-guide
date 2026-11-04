@@ -279,25 +279,26 @@ Context 不再提供直接返回整文件 `Uint8Array` 的另一套读取接口�
    SDK 不因统一流接口就在后台预读、聚合整文件或无限缓冲。
 5. 读取能力及在途操作遵守 Run 的停止与资源释放边界，不能脱离所属 Run 无限持有资源。
    宿主保护活动工作所需内容，SDK 负责封装读取通信与错误，不向业务回调暴露原始宿主端口。
-6. Context 抽象不取消准入前完整 Bundle 验证，不新增远程代码加载或依赖安装通道。
+6. Context 不取消准入前的目录、声明、Schema、路径及容量验证；
+   资源后继块默认在读取时验证，不新增远程代码加载或依赖安装通道。
    Node Worker 仍不是安全沙箱；本规则约束官方业务访问契约，
    不声称能阻止业务代码调用 Node 内置文件系统或探测其运行环境。
 
 ## 公共 SDK 来源与构建职责
 
 由本仓库维护并发布通用 Task SDK，包名为 `@potential-guide/task-sdk`，
-在同一包中分离运行库、纯构建、成品检查和发布装配入口：
+将运行库与离线构建、成品检查入口分离：
 
 ```ts
 import { runTask } from "@potential-guide/task-sdk";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
 import { checkTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
-import { createIpfsClient, importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
 ```
 
 根入口供生成的 Worker 使用；`/build` 供作者构建环境使用，
 接收低层声明定义、回调模块及构建参数，生成包含精确清单的自包含 Bundle。
-`/artifact` 只检查成品；`/publish` 才负责 RPC/import/pin 装配，纯 build 不重导出网络 client。
+`/artifact` 只检查成品；`/publish`、上传、RPC 配置和 pin 入口均已移除。
+上传目的地、工具及保留策略由用户选择。
 这些入口表示不同使用场景，不应在 Worker 中导入作者工具。
 Engine 直接消费 Bundle，不要求安装该 SDK。
 
@@ -320,8 +321,8 @@ Engine 直接消费 Bundle，不要求安装该 SDK。
    无法静态封装的动态依赖、原生扩展或外部可执行依赖不能被当成已自包含而静默放行。
 6. 完成文件集合与格式验证后，将完整成品目录作为 UnixFS 目录导入 IPFS，取得根 CID
    作为 Bundle 引用，发布环境可附带 gateway hint；不再要求生成 tgz、Git 文件树摘要或独立发布 URL。
-   构建离线计算 CID，不导入远端节点；publish 仅消费成品并验证同一份字节，
-   不读取作者模块、重新展开 glob、隐式重建或提交 Task。
+   构建离线计算 CID 并输出 CAR，不导入远端节点；成品检查只消费同一份快照，
+   不读取作者模块、重新展开 glob、隐式重建或提交 Task。外部工具负责导入及保留。
    仅生成本地目录不代表已经发布或保证远端可获取；
    工具必须区分成品生成、CID 生成与内容保留结果，不伪造发布成功。
 7. 不同 Bundle 可以包含不同 SDK 或第三方库版本，只要各自实现其 Schema URL 规定、
@@ -411,17 +412,19 @@ type BundleReference =
 1. Engine 初始化通过 `ipfsClient` 参数接收可信宿主提供的通用 IPFS 客户端。底层只感知标准 IPFS 内容节点、
    CID、DAG 链接、UnixFS 路径与文件内容，不解释 Task Bundle、`task.yaml` 或 Run。
    这里的内容节点是 CID 标识的 DAG 对象，不等同于提供服务的服务器进程。
-2. 底层复用标准 IPFS 实现的获取、遍历、流式读取、内容验证及 pin 能力，
+2. 底层直接复用官方 HTTP-only Helia 与 UnixFS 的获取、遍历、流式读取及内容验证，
    不另定义 Bundle 专属获取协议，也不将 `openBundle`、Bundle Schema 校验或 Task context
    加入通用 IPFS access。节点连接、gateway 和访问策略由宿主装配。
 3. Engine 的装载层将指定根节点解释为 Bundle，判断其目录类型、文件集合、
    声明、Schema、入口及容量；根 CID 的有效性与内容验证通过不等于 Bundle 准入通过。
-   活动内容保护由 Engine 协调，底层可提供通用 pin 或保留能力，但不理解 Run 生命周期。
+   Engine 只保留已获取的验证块，不管理持久 pin。默认按需读取资源；
+   未读取块可能在准入后获取失败，`bundlePrefetch: true` 可恢复完整预取。
 4. Task SDK 将当前 Run 可信绑定的 Bundle 包装为 context 相对路径访问能力，
    不向业务暴露底层 IPFS client、gateway、宿主连接配置或文件位置。
-5. 初始化需要可用的 IPFS 访问能力，不要求 HTTP gateway URI 是唯一或必填依赖；
+5. 生产初始化需要明确配置 HTTP(S) Gateway，不使用 RPC、delegated routing、libp2p 或公共回退；
    Request hint 只能辅助候选获取，不代替可信初始化配置或绕过宿主访问策略。
-   初始化参数名固定为 `ipfsClient`，具体标准 IPFS API 在实施时确定，不新造一套平行节点协议。
+   初始化参数名固定为 `ipfsClient`，使用 Engine 导出的 `createIpfsGatewayClient`；
+   其只读 block port 也支持显式离线测试夹具，不构成另一套发布协议。
 
 ### 独立 IPFS endpoint 与客户端生命周期
 
@@ -429,8 +432,9 @@ type BundleReference =
    嵌入 Task Engine server 进程，也不将它作为随该进程退出而终止的附属进程。
    部署层独立启动、管理该服务及持久存储，Engine 不负责安装或启动节点。
 2. 注入的 `ipfsClient` 是连接该 endpoint 的通用客户端对象，可以存在于 Engine 进程内；
-   它与独立 IPFS 服务进程是两个不同对象。Endpoint 的具体 API、连接参数与客户端库在实施时确定，
-   不要求它只能是 HTTP gateway。Request hint 仍只是受宿主策略约束的候选网关。
+   它与独立 IPFS 服务进程是两个不同对象。读取使用官方 HTTP-only Helia，
+   Gateway 必须是无路径前缀的 HTTP(S) 根 URL，重定向被拒绝。
+   Request hint 仍只是受宿主策略约束的候选网关。
 3. 注入者负责客户端的创建与关闭。Engine 关闭时只取消自己的读取、释放自己取得的内容保护，
    不关闭可能被共享的 `ipfsClient`，不停止独立 IPFS 服务，不撤销其他使用者持有的 pin。
    同 CID 的其他持有者仍存在时，不能以本 Engine 释放为由使其内容失去保护。
@@ -443,10 +447,11 @@ type BundleReference =
 
 1. 获取直接消费根 CID 所标识的 UnixFS 目录与文件块，复用 IPFS 的寻址、传输及验证能力；
    不再要求 tar.gz、gzip/tar 解包或另设 Bundle 归档协议。
-2. 宿主可以使用配置的 IPFS 节点或支持可验证读取的网关。
-   无论传输方式如何，均须验证 CID、DAG 链接及所消费的块，不盲信普通 HTTP 响应。
-3. Engine 在准入前获取并验证完整 Bundle 文件树及声明契约；
-   单文件访问能力不把准入改成仅检查入口或延迟检查未获取的资源。
+2. 生产宿主使用明确配置的 Trustless HTTP Gateway，验证 CID、DAG 链接及所消费的块，
+   不盲信普通 HTTP 响应，不回退到 RPC 或公共发现。
+3. Engine 在准入前验证完整目录清单、文件类型和尺寸、声明、入口与 Schema；
+   资源后继块默认按需获取和验证，后续 Gateway 故障可能使 Run 失败。
+   显式 `bundlePrefetch: true` 才在准入时验证完整资源字节。
 4. 宿主以 Node 支持的装载方式直接启动已验证的自包含 `worker.cjs`，
    不依赖 Node Worker 原生接受 IPFS URI，不新增业务动态加载外部代码的执行模型。
    入口是否落地及资源是否物化为目录是宿主实现选择，不作为业务可依赖的存放位置契约；
@@ -470,7 +475,8 @@ type BundleReference =
    需验证生成入口与 SDK 协议、Node 内置依赖、错误栈和诊断定位的行为。
    业务不得依赖物理入口位置；自包含与 context 资源访问不授权动态安装依赖或加载另一份业务代码。
 4. 无业务文件物化不等于无磁盘使用：IPFS 节点可在自身 blockstore 保存内容，
-   Engine 的持久事实仍遵守数据域契约。流或内存读取也不取消准入前对完整文件树的验证。
+   Engine 的持久事实仍遵守数据域契约。流或内存读取不取消准入的目录清单和声明验证，
+   也不将未读取的资源块当作已验证或已保留。
 
 ### 宿主容量限制
 
@@ -552,17 +558,19 @@ type BundleReference =
 1. 内容寻址与块复用使用 IPFS 标准能力，不要求 Engine 再维护一套 Bundle 内容分发缓存。
    宿主配置独立本地 IPFS 服务，由节点承担块缓存、pin 与垃圾回收；
    gateway 是读取入口，不单独构成缓存或保留保证。
-   Engine 仍负责完整 Bundle 准入、入口装载、context 读取能力及活动内容保护。
+   Engine 仍负责目录、精确清单、声明、Schema、路径及尺寸准入、入口装载和 context 读取。
+   默认不预取资源的全部后继块，因此 accepted 不是完整 DAG 可用证明。
    装载结果及活动内容保护在 Engine 内部按根 CID 复用，不维护额外的 Bundle 文件缓存目录。
    内存复用不作为公开缓存管理 API，不提供缓存列表、详情、驱逐接口或对应 Web UI；
    IPFS 节点的内容管理不属于 Engine 的公共职责。
    不再另建以 URL 和自定义 Digest 为键的寻址体系，节点或网关更换不改变内容身份。
 2. 内容复用不等于 Request 已受理。缓存命中仍须满足宿主容量限制，
    并按各请求的 Input 完成校验，不能将其他请求的受理结果当作当前请求的结果。
-3. 缓存命中使用已验证且完整性受保护的内容，不需要为判断“最新版本”而重新访问网络。
+3. 缓存命中复用已验证的块，不需要为判断“最新版本”重新访问网络；
+   默认按需模式的未读取块仍需要配置的 Gateway，后续网络故障可使 Run 明确失败。
    缓存缺失或内容损坏时，重新获取仍须满足原期望根 CID。
-4. IPFS 块缓存与 Engine 内存装载结果均不能将局部可用误认为完整 Bundle 可装载；
-   根 CID 可解析不等于其所有后继块均已保留或可获取。
+4. 根 CID 可解析不等于其所有后继块均已保留或可获取。
+   只有显式完整预取成功才保证该 Engine 内存中保留完整文件内容；按需模式不作此承诺。
 5. 缓存淘汰与传输重试不改变 Bundle 身份，不触发任务重跑，
    也不改变已有 Task 与 Run 的匹配或终结事实。
 
@@ -581,7 +589,8 @@ type BundleReference =
 5. 不依赖 Bundle 内容的持久事实查询不因缓存被淘汰而失效。
    重新获取内容是读取所需制品，不是重新提交原 Request 或执行旧 Run。
 6. Pin、副本与垃圾回收策略由可信宿主或发布环境负责；保留 CID 本身不是内容保留保证。
-   活动 preparation 和执行所需内容必须受保护，可通过内容租约、pin 或物化目录保护落实，
+   已读取验证块在活动 preparation 和执行期间受 Engine 内部租约保护，
+   未读取资源的持久可用性仍由外部保留策略负责；
    不因历史缓存淘汰而破坏活动工作，也不扩展为 Engine 管理任意 IPFS 资产的产品。
 
 ## 自包含与运行依赖

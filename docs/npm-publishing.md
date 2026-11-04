@@ -64,12 +64,14 @@ runtime dependency to have a local verification pack. A verification entry alone
 does not authorize publishing a new support package.
 The neutral `@potential-guide/artifact-files` package now supplies portable file
 and YAML primitives without pulling in legacy Check runtime/build code.
-For this CLI's release, the support packages to prepare are `artifact-files`,
-`ipfs-content`, and the runtime-only `task-sdk`, in dependency order; the two
+For this CLI's release, the support packages to prepare are `artifact-files`
+and the runtime-only `task-sdk`, in dependency order; the two
 Check packages are no longer in its runtime dependency closure.
 These support packages still require their own release authorization and
 workflow/tag entries before publishing their actual product versions.
 Local tarball overrides are not proof that npm can install the released CLI.
+`ipfs-content` is now private regression support only and is neither packed for production
+consumers nor part of the production release closure.
 Repository validation must also pass; do not bypass the workflow's `pnpm check`.
 `@potential-guide/pguide-task-engine` and `@potential-guide/task-engine-web-ui`
 are also local-verification-only packages under `apps/`. The command's packed

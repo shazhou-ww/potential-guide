@@ -1,14 +1,14 @@
 $schema: https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json
 objectives:
   standardize:
-    description: Standardize the TypeBox Task Bundle authoring and artifact publishing command.
+    description: Standardize offline TypeBox Task Bundle authoring and CAR inspection.
     objective: "@potential-guide/objective-package-standard"
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm", "cli"], "runtime": "node",
-        "allows": ["@potential-guide/cli-core", "@potential-guide/artifact-files", "@potential-guide/task-protocol", "@potential-guide/task-sdk", "@potential-guide/ipfs-content"],
-        "entries": ["src/bin.ts", "src/authoring.ts", "src/build.ts", "src/artifact.ts", "src/publish.ts"], "generated": [], "deliveries": [],
+        "allows": ["@potential-guide/cli-core", "@potential-guide/artifact-files", "@potential-guide/task-protocol", "@potential-guide/task-sdk"],
+        "entries": ["src/bin.ts", "src/authoring.ts", "src/build.ts", "src/artifact.ts", "src/car.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

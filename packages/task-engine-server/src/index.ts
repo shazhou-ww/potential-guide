@@ -14,7 +14,7 @@ export interface ServerOptions {
   logs?: EngineOptions["logs"];
   ipfsClient: EngineOptions["ipfsClient"];
   allowGateway?: EngineOptions["allowGateway"];
-  fetchIpfs?: EngineOptions["fetchIpfs"];
+  bundlePrefetch?: EngineOptions["bundlePrefetch"];
   bundleLimits?: EngineOptions["bundleLimits"];
   bundleConcurrency?: number;
   authorize: EngineOptions["authorize"];
@@ -155,8 +155,8 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
     engine = createTaskEngine({
       store: lease,
       ipfsClient: options.ipfsClient,
+      ...(options.bundlePrefetch !== undefined ? { bundlePrefetch: options.bundlePrefetch } : {}),
       ...(options.allowGateway ? { allowGateway: options.allowGateway } : {}),
-      ...(options.fetchIpfs ? { fetchIpfs: options.fetchIpfs } : {}),
       ...(options.bundleConcurrency !== undefined
         ? { bundleConcurrency: options.bundleConcurrency }
         : {}),

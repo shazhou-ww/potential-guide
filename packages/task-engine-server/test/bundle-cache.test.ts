@@ -4,7 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
@@ -39,7 +39,7 @@ test("retired cache routes return 404 without changing IPFS content or Task admi
       outDirectory: join(root, "bundle"),
     });
     const ipfsClient = new MemoryIpfsClient();
-    await importTaskBundle(built.directory, ipfsClient);
+    await ipfsClient.import((await readTaskArtifact(built.car)).files);
     server = await startTaskServer({
       port: 0,
       store: new MemoryStore(),

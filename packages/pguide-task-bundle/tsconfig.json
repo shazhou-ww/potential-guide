@@ -19,9 +19,6 @@
     },
     {
       "path": "../artifact-files"
-    },
-    {
-      "path": "../ipfs-content"
     }
   ]
 }

@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
@@ -53,7 +53,7 @@ const type=createEcho({});export default(input,context)=>type.run(input,context)
       entry,
       outDirectory: join(authoredRoot, "bundle"),
     });
-    reference = (await importTaskBundle(built.directory, ipfsClient)).cid;
+    reference = await ipfsClient.import((await readTaskArtifact(built.car)).files);
   })();
   await authoring;
   return {

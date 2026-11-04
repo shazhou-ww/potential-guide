@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
-import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
+import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, VirtualClock } from "@potential-guide/task-engine/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
@@ -44,7 +44,7 @@ for (const phase of ["beforeCommit", "afterCommit"] as const) {
           outDirectory: join(directory, "bundle"),
         });
         const ipfsClient = new MemoryIpfsClient();
-        await importTaskBundle(built.directory, ipfsClient);
+        await ipfsClient.import((await readTaskArtifact(built.car)).files);
         const now = Date.now();
         const request = {
           requestId: newId(now),

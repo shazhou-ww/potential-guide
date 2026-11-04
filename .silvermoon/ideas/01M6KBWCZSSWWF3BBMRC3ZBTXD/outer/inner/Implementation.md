@@ -6,13 +6,19 @@
 
 针对拟采用的已发布版本验证 HTTP-only Helia 与 UnixFS 文件读取，关闭非配置路由和公共回退。核对路径前缀、取消、流控、缓存及全量预取与按需读取的差异；不将现有附加策略自动视为必须保留的能力。
 
+采用 `@helia/http@4.0.8`、`helia@7.1.16` 和 `@helia/unixfs@8.0.9`。生产读取明确禁用 delegated routing、libp2p 和公共回退，拒绝重定向及带路径前缀的 Gateway 基址。默认按需读取资源后继块，显式 `bundlePrefetch: true` 保留完整预取选项；以受控请求记录验证实际网络行为而非仅比较最终字节。
+
 ### I-S02: 收敛 Bundle 与 Engine 职责
 
 Bundle 直接使用官方 UnixFS/CAR 能力，移除 publish、RPC 配置、上传及 pin API。Engine 使用官方路径解析与字节流，保留 Task 准入、路径授权及 Worker 通道；调整或移除 ipfs-content 的生产依赖和测试夹具入口，避免复制通用 IPFS 实现。
 
+离线 CAR 的容量和规范文件树规则归属 Bundle；准入、租约、块预算及 Worker 拉取窗口归属 Engine。`ipfs-content` 仅保留为 private 的历史回归夹具，退出发布验证清单、生产依赖和交付闭包；生产可消费的离线夹具入口使用官方 UnixFS，不再重导出该包。
+
 ### I-S03: 更新关联契约与发布清单
 
 同步 CLI 帮助、文档、测试、示例、打包验证、依赖与发布清单，明确移除入口及资源读取行为变化。构建后的 Worker 继续包含非内置 JS 依赖，本改造不新增任意动态模块加载器。
+
+具体实现理由、已验证行为、平台限制和验证命令统一记录在 [Evidence.md](Evidence.md)。外部 CAR 导入、持久 pin、真实节点和 npm 发布不属于本阶段的执行证据。
 
 ## Acceptance criteria
 

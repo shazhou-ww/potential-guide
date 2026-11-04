@@ -376,23 +376,6 @@ export const builtInSettings = [
     }
   },
   {
-    "name": "@potential-guide/pguide-task-bundle",
-    "description": {
-      "schemaVersion": 1,
-      "namespace": "task-bundle",
-      "settings": {
-        "task-bundle.ipfsRpc": {
-          "description": "Publisher-owned Kubo RPC URL. Used only by artifact publish; --ipfs-rpc overrides it.",
-          "schema": {
-            "type": "string",
-            "pattern": "^https?://",
-            "minLength": 1
-          }
-        }
-      }
-    }
-  },
-  {
     "name": "@potential-guide/pguide-task-engine",
     "description": {
       "schemaVersion": 1,
@@ -2043,42 +2026,18 @@ return errors === 0;
 }
 
 export const setting16 = validate26;
-const schema27 = {"type":"string","pattern":"^https?://","minLength":1};
-const func2 = require("ajv/dist/runtime/ucs2length").default;
-const pattern13 = new RegExp("^https?://", "u");
+const schema27 = {"enum":["127.0.0.1","localhost","::1"]};
 
 function validate26(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
-if(typeof data === "string"){
-if(func2(data) < 1){
-const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(!(((data === "127.0.0.1") || (data === "localhost")) || (data === "::1"))){
+const err0 = {instancePath,schemaPath:"#/enum",keyword:"enum",params:{allowedValues: schema27.enum},message:"must be equal to one of the allowed values"};
 if(vErrors === null){
 vErrors = [err0];
 }
 else {
 vErrors.push(err0);
-}
-errors++;
-}
-if(!pattern13.test(data)){
-const err1 = {instancePath,schemaPath:"#/pattern",keyword:"pattern",params:{pattern: "^https?://"},message:"must match pattern \""+"^https?://"+"\""};
-if(vErrors === null){
-vErrors = [err1];
-}
-else {
-vErrors.push(err1);
-}
-errors++;
-}
-}
-else {
-const err2 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
-if(vErrors === null){
-vErrors = [err2];
-}
-else {
-vErrors.push(err2);
 }
 errors++;
 }
@@ -2087,29 +2046,9 @@ return errors === 0;
 }
 
 export const setting17 = validate27;
-const schema28 = {"enum":["127.0.0.1","localhost","::1"]};
+const schema28 = {"type":"integer","minimum":0,"maximum":65535};
 
 function validate27(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
-let vErrors = null;
-let errors = 0;
-if(!(((data === "127.0.0.1") || (data === "localhost")) || (data === "::1"))){
-const err0 = {instancePath,schemaPath:"#/enum",keyword:"enum",params:{allowedValues: schema28.enum},message:"must be equal to one of the allowed values"};
-if(vErrors === null){
-vErrors = [err0];
-}
-else {
-vErrors.push(err0);
-}
-errors++;
-}
-validate27.errors = vErrors;
-return errors === 0;
-}
-
-export const setting18 = validate28;
-const schema29 = {"type":"integer","minimum":0,"maximum":65535};
-
-function validate28(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(!(((typeof data == "number") && (!(data % 1) && !isNaN(data))) && (isFinite(data)))){
@@ -2143,6 +2082,39 @@ vErrors.push(err2);
 }
 errors++;
 }
+}
+validate27.errors = vErrors;
+return errors === 0;
+}
+
+export const setting18 = validate28;
+const schema29 = {"type":"string","minLength":1};
+const func2 = require("ajv/dist/runtime/ucs2length").default;
+
+function validate28(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data === "string"){
+if(func2(data) < 1){
+const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+}
+else {
+const err1 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
 }
 validate28.errors = vErrors;
 return errors === 0;
@@ -2181,14 +2153,15 @@ return errors === 0;
 }
 
 export const setting20 = validate30;
-const schema31 = {"type":"string","minLength":1};
+const schema31 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
+const pattern13 = new RegExp("^[a-zA-Z0-9_-]{1,64}$", "u");
 
 function validate30(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(typeof data === "string"){
-if(func2(data) < 1){
-const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(!pattern13.test(data)){
+const err0 = {instancePath,schemaPath:"#/pattern",keyword:"pattern",params:{pattern: "^[a-zA-Z0-9_-]{1,64}$"},message:"must match pattern \""+"^[a-zA-Z0-9_-]{1,64}$"+"\""};
 if(vErrors === null){
 vErrors = [err0];
 }
@@ -2213,42 +2186,9 @@ return errors === 0;
 }
 
 export const setting21 = validate31;
-const schema32 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
-const pattern14 = new RegExp("^[a-zA-Z0-9_-]{1,64}$", "u");
+const schema32 = {"type":"boolean"};
 
 function validate31(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
-let vErrors = null;
-let errors = 0;
-if(typeof data === "string"){
-if(!pattern14.test(data)){
-const err0 = {instancePath,schemaPath:"#/pattern",keyword:"pattern",params:{pattern: "^[a-zA-Z0-9_-]{1,64}$"},message:"must match pattern \""+"^[a-zA-Z0-9_-]{1,64}$"+"\""};
-if(vErrors === null){
-vErrors = [err0];
-}
-else {
-vErrors.push(err0);
-}
-errors++;
-}
-}
-else {
-const err1 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
-if(vErrors === null){
-vErrors = [err1];
-}
-else {
-vErrors.push(err1);
-}
-errors++;
-}
-validate31.errors = vErrors;
-return errors === 0;
-}
-
-export const setting22 = validate32;
-const schema33 = {"type":"boolean"};
-
-function validate32(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(typeof data !== "boolean"){
@@ -2261,14 +2201,14 @@ vErrors.push(err0);
 }
 errors++;
 }
-validate32.errors = vErrors;
+validate31.errors = vErrors;
 return errors === 0;
 }
 
-export const setting23 = validate33;
-const schema34 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
+export const setting22 = validate32;
+const schema33 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
 
-function validate33(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+function validate32(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(data && typeof data == "object" && !Array.isArray(data)){
@@ -2317,7 +2257,7 @@ errors++;
 if(data.host !== undefined){
 let data0 = data.host;
 if(!(((data0 === "127.0.0.1") || (data0 === "localhost")) || (data0 === "::1"))){
-const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema34.properties.host.enum},message:"must be equal to one of the allowed values"};
+const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema33.properties.host.enum},message:"must be equal to one of the allowed values"};
 if(vErrors === null){
 vErrors = [err4];
 }
@@ -2398,7 +2338,7 @@ vErrors.push(err10);
 }
 errors++;
 }
-validate33.errors = vErrors;
+validate32.errors = vErrors;
 return errors === 0;
 }
 
@@ -2419,12 +2359,11 @@ export const builtInValidators = {
   "regulate.retentionDays": setting13,
   "regulate.quota": setting14,
   "regulate.permissions": setting15,
-  "task-bundle.ipfsRpc": setting16,
-  "task-engine.host": setting17,
-  "task-engine.port": setting18,
-  "task-engine.database": setting19,
-  "task-engine.ipfsGatewayUrl": setting20,
-  "task-engine.scope": setting21,
-  "task-engine.ui": setting22,
-  "task-engine.uiOptions": setting23,
+  "task-engine.host": setting16,
+  "task-engine.port": setting17,
+  "task-engine.database": setting18,
+  "task-engine.ipfsGatewayUrl": setting19,
+  "task-engine.scope": setting20,
+  "task-engine.ui": setting21,
+  "task-engine.uiOptions": setting22,
 };

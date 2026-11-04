@@ -10,8 +10,8 @@ Install `@potential-guide/pguide-task-engine` and run
 `pguide-task-engine --config ./server.yaml` against an independently managed
 read-only Trustless Gateway, or provide `--ipfs-gateway-url http://127.0.0.1:8080`.
 The URL is required: no default node, transport selection or RPC fallback exists.
-Authors still write/pin through RPC. Old service RPC/transport fields and flags
-are rejected; migrate manually without changing author tools.
+Authors build CARs offline and choose an external upload/import/pin tool.
+Old service RPC/transport fields and flags are rejected.
 See [service configuration](../../docs/task-server.md) for user settings,
 precedence, `--no-global-config` and optional `--ui`.
 The token-free CLI is fixed-loopback and single-scope only.
@@ -21,16 +21,17 @@ when custom token authentication or injected clients are required.
 These programmatic helpers require an injected `ipfsClient` or an explicit
 `IPFS_GATEWAY` URL; they no longer default to Kubo RPC. `check-in-process.mjs`
 also requires `IPFS_GATEWAY`. These helper environment variables are not service
-CLI configuration layers; the separate author builder still uses `IPFS_API`.
-Install `@potential-guide/ipfs-content` and `@potential-guide/task-protocol`
+CLI configuration layers; the author builder no longer uses `IPFS_API`.
+Install `@potential-guide/task-engine` and `@potential-guide/task-protocol`
 alongside the programmatic helpers and Server/Engine packages they import.
 `check-config.mjs` and `probe-config.mjs` intentionally use that identical
 business-free configuration. Use a new v5 database path; older domains are
 rejected without migration or rewriting their bytes.
 
-On a separate author installation with `@potential-guide/task-sdk` (and the
+On a separate author installation with `@potential-guide/pguide-task-bundle`,
+`@potential-guide/task-sdk` (and the
 chosen business packages), copy `build-bundles.mjs` and `echo-type.mjs`.
-`node build-bundles.mjs echo .cache/author-echo` builds a fixed Bundle reference.
+`node build-bundles.mjs echo .cache/author-echo` prints the offline directory, CAR and root CID.
 For Check use `check` and explicitly authorize `CHECK_ORIGIN` and/or
 `CHECK_FILE_ROOT`. These are **business callback** policy, never a server
 registration. For Probe also supply `CHILD_SERVICE_URL`, `CHILD_SERVICE_TOKEN`
@@ -40,12 +41,15 @@ credentials in source control or publicly distributed Bundles. Run callbacks
 do not inherit general host credentials.
 
 The SDK produces a self-contained `worker.cjs`, declaration, locked Schema
-closure and opaque resources. Import/pin the resulting directory on the
-caller-managed IPFS node, not author source or `node_modules`. The returned root
+closure and opaque resources. Import/upload and pin the resulting CAR using an
+external tool and destination of your choice, not author source or `node_modules`. The returned root
 CID is standard UnixFS content identity; name is display-only, not a selector.
 Callbacks read bundled resources via `context.bundle.read(path)` byte streams,
 not `import.meta.url` or physical host paths. Existing business Checker/Objective
 archives and their URL/Digest inputs are unchanged.
+Gateway URLs must be root origins without path prefixes. Resource data is fetched on demand
+by default, so a later Gateway failure can fail a Run; `bundlePrefetch: true` restores
+complete prefetch when composing an Engine/Server programmatically.
 
 POST `/tasks` with JSON and a fresh ULID `Idempotency-Key` (add a bearer token
 only when using the authenticated programmatic example):

@@ -69,13 +69,14 @@ eligibleAt 为请求值与最终创建时间的较大者，deadlineAt 为其加 
 声明、Schema、资源、入口和原始文件名/字节都由目录根 CID 覆盖。
 见 [SDK](../packages/task-sdk/README.md) 与 [Worker 协议](task-bundle-worker.md)。
 
-宿主用标准 UnixFS exporter 解释经 multiformats SHA-256 校验的块，
-官方 `multiformats/traversal.walk` 遍历/去重完整 DAG，本地 loader 只施加容量及节点策略。
-完整遍历所有文件后验证声明、Schema 闭包、容量、路径、重复与特殊文件；
-不截断、改名、替换内容，也不存在延迟读取绕过准入。
+宿主用官方 HTTP-only Helia 验证块，UnixFS 解释目录、路径及文件流。
+准入遍历目录和文件节点，验证声明、Schema 闭包、尺寸、路径、重复与特殊文件；
+默认只预读入口和 Schema，资源后继块在 context 拉取时获取并验证。
+`bundlePrefetch: true` 才在准入前读取完整资源内容；不会截断、改名或替换内容。
 `bundleConcurrency` 默认 4，限制获取/验证并发；排队不是整体等待截止。
 缓存按 CID 共享，准备与 Run 租约保护有界的自有 verified blocks，
-因此节点 GC 不会破坏活动内容；`retainedBytes` 默认总量 256 MiB。
+因此已缓存块不会因节点 GC 丢失，但未读取块仍可在 Run 期间获取失败；
+`retainedBytes` 默认总量 256 MiB。详见[缓存与行为迁移](task-bundle-cache.md)。
 旧 `protectedBytes` 已迁移为 `retainedBytes`；这是有界内存保留，不是 IPFS pin。
 Engine 不调用共享 pin.rm、不关闭 client、不嵌入节点或管理节点进程。
 历史只需保留引用，内容可淘汰；需要时只能重取原 CID，不能改写历史或重跑。

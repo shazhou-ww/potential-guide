@@ -4,14 +4,14 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 验证官方读取链路与行为边界
-- [ ] **I-S02:** 收敛 Bundle 与 Engine 职责
-- [ ] **I-S03:** 更新关联契约与发布清单
+- [x] **I-S01:** 验证官方读取链路与行为边界
+- [x] **I-S02:** 收敛 Bundle 与 Engine 职责
+- [x] **I-S03:** 更新关联契约与发布清单
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 官方 Gateway 与 Worker 资源链路可验证
-- [ ] **I-AC02:** 离线 CAR 与依赖收敛可验证
+- [x] **I-AC01:** 官方 Gateway 与 Worker 资源链路可验证
+- [x] **I-AC02:** 离线 CAR 与依赖收敛可验证
 - [ ] **I-AC03:** 关联验证与行为说明完整
 
 ## Deployment
