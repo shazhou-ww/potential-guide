@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
@@ -27,13 +27,12 @@ const declaration = {
   messageSchema: false,
 };
 async function workspace(run: (directory: string) => Promise<void>) {
-  const directory = resolve(".test-task-sdk", randomUUID());
+  const directory = resolve(".cache", "task-sdk", randomUUID());
   await mkdir(directory, { recursive: true });
   try {
     await run(directory);
   } finally {
     await rm(directory, { recursive: true, force: true });
-    await rmdir(resolve(".test-task-sdk")).catch(() => {});
   }
 }
 test("V01: generated production Worker runs after author sources are removed, with locked transitive Schemas", async () => {

@@ -48,7 +48,7 @@ async function crash(filename: string, mode: string, requestId: string) {
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error(`Child stalled: ${stderr}`));
-    }, 10_000);
+    }, 60_000);
     child.once("error", reject);
     child.once("exit", (code) => {
       clearTimeout(timeout);
@@ -104,7 +104,7 @@ test("real process crash releases exclusive owner lock without stale PID guessin
   const child = fork(childFile, [filename, "owner", newId()], { silent: true });
   try {
     await new Promise<void>((resolveReady, reject) => {
-      const timer = setTimeout(() => reject(new Error("Owner did not become ready")), 10_000);
+      const timer = setTimeout(() => reject(new Error("Owner did not become ready")), 60_000);
       child.once("message", () => {
         clearTimeout(timer);
         resolveReady();

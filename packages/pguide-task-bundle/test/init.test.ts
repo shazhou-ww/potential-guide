@@ -15,7 +15,7 @@ const execute = promisify(execFile);
 const typebox = "@sinclair/typebox";
 const sdk = "@potential-guide/task-sdk";
 async function fixture(action: (root: string) => Promise<void>) {
-  const root = resolve(".test-task-init", randomUUID());
+  const root = resolve(".cache", "task-init", randomUUID());
   await mkdir(root, { recursive: true });
   await writeFile(join(root, "package.json"), '{"private":true}\n');
   try {

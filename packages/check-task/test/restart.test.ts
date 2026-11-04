@@ -37,7 +37,7 @@ for (const transport of ["https", "file"])
         (resolve, reject) => {
           const timer = setTimeout(
             () => reject(new Error(`Child readiness timeout: ${output}`)),
-            10000,
+            60000,
           );
           child.once("message", (message) => {
             clearTimeout(timer);

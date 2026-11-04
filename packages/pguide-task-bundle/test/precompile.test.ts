@@ -31,7 +31,7 @@ const declaration = {
   messageSchema: false,
 };
 async function fixture(action: (directory: string) => Promise<void>) {
-  const directory = resolve(".test-precompiled-sdk", randomUUID());
+  const directory = resolve(".cache", "precompiled-sdk", randomUUID());
   await mkdir(directory, { recursive: true });
   try {
     await action(directory);

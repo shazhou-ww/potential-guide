@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!**/.cache",
+      "!**/.test-*",
       "!.staging",
       "!**/.turbo",
       "!**/dist",
