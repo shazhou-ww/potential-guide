@@ -1,4 +1,20 @@
+---
+frozen: false
+---
+
 # Task Engine 职责边界
+
+## Axis 协议冻结标记
+
+Axis 文档使用 YAML frontmatter 的布尔字段 `frozen` 显式标记契约是否冻结：
+
+- `frozen: false` 或未设置：契约可原地修改，相关引用、示例与实现须同步对齐。
+- `frozen: true`：标记已发布并明确冻结的契约，不原地改变其协议含义；
+  不兼容变化另行定义版本或替代契约，不通过自行清除标记绕过冻结。
+- 当前所有 axis 协议均为 `frozen: false`，不冻结任何协议。
+  是否冻结以显式标记为准，不从版本号、包发布记录或 IDEA 验收状态推断。
+- 该标记不改变文档本身的权威级别；历史草稿仍只是参考，
+  可修改协议也不授权自动改写历史数据、迁移旧域或重跑任务。
 
 ## 概述
 
@@ -28,13 +44,16 @@
 - **C3. 订阅单个 Run**：获取该 Run 的后续变更事件流及取消订阅能力。
 - **C4. 查询 Run 集合**：获取数据域内符合条件的完整 Run 摘要列表。
 - **C5. 订阅 Run 集合**：获取符合条件的 Run 集合概况事件流及取消订阅能力。
+- **C6. 查询 Run 诊断日志**：获取指定 Run 仍保留的独立诊断日志页、限额及可用性状态。
+- **C7. 订阅 Run 诊断日志**：按该 Run 的日志序号补读并跟随诊断输出，不使用生命周期 revision。
 
 ### 非职责
 
 1. **业务含义与过程**：输入、前置条件、制品和结果的业务含义，以及内部准备、业务资源分配与复用、执行步骤和业务后继决策，由 TaskType 或业务方负责。
 2. **业务系列与周期提交**：seriesId 的组织规则和周期性 Request 的产生由外部参与者负责。
 3. **通用资产与消费者生命周期**：不接管业务制品、业务缓存、资源池或 UI 的生命周期；停止观察不等于取消任务。
-   TaskType 自身交付制品的获取、校验、缓存与装载属于 Engine 的通用类型装载职责，
+   TaskType 自身交付制品的 IPFS 获取、校验、内容保护、入口装载与 context 内容访问
+   属于 Engine 的通用类型装载职责，
    见[Task Bundle、类型装载与运行库](./task-engine-contracts/task-bundle.md)，不扩展为任意业务资产管理。
 
 ## 术语表
@@ -47,6 +66,7 @@
 | Run | 包含准备、资源分配与实际执行的一次完整尝试，可由多个 Task 共享。 |
 | Execution | Run 内部实际业务执行的子过程，不是 Task 的匹配对象。 |
 | TaskType | 定义业务输入、输出与消息契约并实现完整 Run 的任务类型。 |
+| Task Bundle 根 CID | 新架构中自包含 Task Bundle 的 UnixFS 目录内容身份；Request 使用根 CID 字符串或 `{cid, hint}` 引用，hint 不参与身份。 |
 | 数据域 | Task、Run 及其关系和历史的稳定归属范围，详见[数据域归属与运行实例独占绑定](./task-engine-contracts/data-domain.md)。 |
 | 运行实例 | 一次初始化后固定绑定一个数据域的 Engine 运行时实例。 |
 | 输入 Schema | 描述 TaskType 输入合法结构与约束的声明式契约。 |
@@ -74,7 +94,7 @@ output 不规定传输协议；side effects 为“无”指无领域状态或订
 数据域在初始化时指定并取得独占管理权，后续调用不再传入或切换数据域；初始化入口仅作示意：
 
 ```ts
-const engine = await openTaskEngine({ dataDomain });
+const engine = await openTaskEngine({ dataDomain, ipfsClient });
 await engine.getTask(taskId);
 ```
 
@@ -82,9 +102,11 @@ await engine.getTask(taskId);
 时间标签仍按 now，查询绝不写资格事实。独立时间推算无事件，实际资格观测形成源事实的限制性澄清见匹配契约。
 
 TaskRequest 对应本文 Request，避免与平台的 Request 类型混淆；其余领域类型只引用名称，字段另行定义。
-TaskSnapshot、RunSnapshot 和 Page 均包含查询水位 `revision`，各事件也携带自身的 `revision`；
+TaskSnapshot、RunSnapshot 和生命周期 Page 均包含查询水位 `revision`，各生命周期事件也携带自身的 `revision`；
+独立 RunLogPage 使用日志 sequence，不包含生命周期 revision，见[日志契约](./task-engine-contracts/run-logs.md)。
 快照/摘要的最小事实范围及筛选边界见[观察契约](./task-engine-contracts/observation.md)。
-所有订阅以 `fromRevision` 为起始锚点，先补读其后的历史再接续实时流；具体语义见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。
+生命周期订阅以 `fromRevision` 为起始锚点，先补读其后的历史再接续实时流；具体语义见[数据域事件序号与查询 Revision](./task-engine-contracts/revision.md)。
+C7 的独立日志订阅使用 `afterSequence`，不混用生命周期锚点。
 Page 表示有界分页，完整集合可通过续页获取；HistoryQuery、TaskCollectionQueryOptions、
 RunCollectionQueryOptions 均包含[历史与集合查询的分页](./task-engine-contracts/pagination.md)定义的 `cursor`、`limit`；
 查询条件和订阅条件分别定义，不默认相同。
@@ -326,16 +348,57 @@ subscribeRuns(
 - 关于集合概况事件的范围，参考[Task 与 Run 的查询范围及订阅粒度](./task-engine-contracts/observation.md)。
 - 关于事件流消费与取消订阅，参考[订阅句柄与订阅生命周期](./task-engine-contracts/subscription.md)。
 
+### C6. 查询 Run 诊断日志
+
+| 项目 | 说明 |
+| --- | --- |
+| input | Run 标识、afterSequence 及有限 limit |
+| output | 独立日志页、续读序号、缺口、限额及可用性/完整性状态 |
+| side effects | 可触发日志保留清理，不修改业务生命周期事实 |
+
+```ts
+getRunLogs(runId: string, query: RunLogQuery): Promise<RunLogPage>;
+```
+
+读取仍保留的诊断，不代替 C2 的 Run 变更历史。
+权限、保留、独立序号与错误语义见[Run 诊断日志](./task-engine-contracts/run-logs.md)。
+
+### C7. 订阅 Run 诊断日志
+
+| 项目 | 说明 |
+| --- | --- |
+| input | Run 标识、afterSequence 及有限页预算 |
+| output | 独立日志订阅，交付有界日志页与状态，支持解除观察 |
+| side effects | 建立日志订阅，可触发保留清理，不取消 Task/Run |
+
+```ts
+subscribeRunLogs(runId: string, query: RunLogQuery): Promise<LogSubscription>;
+```
+
+以上仍是逻辑签名；Engine 拉取句柄与 HTTP 异步迭代器是各自传输实现。
+补读、实时衔接与容量独立于 C3 的生命周期事件订阅，
+见[Run 诊断日志](./task-engine-contracts/run-logs.md#查询与实时续接)。
+
 ## 配套能力与可信装配
 
-A1–C5 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
+A1–C7 是核心控制与观察操作，不是删除现有配套能力的名单。本轮继续提供：
 
-- 类型契约获取：Request 通过 URL 与 Digest 成对引用自包含 Task Bundle，
+- 类型契约获取：Request 通过根 CID 字符串或 `{cid, hint}` 引用自包含 Task Bundle 的 UnixFS 目录，
   Engine 按需获取并验证，不要求显式类型注册；宿主配置容量限制，不另引入来源或执行权限模型。
   Engine 不提供 `discoverTypes` 类型枚举或类型目录，Bundle 的查找由调用方或外部目录负责，
   不将缓存列表视为可提交类型目录。
   内容寻址、装载及公共运行库边界见
   [Task Bundle、类型装载与运行库](./task-engine-contracts/task-bundle.md)。
+  Hint 仅为单个 gateway 基址 URI 或有序候选列表；宿主按访问策略决定是否采用，
+  不将调用方提示当作可信配置、内容身份或访问授权。
+  Bundle 内文件可通过根 CID 加相对路径独立访问；这不是新增 Task/Run 控制或订阅操作。
+  业务 Worker 经 Task context 以字节流读取当前 Bundle 的相对路径内容，不依赖宿主物理目录；
+  需要完整字节的调用方自行聚合，资源是否物化由宿主实现决定，完整准入验证仍保留。
+  初始化参数 `ipfsClient` 由宿主装配，仅理解 IPFS 节点与内容；
+  客户端连接独立本地 IPFS 服务，不在 Engine server 进程内嵌节点。
+  注入者负责关闭客户端，Engine 只释放自己的读取与内容保护，不影响共享客户端及其他持有者。
+  Bundle 解释与准入属于 Engine，context 访问封装属于 Task SDK，不放入底层 IPFS 接口。
+  此替换仅限 Task Engine 新架构，不改变 Check/Probe 等业务制品的引用或传输格式。
 - `getRequest`：读取不可变原始请求意图，保留省略与显式值区别；缺失或不可提供明确失败。
 - 受理状态查询：以 `requestId` 查询 preparing/accepted/rejected，
   同一操作通过可选 `waitMs` 支持立即查询或有界 long poll；不改变请求处理。

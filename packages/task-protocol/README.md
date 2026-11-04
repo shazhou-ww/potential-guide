@@ -1,12 +1,13 @@
 # @potential-guide/task-protocol
 
-Task Bundle 的完整引用可使用 `URL#sha256:<64 位小写十六进制摘要>`：
-`parseBundleReference(reference)` 解析为 `{url, digest}`，
-`formatBundleReference(bundle)` 校验并拼合为字符串。两者复用
-`validateBundleReference` 的 URL 与 Digest 约束，非法输入抛出
-`TaskError`（`invalid_request`）。获取 URL 不得带 fragment，包括空 `#`；
-不截短、解码或修正 Digest，不改写 URL。HTTP 请求不发送 fragment。
-请求在线路上仍使用 `{url, digest}`；内容判等与缓存使用 Digest，而非完整引用字符串。
+Task Bundle 的引用为根 CID 字符串或 `{cid, hint}`：
+`parseBundleReference(reference)` 接受 CID 文本或对象 JSON，
+`formatBundleReference(bundle)` 保留其填写形状及有序 hint。
+两者复用 `validateBundleReference` 的 CID/HTTP(S) gateway 基址约束；
+hint 可为非空字符串或非空数组，不允许凭据、query、fragment、空项或非法 URI。
+Engine 另施加宿主 hint 数量预算，非法输入与容量超限明确区分。
+Request 原始表示参与幂等；内容判等与缓存使用 `bundleCid(reference)` 规范化根 CID。
+旧 URL/Digest 或 URL#Digest 引用明确拒绝，不做双轨转换。
 辅助函数同时从包根与浏览器安全的 `@potential-guide/task-protocol/bundle-reference`
 子入口导出；浏览器使用子入口，不引入 Node Schema 编译与摘要依赖。
 
@@ -16,6 +17,9 @@ Task Bundle 的完整引用可使用 `URL#sha256:<64 位小写十六进制摘要
 失败 Result 与成功 Result 一样经纯 terminal 业务复验，不能改写或在恢复前放宽。
 
 通用 Task/完整 Run 的 JSON、schema、请求、事件、Store 与服务边界。
+
+Task Bundle/Worker 使用唯一 `taskSchemaUri` v1，包含独立诊断日志协议。
+项目尚未正式发布，v1 可原地演进；已移除的 Task v2 和未来未知 URL 明确拒绝，不做别名。
 TaskType 仅声明 type/version/inputSchema/resultSchema/messageSchema 和完整 run 入口；
 Host 用 RegisteredType 本地模块描述注册，不传动态函数对象给 Engine。
 
@@ -49,7 +53,9 @@ messageSchema 支持 boolean，false 是 Never，{} / true 不是 Never。
 messages 必选、Task 归属及确认与生命周期控制分离；checkpoint 是独立、按 resultSchema 验证的机器证据。
 公共服务消息操作使用 taskId/messageId、可信 Caller、持久化状态，不改 Input/deadline。
 
-Facts projection v4；Task 仅存受理/取消事实，匹配与状态按源前缀推导。
+Facts projection v5；Task 仅存受理/取消事实，匹配与状态按源前缀推导。
+新 submission 的 `bundleProtocol:"ipfs"` 区分当前受理记录与不支持的旧协议；
+即使新请求因非法引用而被拒绝，仍可跨重启读取其原始意图及持久拒绝结果。
 Task/Run Binding 保留原 inputSchema；实时共享与纯事实重放都使用该 Schema 编译的结构 Equals。
 历史分组的 equivalenceKey 与 Equals 共用投影和序列化，由绑定 Schema 与原 Input 重建，不落盘为匹配权威。
 允许但未声明的额外字段也参与比较，不能忽略其存在或取值差异。

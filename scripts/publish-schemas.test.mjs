@@ -43,6 +43,7 @@ test("schema sources identify exact canonical Draft 2020-12 definitions", async 
   assert.ok(schemas.has("schemas/artifacts/checker/v1.json"));
   assert.ok(schemas.has("schemas/artifacts/objective/v1.json"));
   assert.ok(schemas.has("schemas/artifacts/task/v1.json"));
+  assert.equal(schemas.has("schemas/artifacts/task/v2.json"), false);
   const request = async (url) => {
     const path = url.slice(schemaBase.length);
     return path === "schemas/index.json"

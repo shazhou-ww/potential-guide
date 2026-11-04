@@ -1,5 +1,6 @@
 import {
   at,
+  bundleCid,
   type Caller,
   type Facts,
   fail,
@@ -18,6 +19,7 @@ import {
   type TaskRecord,
   type TaskSummary,
   ulid,
+  validateBundleReference,
 } from "@potential-guide/task-protocol";
 import { type CatalogLimits, FrozenCatalog } from "./frozen-catalog.js";
 
@@ -58,7 +60,7 @@ export function normalizeTaskQuery(query: TaskQuery): TaskQuery {
         ![
           "taskId",
           "type",
-          "bundleDigest",
+          "bundleCid",
           "scope",
           "seriesId",
           "runId",
@@ -77,10 +79,8 @@ export function normalizeTaskQuery(query: TaskQuery): TaskQuery {
     if (raw[key] !== undefined) result[key] = ulid(raw[key]);
   for (const key of ["type", "scope"] as const)
     if (raw[key] !== undefined) result[key] = text(raw[key]);
-  if (raw.bundleDigest !== undefined) {
-    if (typeof raw.bundleDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(raw.bundleDigest))
-      fail("invalid_request", "Expected a full Bundle Digest.");
-    result.bundleDigest = raw.bundleDigest;
+  if (raw.bundleCid !== undefined) {
+    result.bundleCid = bundleCid(validateBundleReference(raw.bundleCid));
   }
   if (raw.stage !== undefined) {
     if (!stages.includes(raw.stage as Stage))
@@ -111,7 +111,7 @@ export function normalizeRunQuery(query: RunQuery): RunQuery {
         ![
           "runId",
           "type",
-          "bundleDigest",
+          "bundleCid",
           "scope",
           "stage",
           "startedFrom",
@@ -126,10 +126,8 @@ export function normalizeRunQuery(query: RunQuery): RunQuery {
   if (raw.runId !== undefined) result.runId = ulid(raw.runId);
   for (const key of ["type", "scope"] as const)
     if (raw[key] !== undefined) result[key] = text(raw[key]);
-  if (raw.bundleDigest !== undefined) {
-    if (typeof raw.bundleDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(raw.bundleDigest))
-      fail("invalid_request", "Expected a full Bundle Digest.");
-    result.bundleDigest = raw.bundleDigest;
+  if (raw.bundleCid !== undefined) {
+    result.bundleCid = bundleCid(validateBundleReference(raw.bundleCid));
   }
   if (raw.stage !== undefined) {
     if (raw.stage === "initial" || !stages.includes(raw.stage as Stage))
@@ -210,7 +208,8 @@ export function taskMatches(item: TaskSummary, query: TaskQuery): boolean {
   return !(
     (query.taskId !== undefined && item.taskId !== query.taskId) ||
     (query.type !== undefined && item.type !== query.type) ||
-    (query.bundleDigest !== undefined && item.bundle?.digest !== query.bundleDigest) ||
+    (query.bundleCid !== undefined &&
+      (!item.bundle || bundleCid(item.bundle) !== query.bundleCid)) ||
     (query.scope !== undefined && item.scope !== query.scope) ||
     (query.seriesId !== undefined && item.seriesId !== query.seriesId) ||
     (query.runId !== undefined && item.runId !== query.runId) ||
@@ -226,7 +225,8 @@ export function runMatches(item: RunSummary, query: RunQuery): boolean {
   return !(
     (query.runId !== undefined && item.runId !== query.runId) ||
     (query.type !== undefined && item.type !== query.type) ||
-    (query.bundleDigest !== undefined && item.bundle?.digest !== query.bundleDigest) ||
+    (query.bundleCid !== undefined &&
+      (!item.bundle || bundleCid(item.bundle) !== query.bundleCid)) ||
     (query.scope !== undefined && item.scope !== query.scope) ||
     (query.stage !== undefined && item.stage !== query.stage) ||
     (query.startedFrom && item.startedAt < query.startedFrom) ||

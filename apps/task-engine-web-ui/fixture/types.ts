@@ -1,16 +1,18 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { newId } from "@potential-guide/task-engine";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import type { RegisteredType } from "@potential-guide/task-protocol";
 import {
   type BundleReference,
   type Caller,
-  type TaskService,
   TaskError,
+  type TaskService,
   taskSchemaUri,
 } from "@potential-guide/task-protocol";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
-import { newId } from "@potential-guide/task-engine";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import type { Parameters } from "../src/model.js";
 
 export function fixtureTypes() {
@@ -78,6 +80,7 @@ export async function fixtureBundles(
   const root = resolve(directory);
   await mkdir(root, { recursive: true });
   const bundles: Record<string, BundleReference> = {};
+  const ipfsClient = new MemoryIpfsClient();
   for (const type of types) {
     const source = join(root, type.type);
     await mkdir(source);
@@ -112,11 +115,11 @@ export default (input,context)=>type.run(input,context);`,
       entry: callback,
       outDirectory: join(source, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(source, "bundle.tar.gz"));
-    bundles[type.type] = { url: pathToFileURL(packed.archive).href, digest: built.digest };
+    bundles[type.type] = (await importTaskBundle(built.directory, ipfsClient)).cid;
   }
   return {
     types,
+    ipfsClient,
     bundles,
     parameters(value: Record<string, unknown>): Parameters {
       if (value.bundle) return value as Parameters;

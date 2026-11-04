@@ -14,6 +14,14 @@
     "./build": {
       "types": "./dist/build.d.ts",
       "import": "./dist/build.js"
+    },
+    "./artifact": {
+      "types": "./dist/artifact.d.ts",
+      "import": "./dist/artifact.js"
+    },
+    "./publish": {
+      "types": "./dist/publish.d.ts",
+      "import": "./dist/publish.js"
     }
   },
   "files": [
@@ -32,10 +40,11 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@potential-guide/ipfs-content": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",
     "@potential-guide/check-artifacts": "workspace:^",
     "esbuild": "catalog:",
-    "tar": "catalog:"
+    "yaml": "catalog:"
   },
   "publishConfig": {
     "access": "public"

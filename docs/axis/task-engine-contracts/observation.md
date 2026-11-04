@@ -1,6 +1,14 @@
+---
+frozen: false
+---
+
 # Task 与 Run 的查询范围及订阅粒度
 
 本契约区分单体与集合、当前状态与历史及后续变化，避免查询与订阅承担不明确或过量的数据范围。
+
+本文的事件、revision 与分页规则针对生命周期观察。独立诊断日志由
+[Run 日志契约](./run-logs.md)定义；它不属于 TaskEvent/RunEvent，
+不进入实体摘要或推进生命周期 revision/updatedAt，也不采用生命周期历史 cursor。
 
 关联 [职责入口](../task-engine-responsibilities.md)：operations B1–B5、C1–C5，Task 与 Run 的查询和订阅。
 
@@ -56,6 +64,8 @@
    时间状态按边界推算，不独立持久化；单 Task 不提供 Run progress。
 2. Run 快照提供类型/匹配身份、严格开始顺序及开始时间、stage、停止流程是否已进入与 Worker 是否接纳、
    可靠结果/失败、终结时间及正常退出/恢复裁决依据（如有）、资源回收的已知或未知状态。
+   类型内容身份可追溯到实际使用的 Task Bundle 根 CID，不以展示名称、hint 或获取节点/网关地址替代；
+   类型身份筛选按相同 CID 语义处理，不新增 Bundle 文件变化事件或 IPFS 资产订阅。
    progress 和完整业务载荷属于单 Run 观察；TaskType 提供的实际环境证据仍可经 Run 历史独立核验。
 3. TaskEvent 表达该 Task 可见的创建、取消、匹配成立或失效、关联 Run stage/结果变化，沿用源 revision；
    Run progress 载荷本身不生成 TaskEvent。独立时间推算和读取不产生事件；

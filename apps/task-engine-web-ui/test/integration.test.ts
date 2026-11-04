@@ -11,15 +11,16 @@ import {
   isTimedOut,
   type Observation,
   type RunPage,
+  type SubmissionResult,
   TaskError,
   type TaskPage,
   type TaskSnapshot,
   type TaskTypeDiscovery,
-  type SubmissionResult,
 } from "@potential-guide/task-protocol";
 import { fixtureBundles } from "../fixture/types.js";
 import {
   ApiError,
+  type Batch,
   consumeSse,
   Directory,
   type Entry,
@@ -27,7 +28,6 @@ import {
   newIdentity,
   originalParameters,
   SubmissionBar,
-  type Batch,
 } from "../src/model.js";
 import { type Endpoint, type Favorite, startUiServer } from "../src/server.js";
 
@@ -44,7 +44,7 @@ async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_
   const backend = await startTaskServer({
     port: 0,
     store,
-    bundleDirectory: resolve(root, "cache"),
+    ipfsClient: resources.ipfsClient,
     authorize: (caller, operation, scope) =>
       caller.scope === scope && (caller.subject !== "list" || operation === "list"),
     resolveCaller(request) {
@@ -126,7 +126,7 @@ async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_
   };
   const discovery = resources.types.map((type) => ({
     ...type,
-    revision: resources.bundles[type.type]!.digest,
+    revision: String(resources.bundles[type.type]),
   }));
   const send = async (entry: Entry) => {
     let result = await request<SubmissionResult>("/tasks", {
@@ -381,7 +381,7 @@ test("directory expiration preserves stale view and requires an explicit new que
   const fetchPage = (query: string) => h.request<TaskPage>(`/tasks?${query}`);
   await directory.load(
     fetchPage,
-    `bundleDigest=${encodeURIComponent(revision(h.discovery, "echo"))}&sort=created-desc&limit=1`,
+    `bundleCid=${encodeURIComponent(revision(h.discovery, "echo"))}&sort=created-desc&limit=1`,
   );
   const old = directory.page;
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -389,7 +389,7 @@ test("directory expiration preserves stale view and requires an explicit new que
     () =>
       directory.load(
         fetchPage,
-        `bundleDigest=${encodeURIComponent(revision(h.discovery, "survey"))}`,
+        `bundleCid=${encodeURIComponent(revision(h.discovery, "survey"))}`,
         true,
       ),
     /query_expired/,
@@ -399,7 +399,7 @@ test("directory expiration preserves stale view and requires an explicit new que
   await assert.rejects(() => directory.load(fetchPage, "", true), /重新查询/);
   await directory.load(
     fetchPage,
-    `bundleDigest=${encodeURIComponent(revision(h.discovery, "survey"))}&sort=created-desc&limit=1`,
+    `bundleCid=${encodeURIComponent(revision(h.discovery, "survey"))}&sort=created-desc&limit=1`,
   );
   assert.deepEqual(directory.page!.tasks, []);
   assert.equal(directory.expired, false);

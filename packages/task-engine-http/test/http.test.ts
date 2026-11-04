@@ -37,8 +37,8 @@ test("type discovery is absent and legacy If-Match cannot replace a fixed Bundle
     assert.equal((await submit(`"${"0".repeat(64)}"`)).status, 400);
     assert.deepEqual(h.store.read().facts.tasks, {});
     assert.ok(h.store.read().events.every((event) => event.type === "window.advanced"));
-    assert.equal((await submit(fixtureBundle.digest)).status, 400);
-    assert.equal((await submit(`"${fixtureBundle.digest}"`)).status, 400);
+    assert.equal((await submit(fixtureBundle.cid)).status, 400);
+    assert.equal((await submit(`"${fixtureBundle.cid}"`)).status, 400);
     assert.equal((await submit()).status, 200);
     assert.equal((await submit(undefined, "changed")).status, 409);
     assert.ok(!JSON.stringify(h.engine.getRequest(id, caller)).includes("Revision"));

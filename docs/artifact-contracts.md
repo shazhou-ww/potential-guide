@@ -1,4 +1,10 @@
-# Artifact contracts and Host services
+# Artifact contracts
+
+Checker Host and Objective Host have been retired. Artifact formats and immutable
+Schemas remain valid business data; they are not automatically Task Bundles.
+Use [Task Bundles](axis/task-engine-contracts/task-bundle.md) and the
+[Task Engine Server](task-server.md) for execution. The Host service and bridge
+sections below are historical protocol documentation, not available APIs.
 
 New immutable schema namespaces:
 
@@ -15,7 +21,11 @@ The Task namespace has its own declaration and Worker protocol:
 [`task-bundle-worker.md`](task-bundle-worker.md) and
 [`task-sdk`](../packages/task-sdk/README.md). It uses `task.yaml`, one
 `worker.cjs`, optional `schemas/` and `resources/`, and three business Schemas.
-Its builder is `@potential-guide/task-sdk/build`; it does not extend the
+Authors use [`pguide task-bundle`](../packages/pguide-task-bundle/README.md)
+to generate the declaration and its required exact file manifest from TypeBox
+contracts and `task.build.yaml`. The low-level compiler is
+`@potential-guide/task-sdk/build`; publishing an existing artifact uses
+`@potential-guide/task-sdk/publish`, never the build entry. It does not extend the
 Checker/Objective Host authorization or business APIs. The remaining sections
 below describe Checker/Objective artifacts and their existing Host services.
 

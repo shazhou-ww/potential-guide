@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "name", "runtime", "source", "outDirectory"],
+  "properties": {
+    "$schema": {
+      "const": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minVersion"],
+      "properties": {
+        "minVersion": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry", "contract"],
+      "properties": {
+        "entry": { "type": "string" },
+        "contract": { "type": "string" },
+        "exportName": { "type": "string", "pattern": "^(default|[A-Za-z_$][A-Za-z0-9_$]*)$" }
+      }
+    },
+    "include": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "outDirectory": { "type": "string", "minLength": 1 }
+  }
+}

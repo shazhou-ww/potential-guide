@@ -1,5 +1,10 @@
 # 从控制机 A 配置目标机 B 的 pguide setup Objective
 
+Checker/Objective Host 已退役。旧 setup 的 nonce sanity 依赖 CLI `probe`/`regulate`，
+当前会明确报告调用失败，不会宣称修复成功；该路径等待 Task Bundle 迁移。
+安装、配置检查与 SSH 传输仍保留。独立本机自查的直接 Agent 检查不依赖旧 Host，
+但通过 CLI `probe` 观察任何 Objective 的入口暂不可执行。
+
 本 Objective 是独立 npm 包，身份为实际 package.json.name，版本为完整交付内容 digest。
 sanity marker 由另一个固定包 `@potential-guide/objective-setup-marker` 提供，
 不再内嵌第二个定义。源码/原始资源入库；`pnpm build` 把 worker/SSH runtime

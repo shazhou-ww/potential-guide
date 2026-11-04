@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 1,
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "failed",
+      "startedAt": "2026-11-03T16:27:15.162Z",
+      "finishedAt": "2026-11-03T16:27:35.995Z",
+      "sourceCommit": "e9b2985ca1e90bb010aca73ea062516bb82d2bcf",
+      "consumer": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+      "packagesMatchFinal": true,
+      "commands": [
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "--version"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:27:15.164Z",
+          "finishedAt": "2026-11-03T16:27:15.789Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "install",
+            "--prod",
+            "--prefer-offline",
+            "--ignore-scripts",
+            "--no-frozen-lockfile",
+            "--reporter=append-only"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:27:16.000Z",
+          "finishedAt": "2026-11-03T16:27:35.877Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "list",
+            "--prod",
+            "--depth",
+            "Infinity",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:27:35.877Z",
+          "finishedAt": "2026-11-03T16:27:35.988Z"
+        }
+      ],
+      "verifiedBeforeFailure": {},
+      "failures": [
+        {
+          "message": "Cannot find module 'cross-spawn'\nRequire stack:\n- C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\node_modules\\pguide\\package.json",
+          "stack": "Error: Cannot find module 'cross-spawn'\nRequire stack:\n- C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\node_modules\\pguide\\package.json\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)\n    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)\n    at Module._load (node:internal/modules/cjs/loader:1227:37)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)\n    at Module.require (node:internal/modules/cjs/loader:1504:12)\n    at require (node:internal/modules/helpers:152:16)\n    at file:///D:/Code/potential-guide.worktrees/task-bundle-authoring-cli-subagent/.silvermoon/ideas/01M6GWRMT65XKB6QZKPYE6JEXD/outer/verify-external.mjs:141:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)"
+        }
+      ]
+    },
+    {
+      "attempt": 2,
+      "status": "failed",
+      "startedAt": "2026-11-03T16:28:59.818Z",
+      "finishedAt": "2026-11-03T16:29:24.925Z",
+      "sourceCommit": "e9b2985ca1e90bb010aca73ea062516bb82d2bcf",
+      "consumer": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+      "packagesMatchFinal": true,
+      "commands": [
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "--version"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:28:59.820Z",
+          "finishedAt": "2026-11-03T16:28:59.878Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "install",
+            "--prod",
+            "--prefer-offline",
+            "--ignore-scripts",
+            "--no-frozen-lockfile",
+            "--reporter=append-only"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:28:59.927Z",
+          "finishedAt": "2026-11-03T16:29:07.593Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "list",
+            "--prod",
+            "--depth",
+            "Infinity",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:07.593Z",
+          "finishedAt": "2026-11-03T16:29:07.687Z"
+        },
+        {
+          "command": "node",
+          "arguments": [
+            "--version"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:07.981Z",
+          "finishedAt": "2026-11-03T16:29:08.043Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "--pguide-command-metadata"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:08.043Z",
+          "finishedAt": "2026-11-03T16:29:11.307Z"
+        },
+        {
+          "command": "pguide",
+          "arguments": [
+            "task-bundle",
+            "--help",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:11.307Z",
+          "finishedAt": "2026-11-03T16:29:12.724Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "check",
+            "author",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:12.736Z",
+          "finishedAt": "2026-11-03T16:29:14.079Z"
+        },
+        {
+          "command": "pguide",
+          "arguments": [
+            "task-bundle",
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:14.079Z",
+          "finishedAt": "2026-11-03T16:29:16.170Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:16.170Z",
+          "finishedAt": "2026-11-03T16:29:17.593Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-two",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:17.593Z",
+          "finishedAt": "2026-11-03T16:29:18.916Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:18.944Z",
+          "finishedAt": "2026-11-03T16:29:20.352Z"
+        },
+        {
+          "command": "pguide",
+          "arguments": [
+            "task-bundle",
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:20.354Z",
+          "finishedAt": "2026-11-03T16:29:22.524Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "check",
+            "artifact",
+            "dist",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:22.524Z",
+          "finishedAt": "2026-11-03T16:29:23.295Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:23.295Z",
+          "finishedAt": "2026-11-03T16:29:24.659Z"
+        }
+      ],
+      "verifiedBeforeFailure": {
+        "authorNode": "v22.13.0",
+        "offlineAuthor": {
+          "daemonStarted": false,
+          "node": "v22.13.0",
+          "initialCid": "bafybeiggjfqfibbhutgpfor7wgz5uts7rnhjrjsrrqh5ztkc6ud2yp2mse",
+          "otherRootCid": "bafybeiggjfqfibbhutgpfor7wgz5uts7rnhjrjsrrqh5ztkc6ud2yp2mse",
+          "addedCid": "bafybeifadjq6ulac3wm3ohqr6lg5rudcjgg3l5awlyjbb7ly3dwxmzxege",
+          "finalCid": "bafybeiegec2kv74zwrpec75sxmgtfxzz7zbw3eyhy5dmpmpfkcoxukwcsu",
+          "finalRepeatCid": "bafybeiegec2kv74zwrpec75sxmgtfxzz7zbw3eyhy5dmpmpfkcoxukwcsu",
+          "declaration": {
+            "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
+            "name": "Outer external typed bundle",
+            "runtime": {
+              "type": "node",
+              "minVersion": "22.13.0"
+            },
+            "entry": "worker.cjs",
+            "inputSchema": {
+              "$ref": "https://task.invalid/schema/input"
+            },
+            "resultSchema": {
+              "$ref": "https://task.invalid/schema/result"
+            },
+            "messageSchema": {
+              "$ref": "https://task.invalid/schema/message"
+            },
+            "include": [
+              "resources/added.txt",
+              "resources/keep.txt",
+              "schemas/0.json",
+              "schemas/1.json",
+              "schemas/2.json",
+              "task.yaml",
+              "worker.cjs"
+            ]
+          },
+          "noAuthorMaintainedTaskYaml": true,
+          "sourcesRemovedOrPoisonedBeforePublish": true
+        }
+      },
+      "failures": [
+        {
+          "message": "Expected values to be strictly deep-equal:\n\nnull !== []\n",
+          "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n\nnull !== []\n\n    at file:///D:/Code/potential-guide.worktrees/task-bundle-authoring-cli-subagent/.silvermoon/ideas/01M6GWRMT65XKB6QZKPYE6JEXD/outer/verify-external.mjs:230:10"
+        }
+      ]
+    },
+    {
+      "attempt": 3,
+      "status": "failed",
+      "startedAt": "2026-11-03T16:29:58.490Z",
+      "finishedAt": "2026-11-03T16:30:25.672Z",
+      "sourceCommit": "e9b2985ca1e90bb010aca73ea062516bb82d2bcf",
+      "consumer": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+      "packagesMatchFinal": true,
+      "commands": [
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "--version"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:58.492Z",
+          "finishedAt": "2026-11-03T16:29:58.550Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "install",
+            "--prod",
+            "--prefer-offline",
+            "--ignore-scripts",
+            "--no-frozen-lockfile",
+            "--reporter=append-only"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:29:58.601Z",
+          "finishedAt": "2026-11-03T16:30:06.708Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "list",
+            "--prod",
+            "--depth",
+            "Infinity",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:06.708Z",
+          "finishedAt": "2026-11-03T16:30:06.815Z"
+        },
+        {
+          "command": "node",
+          "arguments": [
+            "--version"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:06.851Z",
+          "finishedAt": "2026-11-03T16:30:06.916Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "--pguide-command-metadata"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:06.916Z",
+          "finishedAt": "2026-11-03T16:30:07.514Z"
+        },
+        {
+          "command": "pguide",
+          "arguments": [
+            "task-bundle",
+            "--help",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:07.514Z",
+          "finishedAt": "2026-11-03T16:30:08.881Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "check",
+            "author",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:08.894Z",
+          "finishedAt": "2026-11-03T16:30:10.094Z"
+        },
+        {
+          "command": "pguide",
+          "arguments": [
+            "task-bundle",
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:10.095Z",
+          "finishedAt": "2026-11-03T16:30:12.240Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:12.240Z",
+          "finishedAt": "2026-11-03T16:30:13.722Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-two",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:13.722Z",
+          "finishedAt": "2026-11-03T16:30:15.092Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:15.123Z",
+          "finishedAt": "2026-11-03T16:30:16.569Z"
+        },
+        {
+          "command": "pguide",
+          "arguments": [
+            "task-bundle",
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:16.571Z",
+          "finishedAt": "2026-11-03T16:30:18.850Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "check",
+            "artifact",
+            "dist",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:18.850Z",
+          "finishedAt": "2026-11-03T16:30:19.665Z"
+        },
+        {
+          "command": "pguide-task-bundle",
+          "arguments": [
+            "build",
+            "task.build.yaml",
+            "--format",
+            "json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\author\\project-one",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:19.665Z",
+          "finishedAt": "2026-11-03T16:30:21.110Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\runtime\\kubo\\ipfs.exe",
+          "arguments": [
+            "version"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:21.826Z",
+          "finishedAt": "2026-11-03T16:30:21.895Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "install",
+            "--prod",
+            "--prefer-offline",
+            "--ignore-scripts",
+            "--no-frozen-lockfile",
+            "--reporter=append-only"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\host",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:22.129Z",
+          "finishedAt": "2026-11-03T16:30:25.476Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\AppData\\Local\\Microsoft\\WinGet\\Packages\\pnpm.pnpm_Microsoft.Winget.Source_8wekyb3d8bbwe\\pnpm.exe",
+          "arguments": [
+            "list",
+            "--prod",
+            "--depth",
+            "Infinity",
+            "--json"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\host",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:25.477Z",
+          "finishedAt": "2026-11-03T16:30:25.559Z"
+        },
+        {
+          "command": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\runtime\\kubo\\ipfs.exe",
+          "arguments": [
+            "shutdown"
+          ],
+          "cwd": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer",
+          "code": 0,
+          "signal": null,
+          "startedAt": "2026-11-03T16:30:25.563Z",
+          "finishedAt": "2026-11-03T16:30:25.635Z"
+        }
+      ],
+      "verifiedBeforeFailure": {
+        "authorNode": "v22.13.0",
+        "offlineAuthor": {
+          "daemonStarted": false,
+          "node": "v22.13.0",
+          "initialCid": "bafybeiggjfqfibbhutgpfor7wgz5uts7rnhjrjsrrqh5ztkc6ud2yp2mse",
+          "otherRootCid": "bafybeiggjfqfibbhutgpfor7wgz5uts7rnhjrjsrrqh5ztkc6ud2yp2mse",
+          "addedCid": "bafybeifadjq6ulac3wm3ohqr6lg5rudcjgg3l5awlyjbb7ly3dwxmzxege",
+          "finalCid": "bafybeiegec2kv74zwrpec75sxmgtfxzz7zbw3eyhy5dmpmpfkcoxukwcsu",
+          "finalRepeatCid": "bafybeiegec2kv74zwrpec75sxmgtfxzz7zbw3eyhy5dmpmpfkcoxukwcsu",
+          "declaration": {
+            "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
+            "name": "Outer external typed bundle",
+            "runtime": {
+              "type": "node",
+              "minVersion": "22.13.0"
+            },
+            "entry": "worker.cjs",
+            "inputSchema": {
+              "$ref": "https://task.invalid/schema/input"
+            },
+            "resultSchema": {
+              "$ref": "https://task.invalid/schema/result"
+            },
+            "messageSchema": {
+              "$ref": "https://task.invalid/schema/message"
+            },
+            "include": [
+              "resources/added.txt",
+              "resources/keep.txt",
+              "schemas/0.json",
+              "schemas/1.json",
+              "schemas/2.json",
+              "task.yaml",
+              "worker.cjs"
+            ]
+          },
+          "noAuthorMaintainedTaskYaml": true,
+          "sourcesRemovedOrPoisonedBeforePublish": true
+        },
+        "kubo": {
+          "executable": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\runtime\\kubo\\ipfs.exe",
+          "dataDirectory": "C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\kubo-data",
+          "archiveSha512": "e611cecef25cddb10b7f907145383608d9b31219ad7120041aeacfe2313882da1944f2897fda29bc2d959dd357e4950089ec8f2cbd52b29f2fc472bcae4356d0",
+          "executableSha512": "aca8f352ea3b5013ed8cb6ec1a5aeae2d02e34e7fc8341afb48d85da8e1a31738c979735781eaf3db43bda379821999ba4a7ef6be103811fa919ee275e072a73",
+          "version": "ipfs version 0.43.1",
+          "offline": true,
+          "config": {
+            "API": "/ip4/127.0.0.1/tcp/0",
+            "Gateway": "/ip4/127.0.0.1/tcp/0",
+            "autoConf": false,
+            "mdns": false,
+            "bootstrap": null
+          },
+          "pid": 37008,
+          "rpc": "http://127.0.0.1:49262",
+          "readyLog": "Initializing daemon...\nKubo version: 0.43.1-acc53c093\nRepo version: 18\nSystem version: amd64/windows\nGolang version: go1.26.5\nPeerID: 12D3KooWDFBQ9HKqKdNjLvbxKoVgN2GL4rr7VtLcXGCV3ZrDBp6H\nSwarm not listening, running in offline mode.\nRPC API server listening on /ip4/127.0.0.1/tcp/49262\nWebUI: http://127.0.0.1:49262/webui\nGateway server listening on /ip4/127.0.0.1/tcp/49263\nRouting V1 API exposed at http://127.0.0.1:49263/routing/v1\nDaemon is ready\n",
+          "exit": {
+            "code": 0,
+            "signal": null
+          },
+          "rpcStopped": true
+        }
+      },
+      "failures": [
+        {
+          "message": "No \"exports\" main defined in C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\host\\node_modules\\@potential-guide\\ipfs-content\\package.json",
+          "stack": "Error [ERR_PACKAGE_PATH_NOT_EXPORTED]: No \"exports\" main defined in C:\\Users\\leescott.REDMOND\\.copilot\\session-state\\77764d4e-4801-4372-b19f-cf93d7af2ebb\\files\\bundle-deployment\\consumer\\host\\node_modules\\@potential-guide\\ipfs-content\\package.json\n    at exportsNotFound (node:internal/modules/esm/resolve:313:10)\n    at packageExportsResolve (node:internal/modules/esm/resolve:604:13)\n    at resolveExports (node:internal/modules/cjs/loader:679:36)\n    at Module._findPath (node:internal/modules/cjs/loader:746:31)\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1406:27)\n    at require.resolve (node:internal/modules/helpers:163:19)\n    at file:///D:/Code/potential-guide.worktrees/task-bundle-authoring-cli-subagent/.silvermoon/ideas/01M6GWRMT65XKB6QZKPYE6JEXD/outer/verify-external.mjs:263:91\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)"
+        }
+      ]
+    }
+  ]
+}

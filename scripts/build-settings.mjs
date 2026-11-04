@@ -15,8 +15,14 @@ const compiler = new Ajv({
 const validators = {};
 const exports = {};
 const descriptions = [];
-for (const directory of (await readdir(resolve(root, "packages"))).sort()) {
-  const packageRoot = resolve(root, "packages", directory);
+const workspaces = (
+  await Promise.all(
+    ["packages", "apps"].map(async (group) =>
+      (await readdir(resolve(root, group))).map((directory) => resolve(root, group, directory)),
+    ),
+  )
+).flat();
+for (const packageRoot of workspaces) {
   let metadata;
   try {
     metadata = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));

@@ -1,3 +1,8 @@
+import {
+  createProcessCheckProbe,
+  fileResources,
+  loadPilotSpec,
+} from "@potential-guide/objective-pilot";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { cp, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -5,13 +10,6 @@ import { basename, delimiter, dirname, join } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import {
-  createProcessCheckProbe,
-  createWorkerCheckProbe,
-  fileResources,
-  loadPilotSpec,
-} from "@potential-guide/objective-pilot";
-import { readArtifact } from "../../check-host/dist/index.js";
 import { bin, fixture, git, root, run, writeConfig } from "../../pguide/test/fixtures.js";
 
 const objective = join(root, "packages", "objective-pguide-setup");
@@ -670,7 +668,7 @@ test("shipped Node bootstrap runs independently and cleans target payload and ti
   }
 });
 
-test("remote payload uses target authentication and performs actual nonce sanity, not control evidence", async () => {
+test("remote payload reports retired nested Probe instead of inventing nonce sanity", async () => {
   const f = await setup("home");
   const { sshRequest, remoteBootstrap, runSsh } = await transportModule();
   try {
@@ -705,12 +703,15 @@ test("remote payload uses target authentication and performs actual nonce sanity
       env: f.env,
     });
     assert.equal(result.code, 0, result.stdout);
-    passed(JSON.parse(result.stdout).result);
+    const envelope = JSON.parse(result.stdout).result;
+    assert.equal(envelope.status, 502);
+    assert.equal(envelope.payload, null);
+    assert.match(envelope.message, /independent sanity probe failed.*exit=2/);
     const entries = (await readFile(f.log, "utf8"))
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-    assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 1);
+    assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 0);
     assert.ok(entries.filter(({ cwd }) => cwd).every(({ cwd }) => cwd.startsWith(f.scratch)));
     assert.deepEqual(await readdir(f.scratch), []);
     assert.equal(await readFile(join(f.home, "logged-in"), "utf8"), "existing");
@@ -748,7 +749,7 @@ test("sanity without explicit consent never starts even the pguide or ACP proces
 });
 
 for (const mode of ["noop", "wrong", "fix"]) {
-  test(`real sanity ${mode === "fix" ? "verifies a finite repair" : `rejects ${mode} Agent completion`}`, async () => {
+  test(`sanity rejects retired nested execution before the ${mode} Agent can prompt`, async () => {
     const f = await setup(mode);
     try {
       const original = await readFile(f.configPath, "utf8");
@@ -758,20 +759,14 @@ for (const mode of ["noop", "wrong", "fix"]) {
         // All finite business outcomes include cold CLI startups, not a Pilot deadline test.
         timeoutMs: 60000,
       });
-      if (mode === "fix") passed(envelope);
-      else {
-        isProblem(envelope, "sanity-failed");
-        assert.deepEqual(envelope.payload?.problems[0]?.parameters, {
-          stage: "regulate",
-          reason: "quota-exhausted",
-          exhaustedBy: "stall",
-        });
-      }
+      assert.equal(envelope.status, 502);
+      assert.equal(envelope.payload, null);
+      assert.match(envelope.message, /independent sanity probe failed.*exit=2/);
       const messages = (await readFile(f.log, "utf8"))
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line));
-      assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
+      assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 0);
       assert.equal(await readFile(f.configPath, "utf8"), original);
       assert.deepEqual(await readdir(f.work), [".pguide"]);
     } finally {
@@ -805,7 +800,7 @@ test("setup timeout kills its entire owned process tree and cleans scratch", asy
   }
 });
 
-test("sanity invocation diagnostics expose fixed classifications, not arbitrary CLI error data", async () => {
+test("sanity initial Probe diagnostics expose fixed classifications, not arbitrary CLI error data", async () => {
   const f = await setup();
   try {
     const forwarder = join(f.directory, "diagnostic-forwarder.cjs");
@@ -816,7 +811,7 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
       "nativeCode=5;phase=query-started;reason=native-next",
       "nativeCode=none;phase=importing;reason=module-not-found",
     );
-    for (const [report, expected] of [
+    for (const [report] of [
       [
         {
           status: "internal-error",
@@ -843,7 +838,7 @@ test("sanity invocation diagnostics expose fixed classifications, not arbitrary 
       await writeFile(
         forwarder,
         `const {spawnSync}=require("node:child_process");
-if(process.argv[2]==="regulate"){
+if(process.argv[2]==="probe"){
   console.log(JSON.stringify(${JSON.stringify(report)}));process.exitCode=70;
 }else{
   const result=spawnSync(process.execPath,[${JSON.stringify(composition)},...process.argv.slice(2)],{stdio:"inherit"});
@@ -858,7 +853,7 @@ if(process.argv[2]==="regulate"){
       });
       assert.equal(envelope.status, 502);
       assert.equal(envelope.payload, null);
-      assert.ok(envelope.message.includes(`exit=70, ${expected}`));
+      assert.match(envelope.message, /independent sanity probe failed.*invocation; exit=70/);
       assert.equal(envelope.message.includes(canary), false);
       assert.deepEqual(await readdir(f.scratch), []);
     }
@@ -940,157 +935,25 @@ test("oversized child output is bounded and reported as invocation fault", async
   }
 });
 
-test("sanity timeout during an actual ACP prompt cleans isolated config, state and descendants", async () => {
+test("retired sanity execution leaves configuration intact and does not start a hanging prompt", async () => {
   const f = await setup("prompt-timeout");
   try {
-    const runner = join(f.directory, "prompt-deadline.mjs");
-    await writeFile(
-      runner,
-      `import {readFile} from "node:fs/promises";
-import {main} from ${JSON.stringify(pathToFileURL(helper).href)};
-const controller = new AbortController();
-const timer = setInterval(async () => {
-  try {
-    const log = await readFile(${JSON.stringify(f.log)}, "utf8");
-    if (log.includes('"method":"session/prompt"')) {
-      clearInterval(timer);
-      setTimeout(() => controller.abort(), 100);
-    }
-  } catch (error) { if(error.code !== "ENOENT") throw error; }
-}, 25);
-try { await main(undefined, {signal: controller.signal}); } finally { clearInterval(timer); }
-`,
-    );
     const original = await readFile(f.configPath, "utf8");
-    const envelope = await f.direct(
-      "sanity",
-      {
-        ...f.subject,
-        allowSanity: true,
-        // Startup is bounded separately; trigger the deadline only after the real
-        // hanging prompt is observed, not after an assumed machine startup time.
-        timeoutMs: 60000,
-      },
-      runner,
-    );
-    assert.equal(envelope.status, 504, JSON.stringify(envelope));
+    const envelope = await f.direct("sanity", {
+      ...f.subject,
+      allowSanity: true,
+      timeoutMs: 60000,
+    });
+    assert.equal(envelope.status, 502, JSON.stringify(envelope));
+    assert.match(envelope.message, /independent sanity probe failed.*exit=2/);
     const entries = (await readFile(f.log, "utf8"))
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-    assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 1);
+    assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 0);
     for (const { pid } of entries) assert.throws(() => process.kill(pid, 0));
     assert.equal(await readFile(f.configPath, "utf8"), original);
     assert.deepEqual(await readdir(f.work), [".pguide"]);
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
-  }
-});
-
-test("fixed npm package coordinates long local budgets and existing file-auth ACP to terminal", async () => {
-  const f = await setup("home");
-  try {
-    await writeFile(join(f.home, "logged-in"), "existing");
-    f.config.agents.fixture.transport.env = ["USERPROFILE"];
-    await f.updateConfig();
-    const writeProbeConfig = () =>
-      writeConfig(
-        f.configPath,
-        JSON.stringify({
-          ...f.config,
-          objectives: {
-            "@potential-guide/objective-setup-marker": join(
-              root,
-              "packages",
-              "objective-setup-marker",
-              "dist",
-              "package",
-            ),
-          },
-          regulationStrategy: {
-            probe: {
-              timeoutMs: 75000,
-              observationBudget: { timeoutMs: 225000, maxDepth: 32, maxObservations: 128 },
-              retry: { maxRetries: 0, delayMs: 0 },
-            },
-          },
-        }),
-        f.work,
-      );
-    await writeProbeConfig();
-    await cp(
-      join(objective, "dist", "package"),
-      join(f.repository, "packages", "objective-pguide-setup"),
-      {
-        recursive: true,
-        filter: (source) => !["node_modules", ".turbo", "test"].includes(basename(source)),
-      },
-    );
-    await f.commit();
-    await writeFile(
-      f.subjectFile,
-      JSON.stringify({ ...f.subject, allowSanity: true, timeoutMs: 60000 }),
-    );
-    const uri = join(f.repository, "packages", "objective-pguide-setup");
-    const probeEnv: NodeJS.ProcessEnv = { ...f.env };
-    delete probeEnv.GIT_DIR;
-    delete probeEnv.GIT_INDEX_FILE;
-    const probeArgs = [
-      "--pilot",
-      uri,
-      "--subject-file",
-      f.subjectFile,
-      "--cwd",
-      f.work,
-      "--format",
-      "json",
-    ];
-    const result = await run(bin("probe"), probeArgs, probeEnv);
-    assert.equal(result.code, 0, result.stdout + result.stderr);
-    const report = JSON.parse(result.stdout);
-    assert.equal(report.status, 200, result.stdout);
-    assert.equal(report.payload.current.levelId, "verified", result.stdout);
-    assert.deepEqual(report.payload.problems, []);
-    const id = "@potential-guide/objective-pguide-setup";
-    assert.match(report.payload.versions[id], /^sha256-pguide-package-v1:[a-f0-9]{64}$/);
-    assert.equal(report.payload.sources[id].packageDigest, report.payload.versions[id]);
-    assert.equal(report.payload.sources[id].spec, uri);
-    assert.deepEqual(await readdir(f.scratch), []);
-    assert.equal(await readFile(join(f.home, "logged-in"), "utf8"), "existing");
-    f.config.agents.fixture.transport.env = ["USERPROFILE", "PGUIDE_SETUP_TEST_AUTH"];
-    await f.updateConfig();
-    await writeProbeConfig();
-    passed(await f.direct("configuration"));
-    const sanitized = await run(bin("probe"), probeArgs, probeEnv);
-    assert.equal(sanitized.code, 0, sanitized.stdout + sanitized.stderr);
-    const blocked = JSON.parse(sanitized.stdout);
-    assert.equal(blocked.payload.current.levelId, "installed");
-    assert.equal(blocked.payload.problems[0].ref.problemId, "environment-unavailable");
-    assert.deepEqual(await readdir(f.scratch), []);
-    const entries = (await readFile(f.log, "utf8"))
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line));
-    assert.equal(entries.filter(({ method }) => method === "session/prompt").length, 1);
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
-  }
-});
-
-test("sanity worker receives the subject through Host execution context", async () => {
-  const f = await setup();
-  try {
-    const artifact = await readArtifact(join(objective, "dist", "package", "checks", "sanity"));
-    const probe = createWorkerCheckProbe({
-      directory: artifact.directory,
-      revision: artifact.revision,
-      evidence: false,
-    });
-    const result = await probe(f.subject, new AbortController().signal);
-    assert.equal(result.status, 200);
-    const problem = result.payload?.problems[0];
-    assert.equal(problem?.kind, "internal");
-    if (problem?.kind === "internal") assert.equal(problem.id, "sanity-consent-required");
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
@@ -1429,7 +1292,7 @@ test("self-check preserves a shorter configured Agent execution timeout", async 
   }
 });
 
-test("self-check fixed npm packages coordinate default and explicit long budgets with one prompt", async () => {
+test("self-check CLI execution rejects without prompting for default or extended budgets", async () => {
   for (const extended of [false, true]) {
     const f = await setup();
     try {
@@ -1475,21 +1338,12 @@ test("self-check fixed npm packages coordinate default and explicit long budgets
         ],
         f.env,
       );
-      assert.equal(result.code, 0, result.stdout + result.stderr);
+      assert.equal(result.code, 2, result.stdout + result.stderr);
       const report = JSON.parse(result.stdout);
-      assert.equal(report.status, 200);
-      assert.equal(report.payload.current.levelId, "verified");
-      const id = "@potential-guide/objective-pguide-self-check";
-      assert.match(report.payload.versions[id], /^sha256-pguide-package-v1:[a-f0-9]{64}$/);
-      assert.equal(report.payload.sources[id].packageDigest, report.payload.versions[id]);
-      assert.equal(report.payload.sources[id].spec, uri);
-      assert.deepEqual(report.payload.problems, []);
+      assert.equal(report.status, "pilot-error");
+      assert.match(report.error, /Legacy Pilot execution is retired/);
       assert.deepEqual(await readdir(f.scratch), []);
-      const messages = (await readFile(f.log, "utf8"))
-        .trim()
-        .split("\n")
-        .map((line) => JSON.parse(line));
-      assert.equal(messages.filter(({ method }) => method === "session/prompt").length, 1);
+      assert.equal(existsSync(f.log), false);
     } finally {
       await rm(f.directory, { recursive: true, force: true });
     }

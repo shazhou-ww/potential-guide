@@ -1,62 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  bundleCid,
   formatBundleReference,
   parseBundleReference,
-  TaskError,
   validateBundleReference,
-} from "../src/index.js";
+} from "../src/bundle-reference.js";
 
-const digest = `sha256:${"a".repeat(64)}`;
-
-test("Bundle reference helpers preserve retrieval URLs and full tree Digests", () => {
-  for (const url of [
-    "https://example.test/task.tar.gz?version=1&name=a%23b",
-    "http://localhost:3000/task",
-    "file:///D:/bundles/task.tar.gz",
-    "file://localhost/D:/bundles/task.tar.gz",
-    "HTTPS://EXAMPLE.test:443/a%2fb",
+const cid = "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy";
+test("CID strings and ordered scalar/array gateway hints round-trip without rewriting intent", () => {
+  for (const reference of [
+    cid,
+    { cid, hint: "http://localhost:8080" },
+    { cid, hint: ["https://first.example/base", "http://localhost:8080"] },
   ]) {
-    const bundle = { url, digest };
-    const reference = `${url}#${digest}`;
-    assert.equal(formatBundleReference(bundle), reference);
-    assert.deepEqual(parseBundleReference(reference), bundle);
-    assert.equal(formatBundleReference(parseBundleReference(reference)), reference);
+    assert.deepEqual(validateBundleReference(reference), reference);
+    assert.deepEqual(parseBundleReference(formatBundleReference(reference)), reference);
+    assert.equal(bundleCid(reference), cid);
   }
-  assert.equal(
-    parseBundleReference(`https://mirror.test/task#${digest}`).digest,
-    parseBundleReference(`https://origin.test/task#${digest}`).digest,
-  );
 });
-
-test("Bundle reference helpers reject incomplete, ambiguous and unsupported references", () => {
-  const invalid = (error: unknown) =>
-    error instanceof TaskError && error.code === "invalid_request";
+test("old URL/Digest references, empty hints and unsafe gateway bases are rejected", () => {
   for (const reference of [
     "",
-    "https://example.test/task",
-    `#${digest}`,
-    "https://example.test/task#",
-    `https://example.test/task#section#${digest}`,
-    `https://example.test/task##${digest}`,
-    `https://example.test/task#${digest}#`,
-    `https://example.test/task#${digest.toUpperCase()}`,
-    `https://example.test/task#sha256:${"a".repeat(63)}`,
-    `https://example.test/task#sha256%3A${"a".repeat(64)}`,
-    `https://user:password@example.test/task#${digest}`,
-    `ftp://example.test/task#${digest}`,
-    `file://remote/D:/task#${digest}`,
-    `file:///D:/task?version=1#${digest}`,
-    `${"https://example.test/"}${"a".repeat(4096)}#${digest}`,
+    "https://example.test/task#sha256:abc",
+    { url: "file:///task", digest: "sha256:abc" },
+    { cid },
+    { cid, hint: "" },
+    { cid, hint: [] },
+    { cid, hint: [""] },
+    { cid, hint: "file:///task" },
+    { cid, hint: "http://user:password@localhost" },
+    { cid, hint: "http://localhost/?" },
+    { cid, hint: "http://localhost/#" },
+    { cid, hint: ["http://localhost", 1] },
+    { cid, hint: "not a URI" },
+    { cid, hint: " http://localhost" },
+    { cid, hint: "http:\\localhost" },
+    { cid, hint: "http://@localhost" },
+    { cid, hint: "http:localhost" },
+    { cid, hint: "http:///localhost" },
   ])
-    assert.throws(() => parseBundleReference(reference), invalid, reference);
-  for (const url of ["https://example.test/task#", "https://example.test/task#section"]) {
-    assert.throws(() => validateBundleReference({ url, digest }), invalid);
-    assert.throws(() => formatBundleReference({ url, digest }), invalid);
-  }
-  assert.throws(() => parseBundleReference(null as never), invalid);
-  assert.throws(
-    () => formatBundleReference({ url: "https://example.test/task", digest: "" }),
-    invalid,
-  );
+    assert.throws(() => validateBundleReference(reference), { code: "invalid_request" });
+  assert.throws(() => validateBundleReference({ cid, hint: ["http://one", "http://two"] }, 1), {
+    code: "capacity_exceeded",
+  });
 });

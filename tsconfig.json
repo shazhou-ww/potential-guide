@@ -1,11 +1,11 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/pguide-task-bundle" },
+    { "path": "./packages/ipfs-content" },
     { "path": "./packages/check-environment" },
-    { "path": "./packages/objective-host" },
     { "path": "./packages/check-artifacts" },
     { "path": "./packages/test-tree" },
-    { "path": "./packages/check-host" },
     { "path": "./packages/pguide-agents" },
     {
       "path": "./packages/objective-monorepo-standard"

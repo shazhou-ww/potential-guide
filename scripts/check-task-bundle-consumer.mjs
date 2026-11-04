@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { spawn } from "node:child_process";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 /** Separate author install and business-free production host; no in-process business ports. */
@@ -14,6 +14,7 @@ export async function checkTaskBundleConsumer(scratch, tarballs, manifests, run)
   await mkdir(artifacts);
   const entries = {
     author: [
+      "@potential-guide/ipfs-content",
       "@potential-guide/task-sdk",
       "@potential-guide/check-task",
       "@potential-guide/probe-task",
@@ -82,7 +83,17 @@ export async function checkTaskBundleConsumer(scratch, tarballs, manifests, run)
     `
 import {startTaskServer} from "@potential-guide/task-engine-server";
 import {TaskError} from "@potential-guide/task-protocol";
-const server=await startTaskServer({port:0,database:"domain-v5.sqlite",bundleDirectory:"cache",
+import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
+import {readFile} from "node:fs/promises";
+const content=new MemoryIpfsClient();
+let loading;
+const ipfsClient={block:{async get(cid,options){
+ loading??=readFile(${JSON.stringify(join(artifacts, "blocks.json"))},"utf8").then(text=>{
+ for(const [key,hex] of JSON.parse(text))content.blocks.set(key,Buffer.from(hex,"hex"));
+ });
+ await loading;return content.block.get(cid,options);
+}}};
+const server=await startTaskServer({port:0,database:"domain-v5.sqlite",ipfsClient,
 limits:{maxPayloadBytes:100663296,queryPageBytes:100663296,sourceEnvelopeBytes:100663296,maxQueryBytes:536870912},
 authorize:()=>true,resolveCaller(request){if(request.headers.get("authorization")!==${JSON.stringify(`Bearer ${token}`)})throw new TaskError("unauthenticated","Token required.");return {scope:"consumer",subject:"consumer"}}});
 process.send({type:"ready",url:server.url});
@@ -121,8 +132,9 @@ process.on("message",async message=>{if(message==="close"){try{await server.clos
 import assert from "node:assert/strict";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {join,resolve} from "node:path";
-import {pathToFileURL} from "node:url";
-import {buildTaskBundle,packTaskBundle} from "@potential-guide/task-sdk/build";
+import {buildTaskBundle} from "@potential-guide/task-sdk/build";
+import {importTaskBundle} from "@potential-guide/task-sdk/publish";
+import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
 import {writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
 import {checkerSchemaUri,objectiveSchemaUri} from "@potential-guide/check-artifacts/contracts";
 import {checkInputSchema,createCheckTaskType} from "@potential-guide/check-task";
@@ -138,33 +150,31 @@ const objective=await writeContractArtifact(new Map([
 ["references/en/objective.md",page],["references/en/levels/ready.md",page]]),join(root,"objective"));
 await packContractArtifact(checker.directory,join(root,"checker.tgz"));
 await packContractArtifact(objective.directory,join(root,"objective.tgz"));
-const sourceCode=\`import {readFile} from "node:fs/promises";
-import {createArtifactSource} from "@potential-guide/check-task";
-const source=createArtifactSource({allowedOrigins:["https://example.test"],authorize(_reference,scope){if(scope!=="consumer")throw new Error("Scope mismatch.")},download(url){const path=new URL(url).pathname;if(!["/checker.tgz","/objective.tgz"].includes(path))throw new Error("Unknown controlled resource.");return readFile(new URL("./resources"+path,import.meta.url));}});\`;
+const sourceCode=\`import {createArtifactSource} from "@potential-guide/check-task";
+const createSource=context=>createArtifactSource({allowedOrigins:["https://example.test"],authorize(_reference,scope){if(scope!=="consumer")throw new Error("Scope mismatch.")},async download(url){const path=new URL(url).pathname;if(!["/checker.tgz","/objective.tgz"].includes(path))throw new Error("Unknown controlled resource.");const chunks=[];for await(const chunk of context.bundle.read("resources"+path))chunks.push(chunk);return Buffer.concat(chunks);}});\`;
 const nullSource={authorize(){},async resolve(){throw Error("Author schema extraction performs no business IO.")}};
 const check=createCheckTaskType({source:nullSource,directory:"unused"});
+const ipfsClient=new MemoryIpfsClient();
 async function bundle(kind,inputSchema,resultSchema,callback,resources){
  const yaml=resolve(kind+".yaml"),entry=resolve(kind+".ts");
  await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema,resultSchema,messageSchema:false}));
  await writeFile(entry,callback);
  const built=await buildTaskBundle({declaration:yaml,entry,resources,outDirectory:join(root,kind)});
- const packed=await packTaskBundle(built.directory,join(root,kind+".tar.gz"));
- return {url:pathToFileURL(packed.archive).href,digest:built.digest};
+ return (await importTaskBundle(built.directory,ipfsClient)).cid;
 }
 const checkBundle=await bundle("check-task",checkInputSchema,check.resultSchema,sourceCode+\`
 import {resolve} from "node:path";
 import {createCheckTaskType} from "@potential-guide/check-task";
-const type=createCheckTaskType({source,directory:resolve("business-workers"),wallMs:10000});
-export default (input,context)=>type.run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz")});
-const probe=createProbeTaskType({source:nullSource,checkEnvironment:checkBundle.digest,checkBundle,children(){throw Error("Authoring does not create child tasks.")}});
+export default (input,context)=>createCheckTaskType({source:createSource(context),directory:resolve("business-workers"),wallMs:10000}).run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz")});
+const probe=createProbeTaskType({source:nullSource,checkEnvironment:checkBundle,checkBundle,children(){throw Error("Authoring does not create child tasks.")}});
 const probeBundle=await bundle("probe-task",probeInputSchema,probe.resultSchema,sourceCode+\`
 import {createProbeTaskType} from "@potential-guide/probe-task";
 import {TaskClient} from "@potential-guide/task-engine-http";
-const checkBundle={url:new URL("./resources/check-task.tar.gz",import.meta.url).href,digest:\`+JSON.stringify(checkBundle.digest)+\`};
+const checkBundle=\`+JSON.stringify(checkBundle)+\`;
 const client=new TaskClient({url:\`+JSON.stringify(${JSON.stringify(ready.url)})+\`,headers:{Authorization:\`+JSON.stringify(${JSON.stringify(`Bearer ${token}`)})+\`}});
-const type=createProbeTaskType({source,checkBundle,checkEnvironment:checkBundle.digest,wallMs:20000,children(scope){return {service:client,caller:{scope,subject:"consumer"},waitForTaskRelease:(id)=>client.waitForTaskRelease(id)}}});
-export default (input,context)=>type.run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz"),"resources/objective.tgz":join(root,"objective.tgz"),"resources/check-task.tar.gz":join(root,"check-task.tar.gz")});
+export default (input,context)=>createProbeTaskType({source:createSource(context),checkBundle,checkEnvironment:checkBundle,wallMs:20000,children(scope){return {service:client,caller:{scope,subject:"consumer"},waitForTaskRelease:(id)=>client.waitForTaskRelease(id)}}}).run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz"),"resources/objective.tgz":join(root,"objective.tgz")});
 await writeFile(join(root,"references.json"),JSON.stringify({checkBundle,probeBundle,checkerDigest:checker.digest,objectiveDigest:objective.digest}));
+await writeFile(join(root,"blocks.json"),JSON.stringify([...ipfsClient.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("hex")])));
 `,
     );
     console.log(await run(process.execPath, [join(author, "build.mjs")], author));
@@ -200,6 +210,15 @@ assert.equal(check.result.result.ok,false);
 assert.equal(check.result.result.problems[0].id,"bad");
 assert.equal(check.result.evidence.prepared.checker.digest,refs.checkerDigest);
 assert.ok(check.result.evidence.execution.executionId);
+const checkLogs=await client.getRunLogs(check.run.runId);
+assert.equal(checkLogs.state.availability,"available");
+assert.ok(checkLogs.entries.some(entry=>entry.level==="warn"&&entry.fields.problemId==="bad"));
+assert.ok(checkLogs.entries.every(entry=>entry.runId===check.run.runId));
+assert.equal((await client.getRunHistory(check.run.runId)).events.some(event=>event.type.includes("log")),false);
+let replayed=0;
+for await(const page of client.subscribeRunLogs(check.run.runId)){replayed+=page.entries.length;assert.equal(page.runId,check.run.runId);}
+assert.equal(replayed,checkLogs.entries.length);
+console.log("Packed v1 Check diagnostics: HTTP history and realtime replay verified; Result/evidence unchanged.");
 const probe=await execute({bundle:refs.probeBundle,objective:{kind:"objective",url:"https://example.test/objective.tgz",digest:refs.objectiveDigest},subject:{}});
 assert.equal(probe.result.observation.current.levelId,"initial");
 assert.equal(probe.result.observation.problems[0].problem.id,"bad");
@@ -209,9 +228,9 @@ const child=probe.result.evidence.operations.find(entry=>"snapshot" in entry);
 assert.ok(child);
 assert.equal(child.request.reference.digest,refs.checkerDigest);
 assert.equal(child.snapshot.result.evidence.prepared.checker.digest,refs.checkerDigest);
-assert.equal(child.environment,refs.checkBundle.digest);
+assert.equal(child.environment,refs.checkBundle);
 const run=await client.getRun(probe.run.runId);
-assert.equal(run.bundle.digest,refs.probeBundle.digest);
+assert.equal(run.bundle,refs.probeBundle);
 console.log("Independent production host: self-contained Check/Probe Bundles, actual negative business results and evidence verified; author node_modules unavailable.");
 `,
     );

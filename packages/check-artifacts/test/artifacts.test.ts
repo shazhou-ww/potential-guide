@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { createServer } from "node:https";
 import {
   chmod,
-  copyFile,
   cp,
   link,
   mkdir,
@@ -19,16 +18,9 @@ import {
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { setTimeout as delay } from "node:timers/promises";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { after, before, test } from "node:test";
-import {
-  CheckKernel,
-  closePrivateFileBackend,
-  type CheckState,
-  terminal,
-} from "../../check-host/dist/index.js";
-import { watchSnapshot } from "@potential-guide/effects";
+import { closePrivateFileBackend } from "@potential-guide/check-runtime-files";
 import * as tar from "tar";
 import { buildCheckArtifact, packCheckArtifact } from "../dist/build.js";
 import {
@@ -76,52 +68,12 @@ async function copied(name: string) {
   await cp(built.directory, directory, { recursive: true });
   return directory;
 }
-async function completed(kernel: CheckKernel, checkId: string): Promise<CheckState> {
-  return new Promise((done) => {
-    const lifetime = new AbortController();
-    watchSnapshot(
-      kernel.observe(checkId).state,
-      (state) => {
-        if (terminal(state)) {
-          lifetime.abort();
-          done(state);
-        }
-      },
-      lifetime.signal,
-    );
-  });
-}
-async function execute(
-  prepared: { directory: string; revision: string },
-  checkId: string,
-  file: string,
-) {
-  const kernel = await CheckKernel.create(join(scratch, `snapshots-${checkId}`));
-  try {
-    await kernel.executeCheck({ ...prepared, checkId, subject: { file } });
-    const result = await completed(kernel, checkId);
-    assert.equal(result.state, "Completed");
-    return result.state === "Completed" ? result.result : null;
-  } finally {
-    await kernel.close();
-  }
-}
-test("real Check builds, packs, prepares and executes bundled Ajv without Check node_modules", async () => {
+test("real Check builds, packs and prepares bundled Ajv without Check node_modules", async () => {
   const prepared = await prepareCheckArtifact(source(), {
     cacheDirectory: join(scratch, "consumer/cache"),
   });
   assert.equal(prepared.digest, built.digest);
   assert.deepEqual((await readdir(prepared.directory)).sort(), ["resources", "worker.cjs"]);
-  const target = join(scratch, "consumer/target.txt");
-  await copyFile(join(example, "expected.txt"), target);
-  const passed = (await execute(prepared, "pass", target)) as { payload: { ok: boolean } };
-  assert.equal(passed.payload.ok, true);
-  await writeFile(target, "different");
-  const failed = (await execute(prepared, "fail", target)) as {
-    payload: { ok: boolean; problems: { id: string }[] };
-  };
-  assert.equal(failed.payload.ok, false);
-  assert.equal(failed.payload.problems[0]?.id, "content-mismatch");
   for (const reference of [
     manifest.references.check,
     ...Object.values(manifest.references.problems),
@@ -391,66 +343,7 @@ test("aborted preparation and unsafe HTTPS declarations fail without output", as
   }
   assert.deepEqual(await readdir(cacheDirectory), []);
 });
-test("prepared workers preserve cancellation, deadline and confirmed cleanup semantics", async () => {
-  const entry = join(scratch, "cancellable.ts");
-  await writeFile(
-    entry,
-    `
-    import {writeFile} from "node:fs/promises";
-    export async function execute(subject,context) {
-      context.defer(()=>writeFile(subject.cleanup,"clean"));
-      await writeFile(subject.started,"started");
-      await new Promise(done=>{
-        if(context.signal.aborted)done();
-        else context.signal.addEventListener("abort",done,{once:true});
-      });
-      return {ok:true};
-    }`,
-  );
-  const candidate = await buildCheckArtifact({
-    entry,
-    manifest: { ...manifest, id: "cancellable", subjectSchema: true, resultSchema: true },
-    files: {
-      "resources/expected.txt": join(example, "expected.txt"),
-      "references/check.md": join(example, "references/check.md"),
-      "references/content-mismatch.md": join(example, "references/content-mismatch.md"),
-    },
-    outDirectory: join(scratch, "cancellable"),
-  });
-  const prepared = await prepareCheckArtifact(source(candidate.directory, candidate.digest), {
-    cacheDirectory: join(scratch, "cancellable-cache"),
-  });
-  const kernel = await CheckKernel.create(join(scratch, "cancellable-snapshots"), {
-    deadlineMs: 1000,
-  });
-  try {
-    for (const checkId of ["cancel", "deadline"]) {
-      const cleanup = join(scratch, `${checkId}-cleaned`);
-      const started = join(scratch, `${checkId}-started`);
-      await kernel.executeCheck({ ...prepared, checkId, subject: { cleanup, started } });
-      if (checkId === "cancel") {
-        let running = false;
-        for (let attempt = 0; attempt < 100; attempt++) {
-          try {
-            running = (await readFile(started, "utf8")) === "started";
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-          }
-          if (running) break;
-          await delay(10);
-        }
-        assert.ok(running, "worker must actually start before cancellation");
-        kernel.cancel(checkId);
-      }
-      assert.equal((await completed(kernel, checkId)).state, "Cancelled");
-      assert.equal(await readFile(cleanup, "utf8"), "clean");
-      assert.equal(kernel.diagnostics().ownedProcesses, 0);
-    }
-  } finally {
-    await kernel.close();
-  }
-});
-test("real HTTPS acquisition pins both digests, rejects redirects and tampering, then executes offline", async () => {
+test("real HTTPS acquisition pins both digests, rejects redirects and tampering, then prepares offline", async () => {
   const certDirectory = join(scratch, "tls");
   await mkdir(certDirectory);
   const cert = join(certDirectory, "cert.pem");
@@ -512,7 +405,7 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
     timeoutMs = 30_000,
   ) {
     const script = `import {prepareCheckArtifact} from ${JSON.stringify(moduleURL)};
-      const {closePrivateFileBackend:close}=await import(${JSON.stringify(new URL("../../check-host/dist/index.js", import.meta.url).href)});
+      const {closePrivateFileBackend:close}=await import(${JSON.stringify(new URL("../../check-runtime-files/dist/index.js", import.meta.url).href)});
       try { console.log(JSON.stringify(await prepareCheckArtifact(${JSON.stringify({ kind: "https", url: `https://127.0.0.1:${address && typeof address !== "string" ? address.port : 0}${path}`, digest, transportDigest: transfer })},${JSON.stringify({ cacheDirectory: cache, timeoutMs })}))); }
       finally {await close();}`;
     return exec(process.execPath, ["--input-type=module", "--eval", script], {
@@ -524,12 +417,6 @@ test("real HTTPS acquisition pins both digests, rejects redirects and tampering,
     const { stdout } = await child("/check.tgz", cacheDirectory);
     const prepared = JSON.parse(stdout.trim());
     assert.equal(prepared.digest, built.digest);
-    const target = join(scratch, "https-target.txt");
-    await copyFile(join(example, "expected.txt"), target);
-    assert.equal(
-      ((await execute(prepared, "https", target)) as { payload: { ok: boolean } }).payload.ok,
-      true,
-    );
     for (const path of ["/redirect", "/oversize", "/tampered"])
       await assert.rejects(child(path, `${cacheDirectory}-${path.slice(1)}`));
     await assert.rejects(

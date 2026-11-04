@@ -1,8 +1,10 @@
 # Task Run 日志简短设计
 
-这是准备阶段的设计候选，不是已实现 API 或已固定协议。它服务于
+这是当前实施设计，API 与协议以源码和当前运行文档为准；[Evidence.md](Evidence.md) 保留被取代的 v2 历史验证。它服务于
 [Implementation.md](Implementation.md) 的 I-S01、I-S02、I-S03；构想验收范围仍由
-[Idea.md](ideal/Idea.md) 定义。具体限额、协议标识与传输细节在实施阶段确认。
+[Idea.md](ideal/Idea.md) 定义；不改变已接受构想或代替 Deployment gate。
+完整运行说明与独立本地 tarball / standalone UI 步骤见
+[Run Logs](../../../../../docs/task-run-logs.md)。
 
 ## 范围与链路
 
@@ -22,8 +24,8 @@
 
 ## Worker 作者侧 API：before / after
 
-当前 [RunContext](../../../../../packages/task-protocol/src/run.ts) 提供
-`progress(value): Promise<void>` 和 `checkpoint(value): Promise<void>`，没有日志方法。
+实施前 [RunContext](../../../../../packages/task-protocol/src/run.ts) 只提供
+`progress(value): Promise<void>` 和 `checkpoint(value): Promise<void>`；现在另有 typed async `log`。
 作者提供默认导出的异步回调，生成入口调用 `runTask`，不直接操作 parentPort。
 
 ### Before：现有 SDK 用法
@@ -43,7 +45,7 @@ export default async function echo(input: { text: string }, context: RunContext)
 如需详细诊断，目前没有独立作者 API。塞入 progress 会混淆业务进度；
 塞入 Result 会扩大或改变业务 Schema；console/stderr 不是可查询的 Run 日志历史。
 
-### After：候选 API
+### After：已固定 API
 
 沿用 context 方法与异步背压风格，只新增 `log`，原有方法保持原语义：
 
@@ -56,16 +58,16 @@ interface RunLogInput {
   fields?: JsonObject;
 }
 
-type RunLogWriteResult =
+type RunLogReceipt =
   | { state: "stored"; sequence: number }
   | { state: "dropped"; reason: "capacity" | "entry_too_large" }
-  | { state: "unavailable"; reason: "disabled" | "storage" | "channel" | "timeout" };
+  | { state: "unavailable"; reason: "disabled" | "storage" | "channel" | "timeout" | "unsupported" };
 
 // 新增到 RunContext；JsonObject 使用 task-protocol 的 JSON 类型。
-log(value: RunLogInput): Promise<RunLogWriteResult>;
+log(value: RunLogInput): Promise<RunLogReceipt>;
 ```
 
-Worker 回调示例（使用未来支持日志的新协议 SDK）：
+Worker 回调示例（使用 v1 声明与当前 SDK）：
 
 ```ts
 import type { RunContext } from "@potential-guide/task-sdk";
@@ -95,9 +97,11 @@ export default async function echo(input: { text: string }, context: RunContext)
 
 ## Worker、Engine 与保留边界
 
-- 新协议引入专用日志请求与确认，不原地扩写已固定的
-  [Task Bundle v1 协议](../../../../../docs/task-bundle-worker.md)。新旧协议显式区分，
-  宿主在运行前检查兼容性；旧 bundle 仍按旧协议执行，UI 显示“不支持日志”，而不是“无日志”。
+- 唯一 v1 (`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`)
+  包含 `log` / `log-ack` / 累计聚合 `log-drop` / `log-drop-ack`，
+  使用独立 `logId`，见 [Task Bundle v1 协议](../../../../../docs/task-bundle-worker.md)。
+  项目尚未正式发布，v1 可原地演进；已移除的 v2 与未来未知版本在执行前拒绝，不做别名。
+  v1 支持日志；禁用、自定义宿主不支持日志仍须区别于“无日志”。
 - 宿主校验 generation、Run 与 scope，对同一 Run 分配单调序号及宿主接收时间。
   顺序以宿主接受顺序为准，不用 Worker 时钟推导跨 Run 顺序。
 - 日志队列与必要业务输出隔离。单条字节数、待处理队列、每 Run 总量、全局存储和保留时长
@@ -110,14 +114,15 @@ export default async function echo(input: { text: string }, context: RunContext)
 
 ## 消费 API 与 Web UI
 
-候选消费接口如下，名称及实时传输方式在实施阶段按既有 HTTP 模式固定：
+已固定消费接口如下；TaskClient 使用独立 Run 路由和 pull-driven SSE：
 
 ```ts
 client.getRunLogs(runId, { afterSequence, limit });
 client.subscribeRunLogs(runId, { afterSequence });
 ```
 
-查询返回有界的日志页、后续游标与独立日志状态；条目包含
+`GET /runs/:id/logs` 与 `/runs/:id/logs/events` 使用 Run 读取授权和可信 scope，
+不授予其他 scope 读取权限。查询返回有界的日志页、`limits`、后续游标与独立日志状态；条目包含
 `runId, sequence, receivedAt, level, message, fields?`。
 状态至少区分支持但无输出、不支持、禁用、可用、截断、过期及不可用，
 并单独表达尾部完整性与丢弃计数。Run 不存在和未授权返回明确错误。
@@ -125,7 +130,8 @@ API 复用 Run 读取的身份与 scope 校验；不能仅凭 runId 读取其他
 
 实时订阅从最后确认序号续接，以序号去重；游标落在已清理区间时显式报告缺口。
 首屏历史与订阅之间不能漏条目：以最后读取序号回放后再跟随实时输出。
-慢消费者使用有界缓冲，溢出或断连明确通知，由客户端按游标补读；
+慢消费者使用 pull-driven 页面（ReadableStream highWaterMark 为 0），不建立推送队列；
+保留失效报告 `gap` / `expired`，断连由客户端按游标补读；
 实时订阅不是无限内存队列，也不承诺任意旧序号永久可回放。
 
 在 [Task Engine Web UI](../../../../../apps/task-engine-web-ui) 的 Run 详情增加独立
@@ -142,4 +148,30 @@ Logs 区域，与 Result、progress 和现有事件历史分开：
 I-AC01 验证同一真实 SDK bundle 的日志与精简 Result 分离；
 I-AC02 验证 HTTP、历史/实时衔接及 Web UI 按 Run 隔离；
 I-AC03 验证失败、取消、强制停止、容量、存储故障与慢消费者下资源有界且缺失可见。
-这些是实施期验证计划，不是本次文档更新已经通过的运行证据。
+实际命令、结果、源码定位与基线失败区分统一见 [Evidence.md](Evidence.md)。
+
+## 固定容量与实施调整
+
+- SDK 在途 `min(16,maxInFlight)`，确认超时 1000 ms；取消立即释放等待。
+  未 await 的日志不阻塞最终 Result、释放或强制停止。
+- 丢弃报告不是每个 awaited rejection 产生一条 IPC：普通累计快照最多一个在途，
+  确认超时 1000 ms 后冻结发送，不因超时继续排队；匹配的迟到 ACK 才允许恢复。
+  结束最多额外发送一个不等待的终端累计快照，在途控制消息总计最多两个；
+  宿主只计 cumulative count 的增量，保留最终丢弃数量且不重计。
+  强停/通道丢失仍使用 unknown 尾部，不等待日志确认，也不改变生命周期。
+- 默认单条 16 KiB（含保守 envelope allowance）、每 Run 2000 条 / 1 MiB、
+  全局正文 64 MiB、状态最多 10000 个 Run、保留一天、每页 100、
+  独立日志订阅最多 128。绝对验证 ceiling 为 1 MiB；非 JSON 等错误仍拒绝。
+- 过期状态受 `maxRuns` 限制；状态被淘汰后显示
+  `unavailable/metadata_evicted`，不伪装零日志，也不在活动 Run 重置序号。
+- SQLite 独立 additive `run_logs` 表，生命周期 projection v5 与事件不变。
+  写失败可通过独立状态记录保留缺失；状态服务也失败则明确 API 错误。
+  受影响 Run 不自动重试写入。SQLite 日志锁竞争立即失败，随后恢复生命周期 timeout；
+  同步 I/O 仍使用现有存储模式；
+  不宣称硬实时磁盘延迟、文件即时缩小或永久保留。
+- 正常失败仍可有完整日志尾部；取消、强停、恢复、资源清理未知和
+  不可用/过期/不支持/禁用的完整性为 unknown。Logs 不制造物理清理证明。
+- UI 独立跟随与暂停，历史页替换当前窗口；实时窗口最多 300 条 / 1 MiB，
+  超限可见。切换 Run 与较晚返回的历史读取使用 AbortController 和代际隔离。
+- check 作者适配器显式记录选定的问题 kind/id/index 与汇总，不转储问题参数。
+  SDK 另提供逐项 assertion 的精简 Result 样例及 standalone UI 实际链路测试。

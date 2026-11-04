@@ -29,7 +29,11 @@ import {
   validateAgentProfile,
   writeResult,
 } from "@potential-guide/cli-core";
-import { pilotSourceBudgets, withPilot } from "@potential-guide/cli-runtime";
+import {
+  assertPilotExecutionSupported,
+  pilotSourceBudgets,
+  withPilot,
+} from "@potential-guide/cli-runtime";
 import { Exit, startEffect } from "@potential-guide/effects";
 import { selectObjective } from "@potential-guide/objective-declarations";
 import type {
@@ -695,6 +699,7 @@ export async function runRegulate(
     "--revision": "value",
     "--report": "value",
   });
+  assertPilotExecutionSupported();
   const loaded = await loadConfig(globals.cwd, [
     "regulate",
     "pilot",
@@ -822,6 +827,7 @@ export async function runContinue(
     return;
   }
   rejectUnknownOptions(argv, { "--report": "value" }, 1);
+  assertPilotExecutionSupported();
   const id = argv[0];
   if (id === undefined || !/^[0-9a-f-]{36}$/.test(id))
     throw new CliError("A valid regulation ID is required.");

@@ -24,7 +24,10 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     Option: globalThis.Option,
   };
   const endpoint = { id: "demo", label: "demo", binding: "binding" };
-  const bundle = { url: "https://example.test/task", digest: `sha256:${"a".repeat(64)}` };
+  const bundle = {
+    cid: "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy",
+    hint: "http://localhost:8080",
+  };
   const makeTask = (): TaskSnapshot => ({
     bundle,
     taskId: newIdentity(),
@@ -318,7 +321,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       () => element("#directory").textContent!.includes(remote.taskId.slice(-8)),
       "Task directory must load by default",
     );
-    assert.equal(document.querySelectorAll('[role="tab"]').length, 3);
+    assert.equal(document.querySelectorAll('[role="tab"]').length, 2);
     assert.equal(document.querySelector("#bar-toggle"), null);
     assert.equal(document.querySelectorAll('main [role="tabpanel"]:not([hidden])').length, 1);
     click("#tab-executions");
@@ -340,7 +343,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     assert.equal(taskRow.querySelector('[data-action="详情"]'), null);
     assert.equal(
       taskRow.querySelector(".bundle-digest")?.textContent,
-      `sha256:${bundle.digest.slice(7, 19)}`,
+      `${bundle.cid.slice(0, 16)}…`,
     );
     const star = taskRow.querySelector<HTMLButtonElement>(".star")!;
     star.click();
@@ -360,19 +363,16 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       "Task row opens the real task observer",
     );
     assert.match(element("#task-detail").textContent!, new RegExp(remote.taskId));
-    assert.equal(
-      element("#task-detail .bundle-reference").textContent,
-      `${bundle.url}#${bundle.digest}`,
-    );
+    assert.equal(element("#task-detail .bundle-reference").textContent, JSON.stringify(bundle));
     element<HTMLButtonElement>("#task-detail-sheet [data-close]").click();
     await until(() => document.activeElement === taskRow, "closing returns focus to the Task row");
-    element<HTMLInputElement>("#history-type").value = bundle.digest;
+    element<HTMLInputElement>("#history-type").value = bundle.cid;
     click("#new-task");
-    field("Task Bundle 引用（URL#digest）").value = `${bundle.url}#${bundle.digest}`;
+    field("Task Bundle 引用（根 CID / JSON）").value = JSON.stringify(bundle);
     field("超时预算 timeoutMs（毫秒）").value = "1000";
     const draft = element<HTMLTextAreaElement>("#form-fields textarea");
     draft.value = JSON.stringify({ text: "draft retained" });
-    key(field("Task Bundle 引用（URL#digest）"), "Escape");
+    key(field("Task Bundle 引用（根 CID / JSON）"), "Escape");
     await until(() => !document.querySelector("#create-dialog"), "Esc closes Dialog");
     await until(
       () => document.activeElement === element("#new-task"),
@@ -386,8 +386,8 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
       "draft control identity survives close and tab switches",
     );
     assert.equal(draft.value, JSON.stringify({ text: "draft retained" }));
-    assert.equal(element<HTMLInputElement>("#history-type").value, bundle.digest);
-    const first = field("Task Bundle 引用（URL#digest）");
+    assert.equal(element<HTMLInputElement>("#history-type").value, bundle.cid);
+    const first = field("Task Bundle 引用（根 CID / JSON）");
     const last = element<HTMLElement>("#create-dialog [data-close]");
     first.focus();
     key(first, "Tab", true);
@@ -397,7 +397,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     );
     key(last, "Tab");
     assert.ok(document.activeElement === first, "Tab wraps to first dialog control");
-    first.value = bundle.url;
+    first.value = bundle.hint;
     named("#create-actions", "提交任务").click();
     await until(
       () => element(".error-launcher").textContent !== "0",
@@ -406,13 +406,13 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     element<HTMLButtonElement>(".error-launcher").click();
     await until(() => !!document.querySelector(".error-sheet"), "error panel opens");
     await until(
-      () => element(".error-sheet").textContent!.includes("URL#Digest"),
+      () => element(".error-sheet").textContent!.includes("CID"),
       "validation error is logged",
     );
     element<HTMLButtonElement>(".error-sheet [data-close]").click();
     assert.equal(calls.filter((call) => call === "POST /api/endpoints/demo/tasks").length, 0);
     assert.equal(draft.value, JSON.stringify({ text: "draft retained" }));
-    first.value = `${bundle.url}#${bundle.digest}`;
+    first.value = JSON.stringify(bundle);
     await new Promise((resolve) => setTimeout(resolve, 310));
     named("#create-actions", "提交任务").click();
     await until(
@@ -567,7 +567,7 @@ test("workbench tabs, retained popup draft, all stars, independent execution dir
     element<HTMLButtonElement>(".error-sheet [data-close]").click();
 
     click("#new-task");
-    field("Task Bundle 引用（URL#digest）").value = `${bundle.url}#${bundle.digest}`;
+    field("Task Bundle 引用（根 CID / JSON）").value = JSON.stringify(bundle);
     field("超时预算 timeoutMs（毫秒）").value = "1000";
     const batchInput = element<HTMLTextAreaElement>("#form-fields textarea");
     batchInput.value = JSON.stringify({ text: "batch first" });

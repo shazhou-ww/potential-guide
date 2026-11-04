@@ -1,6 +1,5 @@
 import {
   type Caller,
-  type BundleCacheService,
   fail,
   type HistoryFilter,
   type Observation,
@@ -17,7 +16,6 @@ import {
 
 export interface HandlerOptions {
   service: TaskService;
-  bundleCache?: BundleCacheService;
   resolveCaller(request: Request): Caller | Promise<Caller>;
   prefix?: string;
   maxBodyBytes?: number;
@@ -26,7 +24,6 @@ export interface HandlerOptions {
   auditRejection?: (event: { requestId?: string; code: string }) => void;
 }
 function status(code: string): number {
-  if (code === "bundle_in_use") return 409;
   if (code === "observation_aborted") return 499;
   if (code === "unauthenticated") return 401;
   if (code === "forbidden") return 403;
@@ -82,7 +79,7 @@ function params(url: URL, allowed: readonly string[]): Record<string, string> {
   return result;
 }
 const taskFilters = [
-  "bundleDigest",
+  "bundleCid",
   "taskId",
   "type",
   "scope",
@@ -97,7 +94,7 @@ const taskFilters = [
   "sort",
 ];
 const runFilters = [
-  "bundleDigest",
+  "bundleCid",
   "runId",
   "type",
   "scope",
@@ -362,31 +359,6 @@ export function createTaskHandler(
       const url = new URL(request.url);
       if (prefix && !url.pathname.startsWith(`${prefix}/`)) fail("not_found", "Route not found.");
       const path = url.pathname.slice(prefix.length);
-      if (path === "/bundle-cache" && request.method === "GET") {
-        if (!options.bundleCache) fail("not_found", "Bundle cache management is unavailable.");
-        const values = params(url, ["after", "limit"]);
-        if (values.limit !== undefined && !/^[1-9]\d*$/.test(values.limit))
-          fail("invalid_request", "Invalid cache page limit.");
-        return response(
-          await options.bundleCache.listCachedBundles(
-            {
-              ...(values.after !== undefined ? { after: values.after } : {}),
-              ...(values.limit !== undefined ? { limit: Number(values.limit) } : {}),
-            },
-            caller,
-          ),
-        );
-      }
-      const cachedBundle = /^\/bundle-cache\/(sha256:[a-f0-9]{64})$/.exec(path);
-      if (cachedBundle?.[1] && ["GET", "DELETE"].includes(request.method)) {
-        if (!options.bundleCache) fail("not_found", "Bundle cache management is unavailable.");
-        params(url, []);
-        if (request.method === "GET")
-          return response(await options.bundleCache.getCachedBundle(cachedBundle[1], caller));
-        await noBody(request);
-        await options.bundleCache.removeCachedBundle(cachedBundle[1], caller);
-        return response({ removed: true, digest: cachedBundle[1] });
-      }
       if (request.method === "GET" && (path === "/tasks/events" || path === "/runs/events")) {
         const runs = path === "/runs/events";
         const values = params(url, [...(runs ? runFilters : taskFilters), "fromRevision"]);
@@ -434,7 +406,7 @@ export function createTaskHandler(
         if (request.headers.has("If-Match"))
           fail(
             "unsupported_request",
-            "If-Match type discovery guards are not supported; pin Bundle Digest.",
+            "If-Match type discovery guards are not supported; pin Bundle root CID.",
           );
         const result = await observe(
           options.service.submit({ ...raw, requestId: identity }, caller),
@@ -466,6 +438,33 @@ export function createTaskHandler(
         return response(options.service.cancelTask(task[1], caller));
       }
       const entity = /^\/(tasks|runs)\/([0-9A-Z]+)\/(history|events)$/.exec(path);
+      const logs = /^\/runs\/([0-9A-Z]+)\/logs(\/events)?$/.exec(path);
+      if (logs?.[1] && request.method === "GET") {
+        const values = params(url, ["afterSequence", "limit"]);
+        const sequence = logs[2]
+          ? (request.headers.get("Last-Event-ID") ?? values.afterSequence)
+          : values.afterSequence;
+        if (sequence !== undefined && !/^(0|[1-9]\d*)$/.test(sequence))
+          fail("invalid_log_cursor", "Invalid log sequence.");
+        if (values.limit !== undefined && !/^[1-9]\d*$/.test(values.limit))
+          fail("invalid_log_cursor", "Invalid log page limit.");
+        const page = {
+          ...(sequence !== undefined ? { afterSequence: Number(sequence) } : {}),
+          ...(values.limit !== undefined ? { limit: Number(values.limit) } : {}),
+        };
+        if (logs[2]) {
+          if (!options.service.subscribeRunLogs)
+            fail("unsupported_version", "Run logs unsupported by this host.");
+          return logStream(
+            options.service.subscribeRunLogs(logs[1], page, caller),
+            request.signal,
+            pollMs,
+          );
+        }
+        if (!options.service.getRunLogs)
+          fail("unsupported_version", "Run logs unsupported by this host.");
+        return response(options.service.getRunLogs(logs[1], page, caller));
+      }
       if (entity?.[2] && request.method === "GET") {
         const id = entity[2],
           run = entity[1] === "runs";
@@ -542,3 +541,5 @@ export function createTaskHandler(
   };
 }
 export { TaskClient, type TaskClientOptions } from "./client.js";
+
+import { logStream } from "./logs.js";

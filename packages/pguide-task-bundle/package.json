@@ -1,0 +1,60 @@
+{
+  "name": "@potential-guide/pguide-task-bundle",
+  "version": "0.1.0-rc.0",
+  "description": "TypeBox Task Bundle authoring and artifact-only publishing for pguide.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/authoring.d.ts",
+      "import": "./dist/authoring.js"
+    },
+    "./bin/task-bundle": {
+      "types": "./dist/bin.d.ts",
+      "import": "./dist/bin.js"
+    }
+  },
+  "bin": {
+    "pguide-task-bundle": "./dist/bin.js"
+  },
+  "pguide": {
+    "settings": "./settings.json"
+  },
+  "files": [
+    "dist",
+    "settings.json",
+    "README.md",
+    "examples"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/cli-core": "workspace:^",
+    "@potential-guide/check-artifacts": "workspace:^",
+    "@potential-guide/task-protocol": "workspace:^",
+    "@potential-guide/task-sdk": "workspace:^",
+    "@sinclair/typebox": "catalog:",
+    "ajv": "catalog:",
+    "esbuild": "catalog:"
+  },
+  "devDependencies": {
+    "@potential-guide/ipfs-content": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/pguide-task-bundle"
+  }
+}

@@ -22,6 +22,10 @@ separate server cursor continuation; partial directories are explicitly labeled.
 Snapshot information and query errors also stay in the footer, so live status
 changes do not move the headers.
 
-The optional Bundle cache page, alongside Task and Run, manages only the selected Endpoint's cached
-content through independently authorized public APIs; it is not an asset registry
-or upload service. See [cache management](../../docs/task-bundle-cache.md).
+The workbench has Task and Run pages only. IPFS content is managed by the independent
+node; Engine's internal memory reuse is not exposed as a cache page or public API.
+See [content storage and reuse](../../docs/task-bundle-cache.md).
+Run detail includes an independent Logs interface with follow/pause, sequence
+resume, history paging, explicit missing/expired/unsupported states, and a
+300-entry / 1-MiB browser window. See
+[Run Logs and standalone UI verification](../../docs/task-run-logs.md).

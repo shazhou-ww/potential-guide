@@ -1,0 +1,40 @@
+# Deployment
+
+本轮在本机隔离的离线环境验证，不发布 npm 包或上传公共 IPFS 网络。
+使用独立 Kubo 发布节点与消费节点、合成非敏感 Bundle、独立 Engine 子进程及临时 SQLite 数据域。
+
+## Steps
+
+### D-S01: 准备可保留的验证内容
+
+在经授权的验证环境发布不含敏感信息的 Task Bundle，配置独立本地 IPFS endpoint、
+保留策略和新架构宿主，IPFS 服务不随 Engine 进程生命周期启动或退出；
+保留根 CID 与环境证据，不自动发布任何既有业务制品。
+
+### D-S02: 验证跨节点消费与恢复
+
+从独立消费环境验证根引用、单文件读取、业务经 context 消费字节流、Task 执行及宿主重启；
+将标准验证后的合成块从发布节点复制到独立消费节点，随后停止发布节点，
+在作者目录已删除的条件下运行；以 scalar/array hint 测试实际 gateway raw-block 获取。
+验证根 CID 简写、单 gateway hint 和多候选 hint 均保持相同内容身份，
+核验内容缺失时的明确失败和不依赖内容的历史查询。
+
+验证辅助保存在本阶段的 `verification/endpoint.mjs`，
+通过 `node .silvermoon\ideas\01M6G3S79VWXYY1Q3A07R2HRP6\outer\verification\endpoint.mjs`
+执行。只使用现有已校验 Kubo 二进制，临时节点全部 `--offline` 且仅监听 loopback；
+所有子进程与临时目录由辅助自身清理，不关闭外部共享节点。
+
+## Acceptance criteria
+
+### D-AC01: 引用不绑定发布位置
+
+以实际获取和执行结果证明同一 CID 可由独立节点消费，文件可按根 CID 加路径读取，
+新架构用户无需提供 tgz URL 或附加 Digest；
+以不同宿主装载位置的实际执行结果证明业务回调不依赖物理目录。
+
+### D-AC02: 保留与故障边界可观察
+
+以受控 Engine 进程故障证明独立 IPFS 服务仍可访问，已确认持久内容按节点保留策略可验证，
+不将中断的上传下载误报为完成；核验共享客户端与其他 pin 持有者不受单 Engine 关闭影响。
+以验证环境的内容保留、恢复及受控缺失结果证明活动工作受保护，
+需要缺失内容的操作明确失败，不换用其他 CID，不重跑旧 Run，不破坏独立历史读取。

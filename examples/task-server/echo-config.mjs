@@ -1,3 +1,4 @@
+import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
 import { TaskError } from "@potential-guide/task-protocol";
 
 export default function configure() {
@@ -10,11 +11,14 @@ export default function configure() {
   });
 }
 
-export function configureTaskServer({ token, port = 0, database, bundleDirectory }) {
+export async function configureTaskServer({ token, port = 0, database, ipfsClient }) {
+  if (!ipfsClient && !process.env.IPFS_GATEWAY)
+    throw new Error("Set IPFS_GATEWAY to a read-only Gateway URL or inject ipfsClient.");
+  ipfsClient ??= createIpfsGatewayClient(process.env.IPFS_GATEWAY);
   return {
     port,
     database,
-    bundleDirectory,
+    ipfsClient,
     limits: {
       maxConcurrent: 4,
       maxPayloadBytes: 96 * 1024 * 1024,

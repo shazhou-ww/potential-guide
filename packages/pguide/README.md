@@ -4,6 +4,23 @@ The Potential Guide CLI discovers and dispatches `pguide-<command>` executables.
 It installs Pilot commands (`probe`, `scaffold`, `validate`), `config` and
 `objectives` by default; its built-ins are `diagnose` and `complete`.
 Regulation remains optional.
+The optional [`@potential-guide/pguide-task-bundle`](../pguide-task-bundle/README.md)
+extension supplies `pguide task-bundle check/build/publish` and the independent
+`pguide-task-bundle` executable. It uses ordinary command discovery and settings;
+it does not install or start an Engine, service or UI.
+The optional [`@potential-guide/pguide-task-engine`](../../apps/pguide-task-engine/README.md)
+extension supplies `pguide task-engine` and `pguide-task-engine` for foreground
+loopback Engine and optional HTTP Web UI startup. See [service configuration](../../docs/task-server.md)
+for CLI > explicit YAML/JSON > user JSONC > defaults, source-relative paths and
+`--no-global-config`. Project service settings are excluded; only this command
+accepts `--config`. Isolation also skips the user file during command discovery,
+so expose the extension through PATH or project commandDirectories.
+
+Checker/Objective Host execution has been retired. `probe`, `regulate` and
+`continue` keep their discovery and help entries but execution explicitly fails
+until migrated to Task Bundles. Existing regulation state is not replayed or
+rewritten. Static `scaffold`/`validate`, configuration, Agent resources and
+Objective declaration management remain available.
 
 Install the default CLI and add optional commands as needed (use explicit
 candidate versions when testing RCs):

@@ -129,15 +129,29 @@ export default function configure(){
       );
     }
     await writeFile(
+      join(directory, "consumer-config.mjs"),
+      `
+import {readFile} from "node:fs/promises";
+import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
+import {configureTaskServer} from "./echo-config.mjs";
+export default async function configure(){
+ const ipfsClient=new MemoryIpfsClient();
+ for(const [cid,hex] of JSON.parse(await readFile("content.json","utf8")))ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
+ return configureTaskServer({token:process.env.TASK_SERVER_TOKEN,port:0,database:process.env.TASK_SERVER_DATABASE??"consumer.sqlite",ipfsClient});
+}
+`,
+    );
+    await writeFile(
       join(directory, "mvp.mjs"),
       `
 import assert from "node:assert/strict";
-import {spawn} from "node:child_process";
 import {writeFile,readdir,mkdir,copyFile} from "node:fs/promises";
 import {fileURLToPath,pathToFileURL} from "node:url";
 import {resolve} from "node:path";
 import {startTaskServer} from "@potential-guide/task-engine-server";
 import {newId} from "@potential-guide/task-engine";
+import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
+const ipfsClient=new MemoryIpfsClient();
 ${
   label === "mvp-check"
     ? `
@@ -152,15 +166,17 @@ const built=await writeContractArtifact(new Map([
 ]),"artifact");
 await packContractArtifact(built.directory,"checker.tgz");
 await mkdir("imports");await copyFile("checker.tgz",resolve("imports","checker.tgz"));
-const bundle=await buildExampleBundle({kind:"check",directory:resolve("author"),sourceOptions:{allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")]},downloadResources:{"https://example.test/checker.tgz":"resources/checker.tgz"},resources:{"resources/checker.tgz":resolve("checker.tgz")}});
+const bundle=await buildExampleBundle({ipfsClient,kind:"check",directory:resolve("author"),sourceOptions:{allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")]},downloadResources:{"https://example.test/checker.tgz":"resources/checker.tgz"},resources:{"resources/checker.tgz":resolve("checker.tgz")}});
 const body={bundle,checker:{kind:"checker",url:"https://example.test/checker.tgz",digest:built.digest},subject:{},timeoutMs:10000};
 const fileBody={...body,checker:{...body.checker,url:pathToFileURL(resolve("imports","checker.tgz")).href}};
 `
     : `import {readFile} from "node:fs/promises";const binding=JSON.parse(await readFile(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "binding.json"))},"utf8"));
-const body={bundle:{url:pathToFileURL(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "bundle.tar.gz"))}).href,digest:binding.digest},text:"packed",timeoutMs:10000};`
+for(const [cid,hex] of JSON.parse(await readFile(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "blocks.json"))},"utf8")))ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
+const body={bundle:binding.cid,text:"packed",timeoutMs:10000};`
 }
+await writeFile("content.json",JSON.stringify([...ipfsClient.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("hex")])));
 process.env.TASK_SERVER_TOKEN="fixture";process.env.TASK_SERVER_PORT="0";
-const configure=(await import("./${label === "mvp-check" ? "check" : "echo"}-config.mjs")).default;
+const configure=(await import("./consumer-config.mjs")).default;
 const headers={authorization:"Bearer fixture","content-type":"application/json"};
 async function exercise(url,requestBody=body){
  assert.equal((await fetch(url+"/tasks/"+newId())).status,401);
@@ -190,32 +206,13 @@ async function exercise(url,requestBody=body){
  if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,runId:final.run.runId,result:final.result}));
 }
 const signals=process.listenerCount("SIGINT");
-const server=await startTaskServer(configure());
+const server=await startTaskServer(await configure());
 assert.equal(process.listenerCount("SIGINT"),signals);
 try{await exercise(server.url);${label === "mvp-check" ? "await exercise(server.url,fileBody);" : ""}}finally{await server.close()}
-const cli=fileURLToPath(new URL("./main.js",import.meta.resolve("@potential-guide/task-engine-server")));
-const child=spawn(process.execPath,[cli,"--config","./${label === "mvp-check" ? "check" : "echo"}-config.mjs"],{env:{...process.env,TASK_SERVER_DATABASE:"cli.sqlite"},stdio:["ignore","pipe","pipe"],windowsHide:true});
-let stderr="";child.stderr.on("data",chunk=>stderr+=chunk);
-const exited=new Promise(resolve=>child.once("exit",(code,signal)=>resolve({code,signal})));
-try{
- const url=await new Promise((resolve,reject)=>{
-  let text="";const timer=setTimeout(()=>reject(Error("CLI readiness timeout: "+stderr)),10000);
-  child.stdout.on("data",chunk=>{text+=chunk;for(const line of text.split("\\n")){try{const value=JSON.parse(line);if(value.event==="ready"){clearTimeout(timer);resolve(value.url)}}catch{}}});
-  child.once("error",error=>{clearTimeout(timer);reject(error)});
-  child.once("exit",()=>{clearTimeout(timer);reject(Error(stderr))});
- });
- await exercise(url);
- ${label === "mvp-check" ? "await exercise(url,fileBody);" : ""}
- child.kill("SIGTERM");const result=await exited;
- if(process.platform!=="win32")assert.equal(result.code,0);
- await assert.rejects(fetch(url));
-}finally{if(child.exitCode===null&&child.signalCode===null)child.kill("SIGKILL");await exited}
 ${label === "mvp-check" ? `assert.deepEqual(await readdir(".business-workers"),[]);` : ""}
-console.log("packed ${label}: programmatic + CLI readiness, auth, result, history and SSE reconnect; Windows SIGTERM is forced-process shutdown");
+console.log("packed ${label}: programmatic readiness, auth, result, history and SSE reconnect; declarative CLI is verified separately");
 `,
     );
-    const help = await run("pnpm", ["exec", "task-engine-server", "--help"], directory);
-    assert.match(help, /--config/);
     console.log(await run(process.execPath, ["mvp.mjs"], directory));
   }
   console.log(`${label} actual production install: ${[...names].sort().join(", ")}`);

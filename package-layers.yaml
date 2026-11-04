@@ -1,12 +1,11 @@
 protocol:
+  - "@potential-guide/ipfs-content"
   - "@potential-guide/task-protocol"
   - "@potential-guide/task-sdk"
   - "@potential-guide/task-engine"
   - "@potential-guide/task-engine-http"
   - "@potential-guide/task-engine-storage"
   - "@potential-guide/task-engine-server"
-  - "@potential-guide/checker-host"
-  - "@potential-guide/objective-host"
   - "@potential-guide/check-artifacts"
   - "@potential-guide/check-runtime-files"
   - "@potential-guide/effects"
@@ -19,11 +18,13 @@ business:
   - "@potential-guide/objective-regulator"
   - "@potential-guide/regulation-coordinator"
 tools:
+  - "@potential-guide/pguide-task-engine"
   - "@potential-guide/task-engine-web-ui"
   - "@potential-guide/test-tree"
   - pguide
   - "@potential-guide/cli-core"
   - "@potential-guide/pguide-config"
+  - "@potential-guide/pguide-task-bundle"
   - "@potential-guide/pguide-agents"
   - "@potential-guide/cli-runtime"
   - "@potential-guide/pguide-pilot"

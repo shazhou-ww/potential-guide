@@ -1,5 +1,6 @@
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
 import { fileURLToPath } from "node:url";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { createIpfsClient, importTaskBundle } from "@potential-guide/task-sdk/publish";
 
 const source = (name) => fileURLToPath(new URL(name, import.meta.url));
 const built = await buildTaskBundle({
@@ -7,4 +8,8 @@ const built = await buildTaskBundle({
   entry: source("./callback.ts"),
   outDirectory: source("./bundle"),
 });
-console.log(await packTaskBundle(built.directory, source("./bundle.tar.gz")));
+if (process.env.IPFS_API)
+  console.log(
+    (await importTaskBundle(built.directory, await createIpfsClient(process.env.IPFS_API))).cid,
+  );
+else console.log({ directory: built.directory, cid: built.cid });

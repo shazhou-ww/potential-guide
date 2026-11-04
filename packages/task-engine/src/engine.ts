@@ -27,6 +27,9 @@ import {
   projectRun,
   type RegisteredType,
   type Revision,
+  type RunLogLimits,
+  type RunLogQuery,
+  type RunLogSubscription,
   type RunPage,
   type RunQuery,
   type RunRecord,
@@ -39,6 +42,7 @@ import {
   type SubmitOptions,
   type Subscription,
   TaskError,
+  taskSchemaUri,
   type TaskMessageRecord,
   type TaskPage,
   type TaskQuery,
@@ -55,6 +59,7 @@ import {
 } from "@potential-guide/task-protocol";
 import { type CatalogLimits, RunCatalog, TaskCatalog } from "./catalog.js";
 import { newId } from "./identity.js";
+import { RunLogs } from "./logs.js";
 import { ObservationHub, type ObservationLimits } from "./observation.js";
 import {
   RunDispatchError,
@@ -84,6 +89,7 @@ export interface EngineLimits extends CatalogLimits, ObservationLimits {
   inFlight: number;
 }
 export interface EngineOptions {
+  logs?: Partial<RunLogLimits>;
   store: Store;
   types: readonly RegisteredType[];
   currentVersions: Readonly<Record<string, string>>;
@@ -160,6 +166,8 @@ interface Group {
   releaseBundle?: () => void;
 }
 export class TaskEngine implements TaskService {
+  private readonly logs: RunLogs;
+  private logSubscriptions = 0;
   private readonly owner = newId();
   private readonly clock: Clock;
   readonly limits: EngineLimits;
@@ -188,6 +196,7 @@ export class TaskEngine implements TaskService {
 
   constructor(private readonly options: EngineOptions) {
     this.clock = options.clock ?? systemClock;
+    this.logs = new RunLogs(options.store, this.owner, () => this.clock.now(), options.logs);
     for (const key of Object.keys(options.limits ?? {}))
       if (!Object.hasOwn(defaultEngineLimits, key))
         throw new TaskError("invalid_config", `Unknown limit: ${key}`);
@@ -313,9 +322,35 @@ export class TaskEngine implements TaskService {
         dispatch: async (id, generation) => {
           this.dispatch(id, generation);
           const run = this.view.facts.runs[id]!;
+          if (run.binding.declaration?.$schema === taskSchemaUri) this.logs.initialize(id);
           return { generation: run.generation, startedAt: run.startedAt };
         },
         progress: async (id, value) => this.report(this.view.facts.runs[id]!, "progress", value),
+        log: (id, generation, scope, value) => {
+          const run = this.view.facts.runs[id];
+          if (
+            !run ||
+            run.workerGeneration !== generation ||
+            run.binding.scope !== scope ||
+            run.exit
+          )
+            throw new TaskError(
+              "invalid_log_identity",
+              "Log generation, Run or scope is unavailable.",
+            );
+          return this.logs.write(id, value);
+        },
+        logDropped: (id, generation, scope, count) => {
+          const run = this.view.facts.runs[id];
+          if (
+            !run ||
+            run.workerGeneration !== generation ||
+            run.binding.scope !== scope ||
+            run.exit
+          )
+            throw new TaskError("invalid_log_identity", "Diagnostic drop identity unavailable.");
+          return this.logs.dropped(id, count);
+        },
         checkpoint: async (id, value) => {
           const run = this.currentRun(id);
           const result = this.historical(run.binding).resultContract.validate(value);
@@ -700,6 +735,46 @@ export class TaskEngine implements TaskService {
   getRun(id: string, caller: Caller): RunSnapshot {
     this.run(id, caller, "run");
     return projectRun(this.view.facts, id, this.clock.now());
+  }
+  getRunLogs(id: string, page: RunLogQuery, caller: Caller) {
+    const run = this.run(id, caller, "run");
+    return this.logs.page(
+      id,
+      page,
+      run.binding.declaration?.$schema === taskSchemaUri,
+      !run.exit
+        ? "open"
+        : run.stopRequested ||
+            !run.outcome ||
+            run.exit.forced ||
+            run.exit.basis === "recovery" ||
+            run.cleanupUnknown
+          ? "unknown"
+          : "complete",
+    );
+  }
+  subscribeRunLogs(id: string, page: RunLogQuery, caller: Caller): RunLogSubscription {
+    const initial = this.getRunLogs(id, page, caller);
+    if (this.logSubscriptions >= this.logs.limits.maxSubscriptions)
+      throw new TaskError("capacity_exceeded", "Diagnostic subscription capacity exceeded.");
+    this.logSubscriptions++;
+    let afterSequence = initial.nextSequence;
+    let closed = false;
+    return {
+      initial,
+      pull: () => {
+        if (closed) throw new TaskError("subscription_closed", "Log subscription closed.");
+        const value = this.getRunLogs(id, { ...page, afterSequence }, caller);
+        afterSequence = value.nextSequence;
+        return value;
+      },
+      close: () => {
+        if (!closed) {
+          closed = true;
+          this.logSubscriptions--;
+        }
+      },
+    };
   }
   getRequest(id: string, caller: Caller): TaskRequest {
     this.readable();

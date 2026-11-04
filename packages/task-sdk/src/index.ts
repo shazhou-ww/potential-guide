@@ -7,19 +7,34 @@ import {
   json,
   type ResolvedTaskBundle,
   type RunContext,
-  type RunProgress,
   RunFailure,
+  type RunLogInput,
+  type RunLogReceipt,
   type RunMessage,
-  taskSchemaUri,
+  type RunProgress,
   TaskError,
+  taskSchemaUri,
+  validateBundleReference,
+  validateRunLog,
   validateRunProgress,
 } from "@potential-guide/task-protocol";
 
+export interface TaskContext<Message extends Json = never> extends RunContext<Message> {
+  readonly bundle: {
+    read(path: string, options?: { signal?: AbortSignal }): ReadableStream<Uint8Array>;
+  };
+}
 export type TaskCallback<Input = Json, Result = Json, Message extends Json = never> = (
   input: Input,
-  context: RunContext<Message>,
+  context: TaskContext<Message>,
 ) => Promise<Result>;
-export type { RunContext, RunMessage, RunProgress } from "@potential-guide/task-protocol";
+export type {
+  RunContext,
+  RunLogInput,
+  RunLogReceipt,
+  RunMessage,
+  RunProgress,
+} from "@potential-guide/task-protocol";
 export { RunFailure } from "@potential-guide/task-protocol";
 
 class Inbox implements AsyncIterable<RunMessage<Json>> {
@@ -67,7 +82,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     generation: string;
     maxInFlight: number;
     maxPayloadBytes: number;
-    bundle: { digest: string; declaration: ResolvedTaskBundle };
+    bundle: { cid: string; declaration: ResolvedTaskBundle };
   };
   if (
     typeof config.generation !== "string" ||
@@ -76,9 +91,10 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     config.maxInFlight <= 0 ||
     !Number.isSafeInteger(config.maxPayloadBytes) ||
     config.maxPayloadBytes <= 0 ||
-    !/^sha256:[a-f0-9]{64}$/.test(config.bundle?.digest ?? "")
+    typeof config.bundle?.cid !== "string"
   )
     throw new Error("Invalid trusted Task Worker configuration.");
+  validateBundleReference(config.bundle.cid);
   if (
     !config.bundle ||
     canonical(json(config.bundle.declaration, 1_048_576)) !==
@@ -99,6 +115,199 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   let queued = 0;
   let cleanupUncertain = false;
   let output = Promise.resolve();
+  let readSequence = 0;
+  const reads = new Map<
+    number,
+    { resolve(value: { done: boolean; chunk?: Uint8Array }): void; reject(error: Error): void }
+  >();
+  function readBundle(
+    path: string,
+    options: { signal?: AbortSignal } = {},
+  ): ReadableStream<Uint8Array> {
+    const id = ++readSequence;
+    const signal = options.signal
+      ? AbortSignal.any([controller.signal, options.signal])
+      : controller.signal;
+    let cleanup: () => void = () => {};
+    const cancel = () => {
+      cleanup();
+      reads.get(id)?.reject(new DOMException("Bundle read canceled.", "AbortError"));
+      reads.delete(id);
+      port!.postMessage({
+        generation: config.generation,
+        runId,
+        kind: "bundle-cancel",
+        readId: id,
+      });
+    };
+    return new ReadableStream<Uint8Array>(
+      {
+        start(stream) {
+          const abort = () => {
+            cancel();
+            stream.error(signal.reason);
+          };
+          cleanup = () => signal.removeEventListener("abort", abort);
+          if (signal.aborted) {
+            stream.error(signal.reason);
+            return;
+          }
+          signal.addEventListener("abort", abort, { once: true });
+        },
+        async pull(stream) {
+          try {
+            if (finishing) throw new TaskError("run_finished", "Bundle stream is closed.");
+            signal.throwIfAborted();
+            const item = await new Promise<{ done: boolean; chunk?: Uint8Array }>(
+              (resolve, reject) => {
+                reads.set(id, { resolve, reject });
+                port!.postMessage({
+                  generation: config.generation,
+                  runId,
+                  kind: "bundle-pull",
+                  readId: id,
+                  path,
+                });
+              },
+            );
+            if (item.done) {
+              cleanup();
+              stream.close();
+            } else if (item.chunk instanceof Uint8Array) stream.enqueue(item.chunk);
+            else throw new TaskError("invalid_bundle", "Invalid Bundle stream chunk.");
+          } catch (error) {
+            cancel();
+            stream.error(error);
+          }
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+  }
+  let logSequence = 0;
+  const logPending = new Map<
+    number,
+    {
+      resolve(value: RunLogReceipt): void;
+      reject(error: Error): void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
+  let droppedLogs = 0;
+  let reportedDroppedLogs = 0;
+  let dropScheduled = false;
+  let dropReportingClosed = false;
+  let finalDropSent = false;
+  let dropPending:
+    | {
+        id: number;
+        count: number;
+        timer: ReturnType<typeof setTimeout>;
+      }
+    | undefined;
+  function flushDroppedLogs(): void {
+    if (
+      dropPending ||
+      dropReportingClosed ||
+      finishing ||
+      controller.signal.aborted ||
+      droppedLogs <= reportedDroppedLogs
+    )
+      return;
+    const id = ++logSequence;
+    const count = droppedLogs;
+    const timer = setTimeout(() => {
+      // Keep the unknown in-flight identity: timeout cannot authorize another queued frame.
+      dropReportingClosed = true;
+    }, 1000);
+    dropPending = { id, count, timer };
+    try {
+      port!.postMessage({
+        generation: config.generation,
+        runId,
+        kind: "log-drop",
+        logId: id,
+        count,
+      });
+    } catch {
+      clearTimeout(timer);
+      dropPending = undefined;
+      dropReportingClosed = true;
+    }
+  }
+  function scheduleDroppedLogs(): void {
+    if (
+      dropScheduled ||
+      dropPending ||
+      dropReportingClosed ||
+      finishing ||
+      controller.signal.aborted
+    )
+      return;
+    dropScheduled = true;
+    queueMicrotask(() => {
+      dropScheduled = false;
+      flushDroppedLogs();
+    });
+  }
+  function finishDroppedLogs(): void {
+    if (finalDropSent || droppedLogs <= reportedDroppedLogs) return;
+    finalDropSent = true;
+    // One terminal cumulative snapshot is bounded even when the ordinary acknowledgment is lost.
+    try {
+      port!.postMessage({
+        generation: config.generation,
+        runId,
+        kind: "log-drop",
+        logId: ++logSequence,
+        count: droppedLogs,
+        final: true,
+      });
+    } catch {
+      /* Disconnected tail remains unknown; required outputs never wait for this snapshot. */
+    }
+  }
+  function settleLogs(): void {
+    if (dropPending) clearTimeout(dropPending.timer);
+    dropPending = undefined;
+    dropReportingClosed = true;
+    for (const operation of logPending.values()) {
+      clearTimeout(operation.timer);
+      operation.resolve({ state: "unavailable", reason: "channel" });
+    }
+    logPending.clear();
+  }
+  async function log(value: RunLogInput): Promise<RunLogReceipt> {
+    const parsed = validateRunLog(value);
+    if (finishing || controller.signal.aborted) return { state: "unavailable", reason: "channel" };
+    if (logPending.size >= Math.min(config.maxInFlight, 16)) {
+      droppedLogs = Math.min(Number.MAX_SAFE_INTEGER, droppedLogs + 1);
+      scheduleDroppedLogs();
+      return { state: "dropped", reason: "capacity" };
+    }
+    const id = ++logSequence;
+    return new Promise<RunLogReceipt>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        logPending.delete(id);
+        resolve({ state: "unavailable", reason: "timeout" });
+      }, 1000);
+      logPending.set(id, { resolve, reject, timer });
+      try {
+        port!.postMessage({
+          generation: config.generation,
+          runId,
+          kind: "log",
+          logId: id,
+          value: parsed,
+        });
+      } catch {
+        clearTimeout(timer);
+        logPending.delete(id);
+        resolve({ state: "unavailable", reason: "channel" });
+      }
+    });
+  }
   function request(kind: string, value: unknown): Promise<void> {
     if (pending.size >= config.maxInFlight)
       return Promise.reject(new Error("Task channel capacity exceeded."));
@@ -129,7 +338,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     kind: "ready",
     value: {
       $schema: declaration.$schema,
-      digest: config.bundle.digest,
+      cid: config.bundle.cid,
       inputSchema: declaration.inputSchema,
       resultSchema: declaration.resultSchema,
       messageSchema: declaration.messageSchema,
@@ -137,6 +346,39 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   });
   port.on("message", (envelope) => {
     if (!envelope || envelope.generation !== config.generation) return;
+    if (envelope.kind === "bundle-data") {
+      const read = reads.get(envelope.readId);
+      if (!read) return;
+      reads.delete(envelope.readId);
+      if (envelope.error) read.reject(new TaskError(envelope.error.code, envelope.error.message));
+      else read.resolve(envelope);
+      return;
+    }
+    if (envelope.kind === "log-drop-ack") {
+      if (envelope.runId !== runId || !dropPending || envelope.logId !== dropPending.id) return;
+      const operation = dropPending;
+      clearTimeout(operation.timer);
+      dropPending = undefined;
+      if (envelope.error || envelope.value?.state === "unavailable") {
+        dropReportingClosed = true;
+      } else {
+        reportedDroppedLogs = operation.count;
+        dropReportingClosed = false;
+        scheduleDroppedLogs();
+      }
+      return;
+    }
+    if (envelope.kind === "log-ack") {
+      if (envelope.runId !== runId) return;
+      const operation = logPending.get(envelope.logId);
+      if (!operation) return;
+      logPending.delete(envelope.logId);
+      clearTimeout(operation.timer);
+      if (envelope.error)
+        operation.reject(new TaskError(envelope.error.code, envelope.error.message));
+      else operation.resolve(envelope.value);
+      return;
+    }
     if (envelope.kind === "ack") {
       const operation = pending.get(envelope.id);
       if (!operation) return;
@@ -154,6 +396,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     if (envelope.kind === "cancel") {
       port.postMessage({ generation: config.generation, runId, kind: "stopping" });
       controller.abort();
+      settleLogs();
       inbox.close();
       for (const task of tasks.values()) task.abort();
       return;
@@ -195,7 +438,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
     }
     if (envelope.kind !== "run" || runId !== undefined) return;
     runId = envelope.runId;
-    const context: RunContext<Json> = Object.freeze({
+    const context: TaskContext<Json> = Object.freeze({
       runId: envelope.runId,
       ...(envelope.identity
         ? { generation: envelope.identity.generation, startedAt: envelope.identity.startedAt }
@@ -203,9 +446,11 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
       scope: envelope.scope,
       signal: controller.signal,
       messages: inbox,
+      bundle: Object.freeze({ read: readBundle }),
       progress: (value: RunProgress) =>
         enqueue("progress", validateRunProgress(value, config.maxPayloadBytes)),
       checkpoint: (value: Json) => enqueue("checkpoint", result.validate(value)),
+      log,
     });
     const reportFailure = async (error: unknown) => {
       cleanupUncertain =
@@ -226,10 +471,11 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
       });
     };
     void Promise.resolve()
-      .then(() => callback(input.validate(envelope.input), context as RunContext<Message>))
+      .then(() => callback(input.validate(envelope.input), context as TaskContext<Message>))
       .then(
         async (value) => {
           finishing = true;
+          finishDroppedLogs();
           await output;
           let validated: Json;
           try {
@@ -242,6 +488,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
         },
         async (error) => {
           finishing = true;
+          finishDroppedLogs();
           await output.catch(() => {});
           if (
             controller.signal.aborted &&
@@ -255,6 +502,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
         () => {
           inbox.close();
           controller.abort();
+          settleLogs();
           for (const task of tasks.values()) task.abort();
           port.postMessage({
             generation: config.generation,
@@ -266,6 +514,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
         () => {
           inbox.close();
           controller.abort();
+          settleLogs();
           for (const task of tasks.values()) task.abort();
           port.postMessage({ generation: config.generation, runId, kind: "uncertain" });
           port.close();

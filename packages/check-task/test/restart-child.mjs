@@ -1,15 +1,16 @@
-import { dirname, join } from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
-import { pathToFileURL } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { dirname, join } from "node:path";
 import {
   packContractArtifact,
   writeContractArtifact,
 } from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, inspectContractFiles } from "@potential-guide/check-artifacts/contracts";
 import { createCheckTaskType } from "@potential-guide/check-task";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 
 const [database, directory, restarting, archive] = process.argv.slice(2);
 const page = Buffer.from("---\ntitle: Restart\ndescription: Restart\n---\nBody\n");
@@ -80,17 +81,15 @@ export default(input,context)=>type.run(input,context);`,
     entry,
     outDirectory: join(root, "task-bundle"),
   });
-  const packed = await packTaskBundle(built.directory, join(root, "task-bundle.tgz"));
-  await writeFile(
-    referenceFile,
-    JSON.stringify({ url: pathToFileURL(packed.archive).href, digest: built.digest }),
-  );
+  await writeFile(referenceFile, JSON.stringify(built.cid));
 }
 const bundle = JSON.parse(await readFile(referenceFile, "utf8"));
+const ipfsClient = new MemoryIpfsClient();
+await importTaskBundle(join(root, "task-bundle"), ipfsClient);
 const server = await startTaskServer({
   database,
   port: 0,
-  bundleDirectory: join(root, "cache"),
+  ipfsClient,
   limits: {
     maxConcurrent: 1,
     maxPayloadBytes: 100663296,

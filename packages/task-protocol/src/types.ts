@@ -1,7 +1,7 @@
+import type { BundleReference, ResolvedTaskBundle } from "./bundle.js";
 import type { Json, JsonObject } from "./json.js";
 import type { TypeWorkerRegistration } from "./run.js";
 import type { InputSchema } from "./schema.js";
-import type { BundleReference, ResolvedTaskBundle } from "./bundle.js";
 
 export type Stage = "initial" | "running" | "stopping" | "stopped" | "completed" | "failed";
 export type RunStage = Exclude<Stage, "initial">;
@@ -28,6 +28,7 @@ export type SubmissionResult =
   | { status: "accepted"; requestId: string; taskId: string }
   | { status: "rejected"; requestId: string; error: ErrorFact };
 export interface SubmissionRecord {
+  bundleProtocol?: "ipfs";
   request: TaskRequest;
   caller: Caller;
   arrivedAt: string;
@@ -248,6 +249,10 @@ export interface StoreView {
   events: FactEvent[];
 }
 export interface Store {
+  markRunLogsUnavailable?: import("./logs.js").RunLogStorage["markRunLogsUnavailable"];
+  readRunLogs?: import("./logs.js").RunLogStorage["readRunLogs"];
+  writeRunLogs?: import("./logs.js").RunLogStorage["writeRunLogs"];
+  pruneRunLogs?: import("./logs.js").RunLogStorage["pruneRunLogs"];
   claim(owner: string): void;
   release(owner: string): void;
   read(): StoreView;
@@ -273,8 +278,6 @@ export type Operation =
   | "subscribe"
   | "list"
   | "list-runs"
-  | "cache-read"
-  | "cache-remove"
   | "message";
 export type Authorize = (caller: Caller, operation: Operation, scope: string) => boolean;
 export interface PreparationOptions {
@@ -330,7 +333,7 @@ export interface Subscription {
   unsubscribe(): Promise<void>;
 }
 export interface TaskQuery {
-  bundleDigest?: string;
+  bundleCid?: string;
   taskId?: string;
   type?: string;
   scope?: string;
@@ -379,7 +382,7 @@ export interface TaskPage {
   next?: string;
 }
 export interface RunQuery {
-  bundleDigest?: string;
+  bundleCid?: string;
   runId?: string;
   type?: string;
   scope?: string;
@@ -456,6 +459,16 @@ export interface CoordinatorService {
   getTask(taskId: string, caller: Caller): TaskSnapshot;
   cancelTask(taskId: string, caller: Caller): CancellationResult;
   getRun(runId: string, caller: Caller): RunSnapshot;
+  getRunLogs?(
+    runId: string,
+    page: import("./logs.js").RunLogQuery,
+    caller: Caller,
+  ): import("./logs.js").RunLogPage;
+  subscribeRunLogs?(
+    runId: string,
+    page: import("./logs.js").RunLogQuery,
+    caller: Caller,
+  ): import("./logs.js").RunLogSubscription;
   getTaskHistory(
     taskId: string,
     page: { cursor?: string; limit?: number },

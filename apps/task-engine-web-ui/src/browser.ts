@@ -1,29 +1,28 @@
 import type {
   BundleReference,
-  BundleCacheDetail,
-  BundleCachePage,
   HistoryPage,
   Observation,
   PublicEvent,
+  RunLogPage,
   RunPage,
   RunSnapshot,
   RunStage,
   RunSummary,
-  TaskSnapshot,
-  TaskPage,
   SubmissionResult,
+  TaskPage,
+  TaskSnapshot,
 } from "@potential-guide/task-protocol";
-import { formatBundleReference } from "@potential-guide/task-protocol/bundle-reference";
+import { bundleCid, formatBundleReference } from "@potential-guide/task-protocol/bundle-reference";
 import { observeDirectory } from "./directory-observation.js";
 import { envelopeKeys, envelopeSchema, schemaEditor } from "./form.js";
 import { ObservationEnd, taskStatus, taskStatusExplanation } from "./lifecycle.js";
 import {
   Api,
   ApiError,
+  bundleIdentity,
   consumeCollectionSse,
   consumeSse,
   Directory,
-  bundleDigest,
   type Entry,
   EventWindow,
   endpointMatches,
@@ -38,12 +37,13 @@ import {
   validSnapshot,
 } from "./model.js";
 import {
+  type DirectoryRowDescription,
   describeAction,
   describeRowAction,
-  type DirectoryRowDescription,
   type InlineAction,
   WorkbenchView,
 } from "./presentation.tsx";
+import { consumeRunLogSse, RunLogWindow } from "./run-logs.js";
 import type { Endpoint, Favorite } from "./server.js";
 
 const view = new WorkbenchView(document.getElementById("app")!);
@@ -127,16 +127,16 @@ function bundleReference(bundle: BundleReference): HTMLElement {
   return result;
 }
 function compactBundle(digest: string): HTMLElement {
-  const result = node("code", `sha256:${digest.replace(/^sha256:/, "").slice(0, 12)}`);
+  const result = node("code", `${digest.slice(0, 16)}…`);
   result.className = "bundle-digest";
   result.title = digest;
-  result.setAttribute("aria-label", `Bundle Digest ${digest}`);
+  result.setAttribute("aria-label", `Bundle CID ${digest}`);
   return result;
 }
-function copyDigest(digest: string): HTMLButtonElement {
-  return button("复制完整 Digest", async () => {
+function copyCid(digest: string): HTMLButtonElement {
+  return button("复制完整 CID", async () => {
     await navigator.clipboard.writeText(digest);
-    inform("已复制完整 Bundle Digest。");
+    inform("已复制完整 Bundle CID。");
   });
 }
 const statusNames = {
@@ -153,193 +153,6 @@ let favorites: Favorite[] = [];
 let favoritesGeneration = 0;
 const sourceStates = new Map<string, { label: string }>();
 const selection = new Selection();
-let cacheGeneration = 0;
-let cachePage: BundleCachePage | undefined;
-let cacheDetail: BundleCacheDetail | undefined;
-let cacheConfirm: string | undefined;
-let cacheError = "";
-let cacheBusy = false;
-function renderCache(): void {
-  const endpoint = selection.endpoint;
-  if (!endpoint) return;
-  const box = node("div");
-  box.className = "cache-layout";
-  box.dataset.key = `cache:${endpoint.binding}`;
-  report("Bundle 缓存", cacheError);
-  const footer = node("footer");
-  footer.className = "directory-grid-footer cache-footer";
-  const summary = node("p");
-  summary.setAttribute("role", "status");
-  summary.textContent = `${cachePage ? `本页 ${cachePage.items.length} 项 · 观察于 ${cachePage.observedAt}` : "尚未取得缓存目录"} · ${cacheError ? "查询失败 / 数据待核对，详见错误日志" : cacheBusy ? "正在读取或清理缓存…" : "缓存快照；不是全缓存容量统计"}`;
-  footer.append(
-    summary,
-    button("刷新缓存", () => loadCache(), cacheBusy),
-  );
-  if (cachePage) {
-    const table = node("table");
-    const head = node("thead");
-    const heading = node("tr");
-    for (const label of ["Bundle / Digest", "内容大小", "占用", "操作"])
-      heading.append(node("th", label));
-    head.append(heading);
-    table.append(head);
-    const body = node("tbody");
-    for (const item of cachePage.items) {
-      const row = node("tr");
-      row.dataset.key = item.digest;
-      const identity = node("td");
-      identity.append(node("strong", item.name ?? "正在准备"), compactBundle(item.digest));
-      const controls = node("td");
-      controls.append(
-        inlineButton("查看契约", () => readCacheDetail(item.digest), cacheBusy),
-        inlineButton(
-          "清理此缓存",
-          () => {
-            cacheConfirm = item.digest;
-            renderCache();
-            navigation.open("cache-confirm");
-          },
-          cacheBusy || item.preparing || item.leases > 0,
-        ),
-      );
-      row.append(
-        identity,
-        node(
-          "td",
-          item.bytes === undefined
-            ? "尚未缓存"
-            : `${item.bytes.toLocaleString()} 字节 / ${item.files} 文件`,
-        ),
-        node(
-          "td",
-          `${item.preparing ? "准备中" : "未在准备"} · ${item.leases} 个占用租约（不等于 Task 数）`,
-        ),
-        controls,
-      );
-      body.append(row);
-    }
-    table.append(body);
-    const scroll = node("div");
-    scroll.className = "cache-grid-scroll";
-    scroll.append(table);
-    box.append(scroll);
-    if (!cachePage.items.length)
-      box.append(node("p", "当前页没有缓存 Bundle。可运行任务后刷新；不会自动下载内容。"));
-    if (cachePage.next)
-      footer.append(button("下一页缓存", () => loadCache(cachePage!.next), cacheBusy));
-  }
-  box.append(footer);
-  if (cacheConfirm) {
-    const digest = cacheConfirm;
-    const confirm = node("section");
-    confirm.dataset.key = `remove:${digest}`;
-    confirm.append(
-      node(
-        "p",
-        `确认清理 ${digest}？只移除缓存内容，不删除任务、历史或原归档。再次运行可能需要重新获取；原来源不可用时会失败。`,
-      ),
-      button("确认清理", () => removeCache(digest), cacheBusy),
-      button(
-        "保留缓存",
-        () => {
-          cacheConfirm = undefined;
-          navigation.close("cache-confirm");
-        },
-        cacheBusy,
-      ),
-    );
-    view.render("cache-confirmation", [confirm]);
-  }
-  if (cacheDetail)
-    view.render("cache-detail", [
-      node("p", cacheDetail.digest),
-      copyDigest(cacheDetail.digest),
-      details("Bundle 声明与解析后契约", cacheDetail, `cache-detail:${cacheDetail.digest}`),
-    ]);
-  reconcile("bundle-cache", [box]);
-}
-async function loadCache(after?: string): Promise<void> {
-  if (!selection.endpoint) return;
-  const endpoint = selection.endpoint,
-    lease = selection.capture(),
-    generation = ++cacheGeneration;
-  cacheBusy = true;
-  cacheError = "";
-  cacheConfirm = undefined;
-  cacheDetail = undefined;
-  renderCache();
-  try {
-    const query = new URLSearchParams({ limit: "50", ...(after ? { after } : {}) });
-    const page = await api.request<BundleCachePage>(endpoint, `/bundle-cache?${query}`, {
-      signal: lease.signal,
-    });
-    if (!lease.current() || generation !== cacheGeneration) return;
-    if (!Array.isArray(page.items) || typeof page.observedAt !== "string")
-      throw new Error("缓存列表协议无效。");
-    cachePage = page;
-  } catch (error) {
-    if (lease.current() && generation === cacheGeneration)
-      cacheError = `缓存读取失败；旧页仅供参考。${String(error)}`;
-  } finally {
-    if (lease.current() && generation === cacheGeneration) {
-      cacheBusy = false;
-      renderCache();
-    }
-  }
-}
-async function readCacheDetail(digest: string): Promise<void> {
-  const endpoint = workspace().endpoint,
-    lease = selection.capture(),
-    generation = ++cacheGeneration;
-  cacheBusy = true;
-  cacheError = "";
-  renderCache();
-  try {
-    const detail = await api.request<BundleCacheDetail>(endpoint, `/bundle-cache/${digest}`, {
-      signal: lease.signal,
-    });
-    if (!lease.current() || generation !== cacheGeneration) return;
-    if (detail.digest !== digest) throw new Error("缓存详情身份不一致。");
-    cacheDetail = detail;
-    navigation.open("cache-detail");
-  } catch (error) {
-    if (lease.current() && generation === cacheGeneration)
-      cacheError = `契约读取失败：${String(error)}`;
-  } finally {
-    if (lease.current() && generation === cacheGeneration) {
-      cacheBusy = false;
-      renderCache();
-    }
-  }
-}
-async function removeCache(digest: string): Promise<void> {
-  const endpoint = workspace().endpoint,
-    lease = selection.capture(),
-    generation = ++cacheGeneration;
-  cacheBusy = true;
-  cacheError = "";
-  renderCache();
-  try {
-    const receipt = await api.request<{ removed: boolean; digest: string }>(
-      endpoint,
-      `/bundle-cache/${digest}`,
-      { method: "DELETE", signal: lease.signal },
-    );
-    if (!lease.current() || generation !== cacheGeneration) return;
-    if (receipt.removed !== true || receipt.digest !== digest)
-      throw new Error("清理回执无效；结果未知，请刷新核对。");
-    navigation.close("cache-confirm");
-    await loadCache();
-  } catch (error) {
-    if (lease.current() && generation === cacheGeneration)
-      cacheError = `清理未确认：${String(error)}。不会停止 Run；请刷新核对缓存状态。`;
-  } finally {
-    if (lease.current() && generation === cacheGeneration) {
-      cacheBusy = false;
-      renderCache();
-    }
-  }
-}
 const states = new Map<string, Workspace>();
 let formReader: (() => Parameters) | undefined;
 let formEndpoint: Endpoint | undefined;
@@ -412,7 +225,7 @@ function checkedForm(): { endpoint: Endpoint; parameters: Parameters; revision: 
   )
     throw new Error("请先选择 Endpoint 并填写完整 Bundle 引用；原输入不会自动提交。");
   const parameters = formReader();
-  return { endpoint: formEndpoint, parameters, revision: bundleDigest(parameters) };
+  return { endpoint: formEndpoint, parameters, revision: bundleIdentity(parameters) };
 }
 function renderForm(parameters?: Parameters): void {
   formReader = undefined;
@@ -441,7 +254,7 @@ function renderForm(parameters?: Parameters): void {
     };
     view.text(
       "contract",
-      "填写 URL#digest 固定 Bundle 内容；服务按 Bundle 离线契约校验 Input。准备完成前不创建 Task，也不开始 Task 超时。",
+      "填写根 CID 或 {cid,hint} 固定 Bundle 内容；hint 不参与匹配。完整准备前不创建 Task，也不开始 Task 超时。",
     );
   } catch (error) {
     formBlocked = true;
@@ -451,7 +264,7 @@ function renderForm(parameters?: Parameters): void {
 }
 async function initializeForm(): Promise<void> {
   renderForm();
-  view.text("discovery-status", "无需类型注册或发现；名称仅用于展示，Digest 决定执行内容。");
+  view.text("discovery-status", "无需类型注册或发现；名称仅用于展示，CID 决定执行内容。");
 }
 function renderBar(): void {
   const container = "batches";
@@ -495,7 +308,7 @@ function renderBar(): void {
       row.append(
         node(
           "strong",
-          `${index + 1}. ${entry.parameters.bundle.digest.slice(0, 19)} · ${statusNames[entry.state]}`,
+          `${index + 1}. ${bundleCid(entry.parameters.bundle).slice(0, 19)} · ${statusNames[entry.state]}`,
         ),
         node("p", entry.message),
       );
@@ -505,7 +318,7 @@ function renderBar(): void {
           endpoint: entry.endpoint.id,
           requestId: entry.id,
           ...(entry.taskId ? { taskId: entry.taskId } : {}),
-          bundleDigest: entry.revision,
+          bundleCid: entry.revision,
           parameters: entry.parameters,
         }),
       );
@@ -597,6 +410,12 @@ function renderTasks(): void {
   reconcile(container, rows);
 }
 interface Observer {
+  logs: RunLogWindow;
+  logController?: AbortController;
+  logState: "loading" | "following" | "paused" | "disconnected" | "ended";
+  logError: string;
+  logLoading: boolean;
+  logGeneration: number;
   kind: "taskId" | "runId";
   id: string;
   endpoint: Endpoint;
@@ -775,6 +594,11 @@ function newObserver(kind: Observer["kind"], id: string): Observer {
   return {
     kind,
     id,
+    logs: new RunLogWindow(id),
+    logState: "loading",
+    logError: "",
+    logLoading: false,
+    logGeneration: 0,
     endpoint: workspace().endpoint,
     window: new EventWindow(),
     historyEvents: [],
@@ -864,9 +688,200 @@ async function openRun(id: string): Promise<void> {
   renderObserver(observer);
   navigation.open("execution-detail");
   await refreshRun(observer);
+  void loadLogs(observer);
   await history(observer);
   void associatedTasks(observer);
   if (current(observer)) void live(observer);
+}
+function pauseLogs(observer: Observer): void {
+  observer.logGeneration++;
+  observer.logState = "paused";
+  observer.logController?.abort();
+}
+async function loadLogs(observer: Observer, next = false): Promise<void> {
+  if (!current(observer) || observer.logLoading) return;
+  pauseLogs(observer);
+  const generation = observer.logGeneration;
+  observer.logLoading = true;
+  try {
+    const page = await api.request<RunLogPage>(
+      observer.endpoint,
+      `/runs/${observer.id}/logs?afterSequence=${next ? observer.logs.sequence : 0}${observer.logs.limits ? `&limit=${Math.min(50, observer.logs.limits.pageSize)}` : ""}`,
+      { signal: observer.controller.signal },
+    );
+    if (!current(observer) || generation !== observer.logGeneration) return;
+    observer.logs.accept(page, true);
+    observer.logError = "";
+    if (!next) void followLogs(observer);
+  } catch (error) {
+    if (!current(observer) || generation !== observer.logGeneration) return;
+    observer.logError =
+      error instanceof ApiError && error.code === "unsupported_version"
+        ? `此服务不支持 Run Logs 接口：${error.message}`
+        : `日志加载失败：${String(error)}`;
+    observer.logState = "disconnected";
+  } finally {
+    observer.logLoading = false;
+    if (current(observer)) renderObserver(observer);
+  }
+}
+async function followLogs(observer: Observer): Promise<void> {
+  observer.logGeneration++;
+  observer.logController?.abort();
+  const controller = new AbortController();
+  observer.logController = controller;
+  const abort = () => controller.abort();
+  observer.controller.signal.addEventListener("abort", abort, { once: true });
+  const valid = () =>
+    current(observer) && !controller.signal.aborted && observer.logController === controller;
+  let failures = 0;
+  try {
+    while (valid() && failures < 5) {
+      try {
+        observer.logState = "following";
+        renderObserver(observer);
+        const response = await fetch(
+          api.path(
+            observer.endpoint,
+            `/runs/${observer.id}/logs/events?limit=${Math.min(50, observer.logs.limits?.pageSize ?? 50)}&afterSequence=${observer.logs.sequence}`,
+          ),
+          { headers: api.headers(observer.endpoint), signal: controller.signal },
+        );
+        if (!response.ok) await api.decode(response);
+        await consumeRunLogSse(response, (page) => {
+          if (!valid()) return;
+          observer.logs.accept(page);
+          observer.logError = "";
+          observer.logState = "following";
+          failures = 0;
+          renderObserver(observer);
+          const viewport = document.querySelector<HTMLElement>(
+            `[data-run-log-viewport="${observer.id}"]`,
+          );
+          if (viewport) viewport.scrollTop = viewport.scrollHeight;
+        });
+        if (!valid()) return;
+        if (
+          observer.logs.state?.completeness !== "open" ||
+          ["unsupported", "disabled", "expired"].includes(observer.logs.state?.availability ?? "")
+        ) {
+          observer.logState = "ended";
+          renderObserver(observer);
+          return;
+        }
+        observer.logError = "日志流已断开，按最后确认序号续接。";
+      } catch (error) {
+        if (!valid()) return;
+        observer.logError = `日志流中断：${String(error)}。可重新连接补读。`;
+        if (error instanceof ApiError && [400, 401, 403, 404, 410, 503].includes(error.status))
+          failures = 5;
+        else failures++;
+      }
+      observer.logState = "disconnected";
+      renderObserver(observer);
+      if (failures < 5)
+        await new Promise<void>((resolve) => {
+          const finish = () => {
+            clearTimeout(timer);
+            controller.signal.removeEventListener("abort", finish);
+            resolve();
+          };
+          const timer = setTimeout(finish, 1000);
+          controller.signal.addEventListener("abort", finish, { once: true });
+          if (controller.signal.aborted) finish();
+        });
+    }
+  } finally {
+    observer.controller.signal.removeEventListener("abort", abort);
+  }
+}
+function logPanel(observer: Observer): HTMLElement {
+  const panel = node("section");
+  panel.className = "run-logs";
+  panel.dataset.key = `logs:${observer.id}`;
+  panel.setAttribute("aria-label", `Run ${observer.id} Logs`);
+  panel.append(node("h3", "Logs · 诊断日志"), node("code", observer.id));
+  const toolbar = node("div");
+  toolbar.className = "run-log-toolbar";
+  toolbar.append(
+    button(
+      "暂停日志跟随",
+      () => {
+        pauseLogs(observer);
+        renderObserver(observer);
+      },
+      observer.logState !== "following",
+    ),
+    button(
+      "跟随 / 重新连接日志",
+      () => followLogs(observer),
+      observer.logState === "following" || observer.logLoading,
+    ),
+    button("从头读取日志", () => loadLogs(observer), observer.logLoading),
+    button(
+      "下一页日志",
+      () => loadLogs(observer, true),
+      !observer.logs.hasMore || observer.logLoading,
+    ),
+  );
+  panel.append(toolbar);
+  const state = observer.logs.state;
+  const names = {
+    available: "日志可用",
+    unsupported: "此 Bundle 协议不支持日志",
+    disabled: "宿主已禁用日志",
+    truncated: "日志已截断 / 输出超限",
+    expired: "日志已过期或被容量清理",
+    unavailable: "日志存储不可用",
+  };
+  const status = node(
+    "p",
+    `${state ? names[state.availability] : "正在读取日志"}；${({ loading: "读取中", following: "实时跟随", paused: "跟随已暂停", disconnected: "已断连", ended: "跟随结束" } as const)[observer.logState]}`,
+  );
+  status.setAttribute("role", "status");
+  panel.append(status);
+  if (state)
+    panel.append(
+      node(
+        "p",
+        `已丢弃 ${state.dropped} 条；尾部${({ open: "尚未结束", complete: "已确认", unknown: "完整性未知（成功/取消不保证日志完整）" } as const)[state.completeness]}${state.reason ? `；${state.reason}` : ""}`,
+      ),
+    );
+  if (observer.logs.limits) {
+    const limits = observer.logs.limits;
+    panel.append(
+      node(
+        "p",
+        `宿主限额：单条 ${limits.entryBytes} 字节；每 Run ${limits.runEntries} 条 / ${limits.runBytes} 字节；全局 ${limits.totalBytes} 字节；保留 ${limits.retentionMs} 毫秒。`,
+      ),
+    );
+  }
+  report(`Run:${observer.id} / 日志`, observer.logError, observer.endpoint);
+  if (observer.logs.gap)
+    panel.append(node("p", "日志游标存在缺口，不能保证完整。已保留可读取内容。"));
+  if (observer.logs.trimmed)
+    panel.append(node("p", "浏览器窗口已按 300 条 / 1 MiB 清理；使用历史分页查看较早日志。"));
+  if (!observer.logs.entries.length && state?.availability === "available")
+    panel.append(node("p", "此 Run 尚未输出诊断日志。"));
+  const viewport = node("div");
+  viewport.dataset.runLogViewport = observer.id;
+  viewport.dataset.key = `log-viewport:${observer.id}`;
+  viewport.className = "run-log-viewport";
+  viewport.tabIndex = 0;
+  for (const entry of observer.logs.entries) {
+    const row = node("article");
+    row.className = `run-log-entry run-log-${entry.level}`;
+    row.dataset.key = `log:${observer.id}:${entry.sequence}`;
+    row.append(
+      node("small", `#${entry.sequence}  ${entry.receivedAt}  ${entry.level}`),
+      node("pre", entry.message),
+    );
+    if (entry.fields)
+      row.append(details("结构化字段", entry.fields, `log-fields:${entry.sequence}`));
+    viewport.append(row);
+  }
+  panel.append(viewport);
+  return panel;
 }
 async function refreshRun(observer: Observer): Promise<void> {
   if (!current(observer) || observer.kind !== "runId") return;
@@ -974,7 +989,7 @@ function renderObserver(observer: Observer): void {
     }
     const task = observer.snapshot;
     if (task) {
-      if (task.bundle) box.append(bundleReference(task.bundle), copyDigest(task.bundle.digest));
+      if (task.bundle) box.append(bundleReference(task.bundle), copyCid(bundleCid(task.bundle)));
       const now = Date.now();
       const timeout = now > Date.parse(task.deadlineAt);
       const state = node("p", taskStatus(task, now));
@@ -1081,7 +1096,7 @@ function renderObserver(observer: Observer): void {
     const snapshot = observer.runSnapshot;
     if (snapshot) {
       if (snapshot.bundle)
-        box.append(node("code", snapshot.bundle.digest), copyDigest(snapshot.bundle.digest));
+        box.append(node("code", bundleCid(snapshot.bundle)), copyCid(bundleCid(snapshot.bundle)));
       box.append(details("原始 Run 快照", snapshot, "run-snapshot"));
       if (snapshot.progress !== undefined)
         box.append(details("Run 进展（不代表完成）", snapshot.progress, "run-progress"));
@@ -1165,6 +1180,7 @@ function renderObserver(observer: Observer): void {
   const ownEvents = observer.window.events.filter((event) =>
     observer.kind === "taskId" ? !event.type.startsWith("run.") : event.type.startsWith("run."),
   );
+  if (observer.kind === "runId") box.append(logPanel(observer));
   box.append(eventList("own-events", "对象事件 · 最近窗口", ownEvents));
   box.append(
     eventList("all-events", "全部公开事件 · 最近窗口（含关联对象）", observer.window.events),
@@ -1184,7 +1200,7 @@ function directoryQuery(): string {
   const query = new URLSearchParams({ sort: "created-desc" });
   const type = (get("history-type") as HTMLInputElement).value;
   if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-  if (type) query.set("bundleDigest", type);
+  if (type) query.set("bundleCid", type);
   if (selection.endpoint && workspace().associatedExecutionId)
     query.set("runId", workspace().associatedExecutionId);
   for (const [id, key] of [
@@ -1449,7 +1465,7 @@ function renderDirectory(): void {
     const type = node("span", task.name ?? task.type);
     type.className = "entity-type";
     title.append(type, node("small", task.taskId.slice(-8)));
-    if (task.bundle) title.append(compactBundle(task.bundle.digest));
+    if (task.bundle) title.append(compactBundle(bundleCid(task.bundle)));
     row.append(star, title);
     const status = node("td", taskStatus(task));
     status.title = taskStatusExplanation(task);
@@ -1533,7 +1549,7 @@ async function queryExecutions(append = false): Promise<void> {
       const filters = new URLSearchParams({ sort: "started-desc" });
       const type = (get("execution-type") as HTMLInputElement).value;
       if (type.length > 256) throw new Error("类型筛选最多 256 字符。");
-      if (type) filters.set("bundleDigest", type);
+      if (type) filters.set("bundleCid", type);
       for (const [id, key] of [
         ["started-from", "startedFrom"],
         ["started-before", "startedBefore"],
@@ -1591,7 +1607,7 @@ function renderExecutions(): void {
       const type = node("span", execution.name ?? execution.type);
       type.className = "entity-type";
       title.append(type, node("small", execution.runId.slice(-8)));
-      if (execution.bundle) title.append(compactBundle(execution.bundle.digest));
+      if (execution.bundle) title.append(compactBundle(bundleCid(execution.bundle)));
       const status = `${execution.state.completed ? "已完成" : execution.state.failed ? "执行失败" : execution.state.running ? "执行中" : "结果未确认"}${execution.state.reclaimed ? " · 已回收" : " · 未确认回收"}`;
       row.append(
         title,
@@ -1635,7 +1651,7 @@ async function reuse(endpoint: Endpoint, parameters: Parameters, direct: boolean
     throw new Error(`请先明确切换到收藏/原请求目标 ${endpoint.label}，不会改投当前目标。`);
   const lease = selection.capture();
   if (direct) {
-    const revision = bundleDigest(parameters);
+    const revision = bundleIdentity(parameters);
     const entry = await bar.quick(endpoint, parameters, revision);
     if (lease.current()) {
       inform(entry.message);
@@ -1706,9 +1722,10 @@ function renderStars(box: HTMLElement): void {
   }
   const stars = selectedStars().filter(
     (item) =>
-      (!query.get("bundleDigest") ||
-        ((item.parameters.bundle as { digest?: string } | undefined)?.digest ??
-          item.parameters.type) === query.get("bundleDigest")) &&
+      (!query.get("bundleCid") ||
+        (item.parameters.bundle
+          ? bundleIdentity(item.parameters as Parameters)
+          : item.parameters.type) === query.get("bundleCid")) &&
       (!query.get("createdFrom") ||
         Date.parse(item.source!.receivedAt) >= Date.parse(query.get("createdFrom")!)) &&
       (!query.get("createdBefore") ||
@@ -1913,18 +1930,11 @@ async function chooseEndpoint(id: string): Promise<void> {
   const endpoint = endpoints.find((item) => item.id === id);
   if (!endpoint) throw new Error("Endpoint 不存在。");
   selection.select(endpoint);
-  cacheGeneration++;
-  cachePage = undefined;
-  cacheDetail = undefined;
-  cacheConfirm = undefined;
-  cacheError = "";
-  cacheBusy = false;
   const lease = selection.capture();
   starChecks?.abort();
   navigation.close("create-dialog", false);
   if (navigation.overlay) navigation.close(navigation.overlay.id, false);
-  const cacheSelected = navigation.tab === "cache";
-  navigation.show(cacheSelected ? "cache" : "tasks", false);
+  navigation.show("tasks", false);
   (get("endpoint") as HTMLSelectElement).value = endpoint.id;
   closeObservers();
   formReader = undefined;
@@ -1951,10 +1961,7 @@ async function chooseEndpoint(id: string): Promise<void> {
   renderDirectory();
   renderExecutions();
   await Promise.all([initializeForm(), renderFavorites()]);
-  if (lease.current()) {
-    if (cacheSelected) await loadCache();
-    else await queryDirectory();
-  }
+  if (lease.current()) await queryDirectory();
 }
 async function start(): Promise<void> {
   const unexpectedError = (event: ErrorEvent) => notify(event.error ?? event.message);
@@ -1966,9 +1973,7 @@ async function start(): Promise<void> {
   const bootstrap = (await response.json()) as { csrf: string; endpoints: Endpoint[] };
   api = new Api(bootstrap.csrf);
   endpoints = bootstrap.endpoints;
-  view.text("bundle-cache", "请选择受控 Endpoint 后查看缓存。");
   view.events.tab = (tab) => {
-    if (tab === "cache") void loadCache();
     if (tab === "executions" && selection.endpoint && !workspace().executionDirectory.page)
       void queryExecutions();
   };

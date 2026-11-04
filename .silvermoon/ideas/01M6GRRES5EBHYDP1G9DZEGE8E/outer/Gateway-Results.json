@@ -1,0 +1,3739 @@
+{
+  "sourceCommit": "9648e2094b296b7f559c79c6ac994e19277300ea",
+  "deploymentBlob": "4a05b865cfeaf1e5380b97044a1f3d453882a15d",
+  "platform": "win32",
+  "node": "v24.11.1",
+  "commands": [
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-agents",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-cli-core",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-pilot",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\cli-runtime",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\check-artifacts",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\check-runtime-files",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\objective-pilot",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\effects",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pilot-protocol",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\objective-declarations",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-config",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-objectives",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\apps\\pguide-task-engine",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\ipfs-content",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-server",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-protocol",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-http",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-storage",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\apps\\task-engine-web-ui",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-sdk",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "install",
+        "--prod",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "install",
+        "--prod",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "<owned-root>\\author",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\runtime\\node_modules\\.bin\\pguide-task-engine.cmd",
+      "args": [
+        "--pguide-command-metadata"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\runtime\\node_modules\\.bin\\pguide.cmd",
+      "args": [
+        "task-engine",
+        "--no-global-config",
+        "--help",
+        "--format",
+        "json"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "version"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "init",
+        "--profile=test"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.API",
+        "/ip4/127.0.0.1/tcp/0"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.Gateway",
+        "/ip4/127.0.0.1/tcp/0"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "prepare.mjs",
+        "http://127.0.0.1:62873"
+      ],
+      "cwd": "<owned-root>\\author",
+      "code": 0
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-transport",
+        "rpc"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/good"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-transport",
+        "rpc"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/good"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--port",
+        "0"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\unsafe.mjs"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 2
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-transport",
+        "rpc"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/good"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-transport",
+        "rpc"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/good"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json",
+        "--port",
+        "0"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\invalid.json"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--cwd",
+        "<owned-root>\\runtime\\workspace",
+        "--config",
+        "files\\unsafe.mjs"
+      ],
+      "cwd": "<owned-root>\\runtime\\workspace",
+      "code": 1
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "repo",
+        "stat"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    }
+  ],
+  "scenarios": [
+    {
+      "label": "纯参数 / Engine-only",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "cli\\cli.sqlite",
+        "--ipfs-transport",
+        "gateway",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/good",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:50968/rpc"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:50969",
+      "pid": 35408,
+      "database": "<owned-root>\\runtime\\workspace\\cli\\cli.sqlite",
+      "requestId": "01M6J4EHDWGS0NW0JKMEQY2A76",
+      "taskId": "01M6J4EHSY3XPWDMMMJ27MGCCT",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "发现 / YAML / CLI 端口覆盖 / base 尾斜杠",
+      "entry": "pguide task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--config",
+        "files\\server.yaml",
+        "--port",
+        "0"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:64831",
+      "pid": 29784,
+      "database": "<owned-root>\\runtime\\workspace\\files\\yaml.sqlite",
+      "requestId": "01M6J4EKN8J7MJ5527G2CFAVFB",
+      "taskId": "01M6J4EM0F7TCE045ZZ30W1CA4",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "独立入口 / JSON",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--config",
+        "files\\server.json"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:61568",
+      "pid": 29652,
+      "database": "<owned-root>\\runtime\\workspace\\files\\json.sqlite",
+      "requestId": "01M6J4ENR9T4PHCZHX1B29BRM1",
+      "taskId": "01M6J4EP4C3S72QRB2WFWAVS6D",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "发现 / 用户 JSONC / 项目排除 / 用户数据库锚点",
+      "entry": "pguide task-engine",
+      "arguments": [],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:54224",
+      "pid": 24120,
+      "database": "<owned-root>\\isolated-user\\pguide\\user.sqlite",
+      "requestId": "01M6J4EQWNGKGMEQ8FVHZKXTX8",
+      "taskId": "01M6J4ER7ZXA2HGX3DAN6C2WP5",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "四层覆盖 / UI 公开 HTTP / CLI Gateway URL",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--config",
+        "files\\ui.yaml",
+        "--port",
+        "0",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/good",
+        "--ui"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:52223",
+      "uiUrl": "http://127.0.0.1:52225",
+      "pid": 50420,
+      "database": "<owned-root>\\runtime\\workspace\\files\\ui.sqlite",
+      "requestId": "01M6J4ETHTMHPTPJ4MZM91F0AF",
+      "taskId": "01M6J4ETWNRJE243F1RTZ5P0CD",
+      "proxyTaskId": "01M6J4EVA20GC7DWB0FT5EKVES",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "发现 / 损坏用户层被完全禁用",
+      "entry": "pguide task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--config",
+        "files\\server.json",
+        "--database",
+        "cli\\isolated.sqlite"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:52239",
+      "pid": 24968,
+      "database": "<owned-root>\\runtime\\workspace\\cli\\isolated.sqlite",
+      "requestId": "01M6J4EWVABPJ4AS6J4VS79W4S",
+      "taskId": "01M6J4EX6Q843V5677ZF79PWT6",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "默认 RPC 对照 / Gateway URL 不自动选择 transport",
+      "entry": "pguide task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "cli\\rpc.sqlite",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:56763",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/unused-rpc"
+      ],
+      "transport": "rpc",
+      "event": "ready",
+      "url": "http://127.0.0.1:56766",
+      "pid": 31680,
+      "database": "<owned-root>\\runtime\\workspace\\cli\\rpc.sqlite",
+      "requestId": "01M6J4FD283NZWAF379AED439S",
+      "taskId": "01M6J4FDC2V5EJMGKAW48RW8GX",
+      "result": {
+        "message": "gateway-outer-proof",
+        "resourceBytes": 600000
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": true,
+      "ownedKuboAbsent": false,
+      "ownedKuboSurvived": true
+    }
+  ],
+  "configurationFailures": [
+    {
+      "entry": "pguide-task-engine",
+      "label": "启用的损坏用户层",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Cannot read or validate pguide user configuration/settings registry."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "被覆盖的非法文件 transport",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid ipfsTransport in service file."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "被覆盖的非法文件 URL",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid ipfsGatewayUrl in service file."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "被覆盖的非法用户 transport",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Cannot read or validate pguide user configuration/settings registry."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "被覆盖的非法用户 URL",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid ipfsGatewayUrl in pguide user config."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "Gateway 缺 URL",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Gateway transport requires ipfsGatewayUrl."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "非法 port 被覆盖",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid port in service file."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "非回环拒绝",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid host in service file."
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "旧模块拒绝且无副作用",
+      "code": 1,
+      "noReady": true,
+      "markerAbsent": true
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "启用的损坏用户层",
+      "code": 2,
+      "noReady": true,
+      "diagnostic": "Error: Invalid JSONC at offset 1."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "被覆盖的非法文件 transport",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid ipfsTransport in service file."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "被覆盖的非法文件 URL",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid ipfsGatewayUrl in service file."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "被覆盖的非法用户 transport",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Cannot read or validate pguide user configuration/settings registry."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "被覆盖的非法用户 URL",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid ipfsGatewayUrl in pguide user config."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "Gateway 缺 URL",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Gateway transport requires ipfsGatewayUrl."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "非法 port 被覆盖",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid port in service file."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "非回环拒绝",
+      "code": 1,
+      "noReady": true,
+      "diagnostic": "Invalid host in service file."
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "旧模块拒绝且无副作用",
+      "code": 1,
+      "noReady": true,
+      "markerAbsent": true
+    }
+  ],
+  "contentFailures": [
+    {
+      "label": "坏 CID 内容",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "0-failure.sqlite",
+        "--ipfs-transport",
+        "gateway",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/bad",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:50968/rpc"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:56740",
+      "pid": 27672,
+      "database": "<owned-root>\\runtime\\workspace\\0-failure.sqlite",
+      "requestId": "01M6J4F6PJ620W655ZTHTX0HAS",
+      "rejection": {
+        "status": "rejected",
+        "requestId": "01M6J4F6PJ620W655ZTHTX0HAS",
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "IPFS acquisition or CID verification failed."
+        }
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": false,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "超限 chunked 流",
+      "entry": "pguide task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "1-failure.sqlite",
+        "--ipfs-transport",
+        "gateway",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:50968/oversize",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:50968/rpc"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:56748",
+      "pid": 18612,
+      "database": "<owned-root>\\runtime\\workspace\\1-failure.sqlite",
+      "requestId": "01M6J4F8KE35CE8M066XYX17X0",
+      "rejection": {
+        "status": "rejected",
+        "requestId": "01M6J4F8KE35CE8M066XYX17X0",
+        "error": {
+          "code": "capacity_exceeded",
+          "message": "IPFS acquisition exceeds host capacity."
+        }
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": false,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    },
+    {
+      "label": "不可达 Gateway",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "2-failure.sqlite",
+        "--ipfs-transport",
+        "gateway",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:56755",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:50968/rpc"
+      ],
+      "transport": "gateway",
+      "event": "ready",
+      "url": "http://127.0.0.1:56756",
+      "pid": 31544,
+      "database": "<owned-root>\\runtime\\workspace\\2-failure.sqlite",
+      "requestId": "01M6J4FAK8CP3F1Z2J0JT54WKJ",
+      "rejection": {
+        "status": "rejected",
+        "requestId": "01M6J4FAK8CP3F1Z2J0JT54WKJ",
+        "error": {
+          "code": "bundle_fetch_failed",
+          "message": "IPFS acquisition or CID verification failed."
+        }
+      },
+      "exited": 0,
+      "graceful": true,
+      "sourceSurvived": true,
+      "acceptedRequestVerifiedInDatabase": false,
+      "ownedKuboAbsent": true,
+      "ownedKuboSurvived": false
+    }
+  ],
+  "cleanup": {
+    "rawSourceGracefulExit": true,
+    "ownedKuboGracefulExitAndRepoLockReleased": true,
+    "trackedChildrenRemaining": 0,
+    "signalControllerClosed": true,
+    "originalUserUnchanged": true,
+    "externalRootRemovalRequired": false,
+    "externalRootRemoved": true,
+    "externalTrackedPidsAbsent": true,
+    "externalPathProcessMatches": 0
+  },
+  "errors": [],
+  "requestedSourceCommit": "9648e2094b296b7f559c79c6ac994e19277300ea",
+  "packedPackages": 22,
+  "graphs": {
+    "runtime": {
+      "entries": [
+        "pguide",
+        "@potential-guide/pguide-task-engine"
+      ],
+      "internalPackages": 21,
+      "allPhysicalPathsInsideConsumer": true,
+      "productionPackages": [
+        {
+          "name": "pguide",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "cross-spawn",
+          "version": "7.0.6"
+        },
+        {
+          "name": "path-key",
+          "version": "3.1.1"
+        },
+        {
+          "name": "shebang-command",
+          "version": "2.0.0"
+        },
+        {
+          "name": "shebang-regex",
+          "version": "3.0.0"
+        },
+        {
+          "name": "which",
+          "version": "2.0.2"
+        },
+        {
+          "name": "isexe",
+          "version": "2.0.0"
+        },
+        {
+          "name": "@potential-guide/pguide-agents",
+          "version": "0.1.0"
+        },
+        {
+          "name": "yaml",
+          "version": "2.9.1"
+        },
+        {
+          "name": "@potential-guide/cli-core",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@microsoft/agent-host-protocol",
+          "version": "1.0.0"
+        },
+        {
+          "name": "ajv",
+          "version": "8.20.0"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3"
+        },
+        {
+          "name": "fast-uri",
+          "version": "3.1.9"
+        },
+        {
+          "name": "json-schema-traverse",
+          "version": "1.0.0"
+        },
+        {
+          "name": "require-from-string",
+          "version": "2.0.2"
+        },
+        {
+          "name": "jsonc-parser",
+          "version": "3.3.1"
+        },
+        {
+          "name": "@potential-guide/pguide-pilot",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/cli-runtime",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "npm-package-arg",
+          "version": "13.0.2"
+        },
+        {
+          "name": "hosted-git-info",
+          "version": "9.0.3"
+        },
+        {
+          "name": "lru-cache",
+          "version": "11.5.3"
+        },
+        {
+          "name": "proc-log",
+          "version": "6.1.0"
+        },
+        {
+          "name": "semver",
+          "version": "7.8.6"
+        },
+        {
+          "name": "validate-npm-package-name",
+          "version": "7.0.2"
+        },
+        {
+          "name": "pacote",
+          "version": "21.0.4"
+        },
+        {
+          "name": "@npmcli/git",
+          "version": "7.0.2"
+        },
+        {
+          "name": "@gar/promise-retry",
+          "version": "1.0.3"
+        },
+        {
+          "name": "@npmcli/promise-spawn",
+          "version": "9.0.2"
+        },
+        {
+          "name": "which",
+          "version": "6.0.1"
+        },
+        {
+          "name": "isexe",
+          "version": "4.0.0"
+        },
+        {
+          "name": "ini",
+          "version": "6.0.0"
+        },
+        {
+          "name": "npm-pick-manifest",
+          "version": "11.0.3"
+        },
+        {
+          "name": "npm-install-checks",
+          "version": "8.0.0"
+        },
+        {
+          "name": "npm-normalize-package-bin",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@npmcli/installed-package-contents",
+          "version": "4.0.0"
+        },
+        {
+          "name": "npm-bundled",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@npmcli/package-json",
+          "version": "7.0.5"
+        },
+        {
+          "name": "glob",
+          "version": "13.0.6"
+        },
+        {
+          "name": "minimatch",
+          "version": "10.2.6"
+        },
+        {
+          "name": "brace-expansion",
+          "version": "5.0.12"
+        },
+        {
+          "name": "balanced-match",
+          "version": "4.0.4"
+        },
+        {
+          "name": "minipass",
+          "version": "7.1.3"
+        },
+        {
+          "name": "path-scurry",
+          "version": "2.0.2"
+        },
+        {
+          "name": "json-parse-even-better-errors",
+          "version": "5.0.0"
+        },
+        {
+          "name": "spdx-expression-parse",
+          "version": "4.0.0"
+        },
+        {
+          "name": "spdx-exceptions",
+          "version": "2.5.0"
+        },
+        {
+          "name": "spdx-license-ids",
+          "version": "3.0.24"
+        },
+        {
+          "name": "@npmcli/run-script",
+          "version": "10.0.4"
+        },
+        {
+          "name": "@npmcli/node-gyp",
+          "version": "5.0.0"
+        },
+        {
+          "name": "node-gyp",
+          "version": "12.4.0"
+        },
+        {
+          "name": "env-paths",
+          "version": "2.2.1"
+        },
+        {
+          "name": "exponential-backoff",
+          "version": "3.1.3"
+        },
+        {
+          "name": "graceful-fs",
+          "version": "4.2.11"
+        },
+        {
+          "name": "nopt",
+          "version": "9.0.0"
+        },
+        {
+          "name": "abbrev",
+          "version": "4.0.0"
+        },
+        {
+          "name": "tar",
+          "version": "7.5.22"
+        },
+        {
+          "name": "@isaacs/fs-minipass",
+          "version": "4.0.1"
+        },
+        {
+          "name": "chownr",
+          "version": "3.0.0"
+        },
+        {
+          "name": "minizlib",
+          "version": "3.1.0"
+        },
+        {
+          "name": "yallist",
+          "version": "5.0.0"
+        },
+        {
+          "name": "tinyglobby",
+          "version": "0.2.17"
+        },
+        {
+          "name": "fdir",
+          "version": "6.5.0"
+        },
+        {
+          "name": "picomatch",
+          "version": "4.0.7"
+        },
+        {
+          "name": "undici",
+          "version": "6.29.1"
+        },
+        {
+          "name": "cacache",
+          "version": "20.0.4"
+        },
+        {
+          "name": "@npmcli/fs",
+          "version": "5.0.0"
+        },
+        {
+          "name": "fs-minipass",
+          "version": "3.0.3"
+        },
+        {
+          "name": "minipass-collect",
+          "version": "2.0.1"
+        },
+        {
+          "name": "minipass-flush",
+          "version": "1.0.7"
+        },
+        {
+          "name": "minipass",
+          "version": "3.3.6"
+        },
+        {
+          "name": "yallist",
+          "version": "4.0.0"
+        },
+        {
+          "name": "minipass-pipeline",
+          "version": "1.2.4"
+        },
+        {
+          "name": "p-map",
+          "version": "7.1.1"
+        },
+        {
+          "name": "ssri",
+          "version": "13.0.1"
+        },
+        {
+          "name": "npm-packlist",
+          "version": "10.0.4"
+        },
+        {
+          "name": "ignore-walk",
+          "version": "8.0.0"
+        },
+        {
+          "name": "npm-registry-fetch",
+          "version": "19.1.1"
+        },
+        {
+          "name": "@npmcli/redact",
+          "version": "4.0.0"
+        },
+        {
+          "name": "jsonparse",
+          "version": "1.3.1"
+        },
+        {
+          "name": "make-fetch-happen",
+          "version": "15.0.6"
+        },
+        {
+          "name": "@npmcli/agent",
+          "version": "4.0.2"
+        },
+        {
+          "name": "agent-base",
+          "version": "7.1.4"
+        },
+        {
+          "name": "http-proxy-agent",
+          "version": "7.0.2"
+        },
+        {
+          "name": "debug",
+          "version": "4.4.3"
+        },
+        {
+          "name": "ms",
+          "version": "2.1.3"
+        },
+        {
+          "name": "https-proxy-agent",
+          "version": "7.0.6"
+        },
+        {
+          "name": "socks-proxy-agent",
+          "version": "8.0.5"
+        },
+        {
+          "name": "socks",
+          "version": "2.8.10"
+        },
+        {
+          "name": "ip-address",
+          "version": "10.7.5"
+        },
+        {
+          "name": "smart-buffer",
+          "version": "4.2.0"
+        },
+        {
+          "name": "http-cache-semantics",
+          "version": "4.3.0"
+        },
+        {
+          "name": "minipass-fetch",
+          "version": "5.0.2"
+        },
+        {
+          "name": "minipass-sized",
+          "version": "2.0.0"
+        },
+        {
+          "name": "iconv-lite",
+          "version": "0.7.3"
+        },
+        {
+          "name": "safer-buffer",
+          "version": "2.1.2"
+        },
+        {
+          "name": "negotiator",
+          "version": "1.1.0"
+        },
+        {
+          "name": "content-type",
+          "version": "2.1.0"
+        },
+        {
+          "name": "promise-retry",
+          "version": "2.0.1"
+        },
+        {
+          "name": "err-code",
+          "version": "2.0.3"
+        },
+        {
+          "name": "retry",
+          "version": "0.12.0"
+        },
+        {
+          "name": "sigstore",
+          "version": "4.1.1"
+        },
+        {
+          "name": "@sigstore/bundle",
+          "version": "4.0.0"
+        },
+        {
+          "name": "@sigstore/protobuf-specs",
+          "version": "0.5.2"
+        },
+        {
+          "name": "@sigstore/core",
+          "version": "3.2.1"
+        },
+        {
+          "name": "@sigstore/sign",
+          "version": "4.1.1"
+        },
+        {
+          "name": "@sigstore/tuf",
+          "version": "4.0.2"
+        },
+        {
+          "name": "tuf-js",
+          "version": "4.1.0"
+        },
+        {
+          "name": "@tufjs/models",
+          "version": "4.1.0"
+        },
+        {
+          "name": "@tufjs/canonical-json",
+          "version": "2.0.0"
+        },
+        {
+          "name": "@sigstore/verify",
+          "version": "3.1.1"
+        },
+        {
+          "name": "@npmcli/arborist",
+          "version": "10.0.4"
+        },
+        {
+          "name": "@isaacs/string-locale-compare",
+          "version": "1.1.0"
+        },
+        {
+          "name": "@npmcli/fs",
+          "version": "6.0.0"
+        },
+        {
+          "name": "@npmcli/installed-package-contents",
+          "version": "5.0.0"
+        },
+        {
+          "name": "npm-bundled",
+          "version": "6.0.0"
+        },
+        {
+          "name": "npm-normalize-package-bin",
+          "version": "6.0.0"
+        },
+        {
+          "name": "@npmcli/map-workspaces",
+          "version": "6.0.0"
+        },
+        {
+          "name": "@npmcli/name-from-folder",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@npmcli/package-json",
+          "version": "8.0.0"
+        },
+        {
+          "name": "@npmcli/git",
+          "version": "8.0.0"
+        },
+        {
+          "name": "@npmcli/promise-spawn",
+          "version": "10.0.1"
+        },
+        {
+          "name": "which",
+          "version": "7.0.0"
+        },
+        {
+          "name": "ini",
+          "version": "7.0.0"
+        },
+        {
+          "name": "npm-pick-manifest",
+          "version": "12.0.0"
+        },
+        {
+          "name": "npm-install-checks",
+          "version": "9.0.0"
+        },
+        {
+          "name": "npm-package-arg",
+          "version": "14.0.0"
+        },
+        {
+          "name": "hosted-git-info",
+          "version": "10.1.1"
+        },
+        {
+          "name": "proc-log",
+          "version": "7.0.0"
+        },
+        {
+          "name": "validate-npm-package-name",
+          "version": "8.0.0"
+        },
+        {
+          "name": "json-parse-even-better-errors",
+          "version": "6.0.0"
+        },
+        {
+          "name": "@npmcli/metavuln-calculator",
+          "version": "10.0.0"
+        },
+        {
+          "name": "cacache",
+          "version": "21.0.1"
+        },
+        {
+          "name": "ssri",
+          "version": "14.0.0"
+        },
+        {
+          "name": "pacote",
+          "version": "22.0.1"
+        },
+        {
+          "name": "@npmcli/run-script",
+          "version": "11.0.0"
+        },
+        {
+          "name": "@npmcli/node-gyp",
+          "version": "6.0.0"
+        },
+        {
+          "name": "node-gyp",
+          "version": "13.1.0"
+        },
+        {
+          "name": "nopt",
+          "version": "10.0.1"
+        },
+        {
+          "name": "abbrev",
+          "version": "5.0.0"
+        },
+        {
+          "name": "undici",
+          "version": "8.12.3"
+        },
+        {
+          "name": "npm-packlist",
+          "version": "11.3.0"
+        },
+        {
+          "name": "ignore-walk",
+          "version": "9.0.0"
+        },
+        {
+          "name": "npm-registry-fetch",
+          "version": "20.0.1"
+        },
+        {
+          "name": "@npmcli/redact",
+          "version": "5.0.0"
+        },
+        {
+          "name": "make-fetch-happen",
+          "version": "16.0.1"
+        },
+        {
+          "name": "@npmcli/agent",
+          "version": "5.0.2"
+        },
+        {
+          "name": "agent-base",
+          "version": "9.0.0"
+        },
+        {
+          "name": "http-proxy-agent",
+          "version": "9.1.0"
+        },
+        {
+          "name": "proxy-agent-negotiate",
+          "version": "1.1.0"
+        },
+        {
+          "name": "https-proxy-agent",
+          "version": "9.1.0"
+        },
+        {
+          "name": "socks-proxy-agent",
+          "version": "10.1.0"
+        },
+        {
+          "name": "minipass-fetch",
+          "version": "6.0.0"
+        },
+        {
+          "name": "sigstore",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@sigstore/bundle",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@sigstore/core",
+          "version": "4.0.1"
+        },
+        {
+          "name": "@sigstore/sign",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@sigstore/tuf",
+          "version": "5.0.0"
+        },
+        {
+          "name": "tuf-js",
+          "version": "6.0.1"
+        },
+        {
+          "name": "@tufjs/models",
+          "version": "5.0.1"
+        },
+        {
+          "name": "@sigstore/verify",
+          "version": "4.1.2"
+        },
+        {
+          "name": "@npmcli/query",
+          "version": "5.0.0"
+        },
+        {
+          "name": "postcss-selector-parser",
+          "version": "7.1.7"
+        },
+        {
+          "name": "cssesc",
+          "version": "3.0.0"
+        },
+        {
+          "name": "util-deprecate",
+          "version": "1.0.2"
+        },
+        {
+          "name": "bin-links",
+          "version": "7.0.1"
+        },
+        {
+          "name": "cmd-shim",
+          "version": "9.0.2"
+        },
+        {
+          "name": "read-cmd-shim",
+          "version": "7.0.1"
+        },
+        {
+          "name": "write-file-atomic",
+          "version": "8.0.0"
+        },
+        {
+          "name": "signal-exit",
+          "version": "4.1.0"
+        },
+        {
+          "name": "common-ancestor-path",
+          "version": "2.0.0"
+        },
+        {
+          "name": "diff",
+          "version": "8.0.4"
+        },
+        {
+          "name": "json-stringify-nice",
+          "version": "1.1.4"
+        },
+        {
+          "name": "parse-conflict-json",
+          "version": "6.0.0"
+        },
+        {
+          "name": "just-diff",
+          "version": "6.0.2"
+        },
+        {
+          "name": "just-diff-apply",
+          "version": "5.5.0"
+        },
+        {
+          "name": "proggy",
+          "version": "4.0.0"
+        },
+        {
+          "name": "promise-all-reject-late",
+          "version": "1.0.1"
+        },
+        {
+          "name": "promise-call-limit",
+          "version": "3.0.2"
+        },
+        {
+          "name": "treeverse",
+          "version": "3.0.0"
+        },
+        {
+          "name": "walk-up-path",
+          "version": "4.0.0"
+        },
+        {
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0"
+        },
+        {
+          "name": "esbuild",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@potential-guide/check-runtime-files",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/objective-pilot",
+          "version": "0.2.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/effects",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "effect",
+          "version": "4.0.2"
+        },
+        {
+          "name": "@potential-guide/pilot-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "jsonata",
+          "version": "2.1.0"
+        },
+        {
+          "name": "json-schema-typed",
+          "version": "9.0.0"
+        },
+        {
+          "name": "@potential-guide/objective-declarations",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-config",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-objectives",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-task-engine",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-server",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "multiformats",
+          "version": "14.0.5"
+        },
+        {
+          "name": "@potential-guide/task-engine",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/ipfs-content",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "kubo-rpc-client",
+          "version": "7.1.0"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "10.0.2"
+        },
+        {
+          "name": "cborg",
+          "version": "6.2.1"
+        },
+        {
+          "name": "@ipld/dag-json",
+          "version": "11.0.1"
+        },
+        {
+          "name": "@ipld/dag-pb",
+          "version": "4.2.0"
+        },
+        {
+          "name": "@libp2p/crypto",
+          "version": "5.2.0"
+        },
+        {
+          "name": "@libp2p/interface",
+          "version": "3.4.0"
+        },
+        {
+          "name": "@multiformats/dns",
+          "version": "1.0.15"
+        },
+        {
+          "name": "@dnsquery/dns-packet",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@leichtgewicht/ip-codec",
+          "version": "2.0.5"
+        },
+        {
+          "name": "utf8-codec",
+          "version": "1.0.0"
+        },
+        {
+          "name": "hashlru",
+          "version": "2.3.0"
+        },
+        {
+          "name": "p-queue",
+          "version": "9.3.5"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4"
+        },
+        {
+          "name": "p-timeout",
+          "version": "7.0.2"
+        },
+        {
+          "name": "progress-events",
+          "version": "1.1.0"
+        },
+        {
+          "name": "uint8arrays",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@multiformats/multiaddr",
+          "version": "13.0.3"
+        },
+        {
+          "name": "@chainsafe/is-ip",
+          "version": "2.1.0"
+        },
+        {
+          "name": "uint8-varint",
+          "version": "3.0.0"
+        },
+        {
+          "name": "uint8arraylist",
+          "version": "3.0.2"
+        },
+        {
+          "name": "main-event",
+          "version": "1.0.5"
+        },
+        {
+          "name": "@noble/curves",
+          "version": "2.4.0"
+        },
+        {
+          "name": "@noble/hashes",
+          "version": "2.4.0"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "7.1.2"
+        },
+        {
+          "name": "@libp2p/logger",
+          "version": "6.2.16"
+        },
+        {
+          "name": "interface-datastore",
+          "version": "10.0.1"
+        },
+        {
+          "name": "abort-error",
+          "version": "1.0.2"
+        },
+        {
+          "name": "interface-store",
+          "version": "8.0.0"
+        },
+        {
+          "name": "weald",
+          "version": "1.1.3"
+        },
+        {
+          "name": "ms",
+          "version": "4.0.0-nightly.202508271359"
+        },
+        {
+          "name": "supports-color",
+          "version": "10.2.2"
+        },
+        {
+          "name": "@libp2p/peer-id",
+          "version": "6.0.18"
+        },
+        {
+          "name": "@multiformats/multiaddr-to-uri",
+          "version": "12.0.0"
+        },
+        {
+          "name": "any-signal",
+          "version": "4.2.0"
+        },
+        {
+          "name": "blob-to-it",
+          "version": "3.0.0"
+        },
+        {
+          "name": "browser-readablestream-to-it",
+          "version": "2.0.12"
+        },
+        {
+          "name": "dag-jose",
+          "version": "5.1.1"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "9.2.7"
+        },
+        {
+          "name": "cborg",
+          "version": "5.1.11"
+        },
+        {
+          "name": "multiformats",
+          "version": "13.1.3"
+        },
+        {
+          "name": "electron-fetch",
+          "version": "1.9.1"
+        },
+        {
+          "name": "encoding",
+          "version": "0.1.14"
+        },
+        {
+          "name": "err-code",
+          "version": "3.0.1"
+        },
+        {
+          "name": "ipfs-unixfs",
+          "version": "13.1.2"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "8.0.2"
+        },
+        {
+          "name": "iso-url",
+          "version": "1.2.1"
+        },
+        {
+          "name": "it-all",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-first",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-glob",
+          "version": "3.0.6"
+        },
+        {
+          "name": "fast-glob",
+          "version": "3.3.3"
+        },
+        {
+          "name": "@nodelib/fs.stat",
+          "version": "2.0.5"
+        },
+        {
+          "name": "@nodelib/fs.walk",
+          "version": "1.2.8"
+        },
+        {
+          "name": "@nodelib/fs.scandir",
+          "version": "2.1.5"
+        },
+        {
+          "name": "run-parallel",
+          "version": "1.2.0"
+        },
+        {
+          "name": "queue-microtask",
+          "version": "1.2.3"
+        },
+        {
+          "name": "fastq",
+          "version": "1.20.3"
+        },
+        {
+          "name": "reusify",
+          "version": "1.1.0"
+        },
+        {
+          "name": "glob-parent",
+          "version": "5.1.2"
+        },
+        {
+          "name": "is-glob",
+          "version": "4.0.3"
+        },
+        {
+          "name": "is-extglob",
+          "version": "2.1.1"
+        },
+        {
+          "name": "merge2",
+          "version": "1.4.1"
+        },
+        {
+          "name": "micromatch",
+          "version": "4.0.8"
+        },
+        {
+          "name": "braces",
+          "version": "3.0.3"
+        },
+        {
+          "name": "fill-range",
+          "version": "7.1.1"
+        },
+        {
+          "name": "to-regex-range",
+          "version": "5.0.1"
+        },
+        {
+          "name": "is-number",
+          "version": "7.0.0"
+        },
+        {
+          "name": "picomatch",
+          "version": "2.3.2"
+        },
+        {
+          "name": "it-last",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-map",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-peekable",
+          "version": "3.0.10"
+        },
+        {
+          "name": "it-to-stream",
+          "version": "1.0.0"
+        },
+        {
+          "name": "buffer",
+          "version": "6.0.3"
+        },
+        {
+          "name": "base64-js",
+          "version": "1.5.1"
+        },
+        {
+          "name": "ieee754",
+          "version": "1.2.1"
+        },
+        {
+          "name": "fast-fifo",
+          "version": "1.3.2"
+        },
+        {
+          "name": "get-iterator",
+          "version": "1.0.2"
+        },
+        {
+          "name": "p-defer",
+          "version": "3.0.0"
+        },
+        {
+          "name": "p-fifo",
+          "version": "1.0.0"
+        },
+        {
+          "name": "readable-stream",
+          "version": "3.6.2"
+        },
+        {
+          "name": "inherits",
+          "version": "2.0.4"
+        },
+        {
+          "name": "string_decoder",
+          "version": "1.3.0"
+        },
+        {
+          "name": "safe-buffer",
+          "version": "5.2.1"
+        },
+        {
+          "name": "merge-options",
+          "version": "3.0.4"
+        },
+        {
+          "name": "is-plain-obj",
+          "version": "2.1.0"
+        },
+        {
+          "name": "nanoid",
+          "version": "5.1.16"
+        },
+        {
+          "name": "parse-duration",
+          "version": "2.1.11"
+        },
+        {
+          "name": "stream-to-it",
+          "version": "1.0.1"
+        },
+        {
+          "name": "it-stream-types",
+          "version": "2.0.4"
+        },
+        {
+          "name": "wherearewe",
+          "version": "2.0.1"
+        },
+        {
+          "name": "is-electron",
+          "version": "2.2.2"
+        },
+        {
+          "name": "ipfs-unixfs-exporter",
+          "version": "16.2.3"
+        },
+        {
+          "name": "@multiformats/murmur3",
+          "version": "2.2.8"
+        },
+        {
+          "name": "hamt-sharding",
+          "version": "3.0.8"
+        },
+        {
+          "name": "sparse-array",
+          "version": "1.3.2"
+        },
+        {
+          "name": "interface-blockstore",
+          "version": "7.0.1"
+        },
+        {
+          "name": "it-parallel",
+          "version": "3.0.16"
+        },
+        {
+          "name": "p-defer",
+          "version": "4.0.1"
+        },
+        {
+          "name": "it-pipe",
+          "version": "3.0.1"
+        },
+        {
+          "name": "it-merge",
+          "version": "3.0.15"
+        },
+        {
+          "name": "it-queueless-pushable",
+          "version": "2.0.5"
+        },
+        {
+          "name": "race-signal",
+          "version": "2.0.2"
+        },
+        {
+          "name": "it-pushable",
+          "version": "3.2.4"
+        },
+        {
+          "name": "it-to-buffer",
+          "version": "5.0.0"
+        },
+        {
+          "name": "ipfs-unixfs-importer",
+          "version": "17.1.1"
+        },
+        {
+          "name": "blockstore-core",
+          "version": "7.0.1"
+        },
+        {
+          "name": "it-filter",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-parallel-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "rabin-wasm",
+          "version": "0.1.5"
+        },
+        {
+          "name": "@assemblyscript/loader",
+          "version": "0.9.4"
+        },
+        {
+          "name": "bl",
+          "version": "5.1.0"
+        },
+        {
+          "name": "minimist",
+          "version": "1.2.8"
+        },
+        {
+          "name": "node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "name": "whatwg-url",
+          "version": "5.0.0"
+        },
+        {
+          "name": "tr46",
+          "version": "0.0.3"
+        },
+        {
+          "name": "webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "name": "@potential-guide/task-engine-storage",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-http",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-web-ui",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@tanstack/react-table",
+          "version": "9.3.1"
+        },
+        {
+          "name": "react",
+          "version": "19.3.1"
+        },
+        {
+          "name": "@tanstack/react-store",
+          "version": "0.11.2"
+        },
+        {
+          "name": "react-dom",
+          "version": "19.3.1"
+        },
+        {
+          "name": "scheduler",
+          "version": "0.28.0"
+        },
+        {
+          "name": "use-sync-external-store",
+          "version": "1.7.0"
+        },
+        {
+          "name": "@tanstack/store",
+          "version": "0.11.2"
+        },
+        {
+          "name": "@tanstack/table-core",
+          "version": "9.3.1"
+        },
+        {
+          "name": "class-variance-authority",
+          "version": "0.7.1"
+        },
+        {
+          "name": "clsx",
+          "version": "2.1.1"
+        },
+        {
+          "name": "get-nonce",
+          "version": "1.0.1"
+        },
+        {
+          "name": "lucide-react",
+          "version": "0.474.0"
+        },
+        {
+          "name": "radix-ui",
+          "version": "1.8.1"
+        },
+        {
+          "name": "@radix-ui/primitive",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-accessible-icon",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-visually-hidden",
+          "version": "1.2.13"
+        },
+        {
+          "name": "@radix-ui/react-primitive",
+          "version": "2.2.0"
+        },
+        {
+          "name": "@radix-ui/react-slot",
+          "version": "1.5.0"
+        },
+        {
+          "name": "@radix-ui/react-compose-refs",
+          "version": "1.1.5"
+        },
+        {
+          "name": "@radix-ui/react-alert-dialog",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-context",
+          "version": "1.3.0"
+        },
+        {
+          "name": "@radix-ui/react-dialog",
+          "version": "1.3.1"
+        },
+        {
+          "name": "aria-hidden",
+          "version": "1.2.6"
+        },
+        {
+          "name": "tslib",
+          "version": "2.9.1"
+        },
+        {
+          "name": "react-remove-scroll",
+          "version": "2.7.2"
+        },
+        {
+          "name": "react-remove-scroll-bar",
+          "version": "2.3.8"
+        },
+        {
+          "name": "react-style-singleton",
+          "version": "2.2.3"
+        },
+        {
+          "name": "use-callback-ref",
+          "version": "1.3.3"
+        },
+        {
+          "name": "use-sidecar",
+          "version": "1.1.3"
+        },
+        {
+          "name": "detect-node-es",
+          "version": "1.1.0"
+        },
+        {
+          "name": "@radix-ui/react-dismissable-layer",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-use-callback-ref",
+          "version": "1.1.5"
+        },
+        {
+          "name": "@radix-ui/react-use-layout-effect",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/react-use-effect-event",
+          "version": "0.0.5"
+        },
+        {
+          "name": "@radix-ui/react-focus-guards",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-focus-scope",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-id",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/react-portal",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-presence",
+          "version": "1.1.11"
+        },
+        {
+          "name": "@radix-ui/react-use-controllable-state",
+          "version": "1.3.0"
+        },
+        {
+          "name": "@radix-ui/react-arrow",
+          "version": "1.1.17"
+        },
+        {
+          "name": "@radix-ui/react-accordion",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-collapsible",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-collection",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-direction",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-aspect-ratio",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-checkbox",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-use-size",
+          "version": "1.1.5"
+        },
+        {
+          "name": "@radix-ui/react-context-menu",
+          "version": "2.4.1"
+        },
+        {
+          "name": "@radix-ui/react-menu",
+          "version": "2.2.1"
+        },
+        {
+          "name": "@radix-ui/react-popper",
+          "version": "1.4.0"
+        },
+        {
+          "name": "@floating-ui/react-dom",
+          "version": "2.1.9"
+        },
+        {
+          "name": "@floating-ui/dom",
+          "version": "1.8.0"
+        },
+        {
+          "name": "@floating-ui/core",
+          "version": "1.8.0"
+        },
+        {
+          "name": "@floating-ui/utils",
+          "version": "0.2.12"
+        },
+        {
+          "name": "@radix-ui/react-use-rect",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/rect",
+          "version": "1.1.3"
+        },
+        {
+          "name": "@radix-ui/react-roving-focus",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-use-is-hydrated",
+          "version": "0.1.3"
+        },
+        {
+          "name": "@radix-ui/react-avatar",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-dropdown-menu",
+          "version": "2.2.1"
+        },
+        {
+          "name": "@radix-ui/react-hover-card",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-form",
+          "version": "0.3.0"
+        },
+        {
+          "name": "@radix-ui/react-label",
+          "version": "2.1.17"
+        },
+        {
+          "name": "@radix-ui/react-menubar",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-one-time-password-field",
+          "version": "0.2.1"
+        },
+        {
+          "name": "@radix-ui/number",
+          "version": "1.1.3"
+        },
+        {
+          "name": "@radix-ui/react-password-toggle-field",
+          "version": "0.2.1"
+        },
+        {
+          "name": "@radix-ui/react-navigation-menu",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-use-previous",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/react-popover",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-radio-group",
+          "version": "1.5.1"
+        },
+        {
+          "name": "@radix-ui/react-progress",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-scroll-area",
+          "version": "1.4.0"
+        },
+        {
+          "name": "@radix-ui/react-separator",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-slider",
+          "version": "1.6.1"
+        },
+        {
+          "name": "@radix-ui/react-switch",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-tabs",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-toggle",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-select",
+          "version": "2.4.1"
+        },
+        {
+          "name": "@radix-ui/react-toggle-group",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-toolbar",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-toast",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-tooltip",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-use-escape-keydown",
+          "version": "1.1.6"
+        },
+        {
+          "name": "tailwind-merge",
+          "version": "3.7.0"
+        }
+      ]
+    },
+    "author": {
+      "entries": [
+        "@potential-guide/task-sdk",
+        "@potential-guide/ipfs-content"
+      ],
+      "internalPackages": 5,
+      "allPhysicalPathsInsideConsumer": true,
+      "productionPackages": [
+        {
+          "name": "@potential-guide/task-sdk",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "esbuild",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "yaml",
+          "version": "2.9.1"
+        },
+        {
+          "name": "@potential-guide/ipfs-content",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "kubo-rpc-client",
+          "version": "7.1.0"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "10.0.2"
+        },
+        {
+          "name": "cborg",
+          "version": "6.2.1"
+        },
+        {
+          "name": "multiformats",
+          "version": "14.0.5"
+        },
+        {
+          "name": "@ipld/dag-json",
+          "version": "11.0.1"
+        },
+        {
+          "name": "@ipld/dag-pb",
+          "version": "4.2.0"
+        },
+        {
+          "name": "@libp2p/crypto",
+          "version": "5.2.0"
+        },
+        {
+          "name": "@libp2p/interface",
+          "version": "3.4.0"
+        },
+        {
+          "name": "@multiformats/dns",
+          "version": "1.0.15"
+        },
+        {
+          "name": "@dnsquery/dns-packet",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@leichtgewicht/ip-codec",
+          "version": "2.0.5"
+        },
+        {
+          "name": "utf8-codec",
+          "version": "1.0.0"
+        },
+        {
+          "name": "hashlru",
+          "version": "2.3.0"
+        },
+        {
+          "name": "p-queue",
+          "version": "9.3.5"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4"
+        },
+        {
+          "name": "p-timeout",
+          "version": "7.0.2"
+        },
+        {
+          "name": "progress-events",
+          "version": "1.1.0"
+        },
+        {
+          "name": "uint8arrays",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@multiformats/multiaddr",
+          "version": "13.0.3"
+        },
+        {
+          "name": "@chainsafe/is-ip",
+          "version": "2.1.0"
+        },
+        {
+          "name": "uint8-varint",
+          "version": "3.0.0"
+        },
+        {
+          "name": "uint8arraylist",
+          "version": "3.0.2"
+        },
+        {
+          "name": "main-event",
+          "version": "1.0.5"
+        },
+        {
+          "name": "@noble/curves",
+          "version": "2.4.0"
+        },
+        {
+          "name": "@noble/hashes",
+          "version": "2.4.0"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "7.1.2"
+        },
+        {
+          "name": "@libp2p/logger",
+          "version": "6.2.16"
+        },
+        {
+          "name": "interface-datastore",
+          "version": "10.0.1"
+        },
+        {
+          "name": "abort-error",
+          "version": "1.0.2"
+        },
+        {
+          "name": "interface-store",
+          "version": "8.0.0"
+        },
+        {
+          "name": "weald",
+          "version": "1.1.3"
+        },
+        {
+          "name": "ms",
+          "version": "4.0.0-nightly.202508271359"
+        },
+        {
+          "name": "supports-color",
+          "version": "10.2.2"
+        },
+        {
+          "name": "@libp2p/peer-id",
+          "version": "6.0.18"
+        },
+        {
+          "name": "@multiformats/multiaddr-to-uri",
+          "version": "12.0.0"
+        },
+        {
+          "name": "any-signal",
+          "version": "4.2.0"
+        },
+        {
+          "name": "blob-to-it",
+          "version": "3.0.0"
+        },
+        {
+          "name": "browser-readablestream-to-it",
+          "version": "2.0.12"
+        },
+        {
+          "name": "dag-jose",
+          "version": "5.1.1"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "9.2.7"
+        },
+        {
+          "name": "cborg",
+          "version": "5.1.11"
+        },
+        {
+          "name": "multiformats",
+          "version": "13.1.3"
+        },
+        {
+          "name": "electron-fetch",
+          "version": "1.9.1"
+        },
+        {
+          "name": "encoding",
+          "version": "0.1.14"
+        },
+        {
+          "name": "iconv-lite",
+          "version": "0.7.3"
+        },
+        {
+          "name": "safer-buffer",
+          "version": "2.1.2"
+        },
+        {
+          "name": "err-code",
+          "version": "3.0.1"
+        },
+        {
+          "name": "ipfs-unixfs",
+          "version": "13.1.2"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "8.0.2"
+        },
+        {
+          "name": "iso-url",
+          "version": "1.2.1"
+        },
+        {
+          "name": "it-all",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-first",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-glob",
+          "version": "3.0.6"
+        },
+        {
+          "name": "fast-glob",
+          "version": "3.3.3"
+        },
+        {
+          "name": "@nodelib/fs.stat",
+          "version": "2.0.5"
+        },
+        {
+          "name": "@nodelib/fs.walk",
+          "version": "1.2.8"
+        },
+        {
+          "name": "@nodelib/fs.scandir",
+          "version": "2.1.5"
+        },
+        {
+          "name": "run-parallel",
+          "version": "1.2.0"
+        },
+        {
+          "name": "queue-microtask",
+          "version": "1.2.3"
+        },
+        {
+          "name": "fastq",
+          "version": "1.20.3"
+        },
+        {
+          "name": "reusify",
+          "version": "1.1.0"
+        },
+        {
+          "name": "glob-parent",
+          "version": "5.1.2"
+        },
+        {
+          "name": "is-glob",
+          "version": "4.0.3"
+        },
+        {
+          "name": "is-extglob",
+          "version": "2.1.1"
+        },
+        {
+          "name": "merge2",
+          "version": "1.4.1"
+        },
+        {
+          "name": "micromatch",
+          "version": "4.0.8"
+        },
+        {
+          "name": "braces",
+          "version": "3.0.3"
+        },
+        {
+          "name": "fill-range",
+          "version": "7.1.1"
+        },
+        {
+          "name": "to-regex-range",
+          "version": "5.0.1"
+        },
+        {
+          "name": "is-number",
+          "version": "7.0.0"
+        },
+        {
+          "name": "picomatch",
+          "version": "2.3.2"
+        },
+        {
+          "name": "it-last",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-map",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-peekable",
+          "version": "3.0.10"
+        },
+        {
+          "name": "it-to-stream",
+          "version": "1.0.0"
+        },
+        {
+          "name": "buffer",
+          "version": "6.0.3"
+        },
+        {
+          "name": "base64-js",
+          "version": "1.5.1"
+        },
+        {
+          "name": "ieee754",
+          "version": "1.2.1"
+        },
+        {
+          "name": "fast-fifo",
+          "version": "1.3.2"
+        },
+        {
+          "name": "get-iterator",
+          "version": "1.0.2"
+        },
+        {
+          "name": "p-defer",
+          "version": "3.0.0"
+        },
+        {
+          "name": "p-fifo",
+          "version": "1.0.0"
+        },
+        {
+          "name": "readable-stream",
+          "version": "3.6.2"
+        },
+        {
+          "name": "inherits",
+          "version": "2.0.4"
+        },
+        {
+          "name": "string_decoder",
+          "version": "1.3.0"
+        },
+        {
+          "name": "safe-buffer",
+          "version": "5.2.1"
+        },
+        {
+          "name": "util-deprecate",
+          "version": "1.0.2"
+        },
+        {
+          "name": "merge-options",
+          "version": "3.0.4"
+        },
+        {
+          "name": "is-plain-obj",
+          "version": "2.1.0"
+        },
+        {
+          "name": "nanoid",
+          "version": "5.1.16"
+        },
+        {
+          "name": "parse-duration",
+          "version": "2.1.11"
+        },
+        {
+          "name": "stream-to-it",
+          "version": "1.0.1"
+        },
+        {
+          "name": "it-stream-types",
+          "version": "2.0.4"
+        },
+        {
+          "name": "wherearewe",
+          "version": "2.0.1"
+        },
+        {
+          "name": "is-electron",
+          "version": "2.2.2"
+        },
+        {
+          "name": "ipfs-unixfs-exporter",
+          "version": "16.2.3"
+        },
+        {
+          "name": "@multiformats/murmur3",
+          "version": "2.2.8"
+        },
+        {
+          "name": "hamt-sharding",
+          "version": "3.0.8"
+        },
+        {
+          "name": "sparse-array",
+          "version": "1.3.2"
+        },
+        {
+          "name": "interface-blockstore",
+          "version": "7.0.1"
+        },
+        {
+          "name": "it-parallel",
+          "version": "3.0.16"
+        },
+        {
+          "name": "p-defer",
+          "version": "4.0.1"
+        },
+        {
+          "name": "it-pipe",
+          "version": "3.0.1"
+        },
+        {
+          "name": "it-merge",
+          "version": "3.0.15"
+        },
+        {
+          "name": "it-queueless-pushable",
+          "version": "2.0.5"
+        },
+        {
+          "name": "race-signal",
+          "version": "2.0.2"
+        },
+        {
+          "name": "it-pushable",
+          "version": "3.2.4"
+        },
+        {
+          "name": "it-to-buffer",
+          "version": "5.0.0"
+        },
+        {
+          "name": "ipfs-unixfs-importer",
+          "version": "17.1.1"
+        },
+        {
+          "name": "blockstore-core",
+          "version": "7.0.1"
+        },
+        {
+          "name": "it-filter",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-parallel-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "rabin-wasm",
+          "version": "0.1.5"
+        },
+        {
+          "name": "@assemblyscript/loader",
+          "version": "0.9.4"
+        },
+        {
+          "name": "bl",
+          "version": "5.1.0"
+        },
+        {
+          "name": "debug",
+          "version": "4.4.3"
+        },
+        {
+          "name": "ms",
+          "version": "2.1.3"
+        },
+        {
+          "name": "minimist",
+          "version": "1.2.8"
+        },
+        {
+          "name": "node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "name": "whatwg-url",
+          "version": "5.0.0"
+        },
+        {
+          "name": "tr46",
+          "version": "0.0.3"
+        },
+        {
+          "name": "webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0"
+        },
+        {
+          "name": "ajv",
+          "version": "8.20.0"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3"
+        },
+        {
+          "name": "fast-uri",
+          "version": "3.1.9"
+        },
+        {
+          "name": "json-schema-traverse",
+          "version": "1.0.0"
+        },
+        {
+          "name": "require-from-string",
+          "version": "2.0.2"
+        },
+        {
+          "name": "tar",
+          "version": "7.5.22"
+        },
+        {
+          "name": "@isaacs/fs-minipass",
+          "version": "4.0.1"
+        },
+        {
+          "name": "minipass",
+          "version": "7.1.3"
+        },
+        {
+          "name": "chownr",
+          "version": "3.0.0"
+        },
+        {
+          "name": "minizlib",
+          "version": "3.1.0"
+        },
+        {
+          "name": "yallist",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@potential-guide/check-runtime-files",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
+        }
+      ]
+    }
+  },
+  "kuboVersion": "ipfs version 0.43.1",
+  "kuboArchiveSha512": "e611cecef25cddb10b7f907145383608d9b31219ad7120041aeacfe2313882da1944f2897fda29bc2d959dd357e4950089ec8f2cbd52b29f2fc472bcae4356d0",
+  "kuboOfficialRelease": "https://github.com/ipfs/kubo/releases/tag/v0.43.1",
+  "kubo": {
+    "pid": 7208,
+    "rpc": "http://127.0.0.1:62873",
+    "offline": true,
+    "onlyUsedForAuthorAndRpcControl": true,
+    "stoppedForAllGatewayScenarios": true,
+    "controlRpc": "http://127.0.0.1:56763",
+    "controlPid": 9296
+  },
+  "bundle": {
+    "cid": "bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu",
+    "blocks": 7,
+    "pinned": true,
+    "cleanYaml": true,
+    "noPrivateResolvedMetadata": true,
+    "expectedResult": {
+      "message": "gateway-outer-proof",
+      "resourceBytes": 600000
+    }
+  },
+  "rawSource": {
+    "event": "ready",
+    "url": "http://127.0.0.1:50968",
+    "pid": 26856
+  },
+  "rawSourceStats": {
+    "rpcRequests": 0,
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 169
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreigyuwq2puljaoprxv6vjdkvn4mvhghsed5pgl77tgjumqyhdw532y?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 168051
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreiflwd42fya3hpxdlt3ev3heh6jgilk6zylgituxmyfhdvfgknv6cq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 299
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 61
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 158
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 75712
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 262144
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 169
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreigyuwq2puljaoprxv6vjdkvn4mvhghsed5pgl77tgjumqyhdw532y?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 168051
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreiflwd42fya3hpxdlt3ev3heh6jgilk6zylgituxmyfhdvfgknv6cq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 299
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 61
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 158
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 75712
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 262144
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 169
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreigyuwq2puljaoprxv6vjdkvn4mvhghsed5pgl77tgjumqyhdw532y?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 168051
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreiflwd42fya3hpxdlt3ev3heh6jgilk6zylgituxmyfhdvfgknv6cq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 299
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 61
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 158
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 75712
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 262144
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 169
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreigyuwq2puljaoprxv6vjdkvn4mvhghsed5pgl77tgjumqyhdw532y?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 168051
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreiflwd42fya3hpxdlt3ev3heh6jgilk6zylgituxmyfhdvfgknv6cq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 299
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 61
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 158
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 75712
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 262144
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 169
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreigyuwq2puljaoprxv6vjdkvn4mvhghsed5pgl77tgjumqyhdw532y?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 168051
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreiflwd42fya3hpxdlt3ev3heh6jgilk6zylgituxmyfhdvfgknv6cq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 299
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 61
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 158
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 75712
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 262144
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 169
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreigyuwq2puljaoprxv6vjdkvn4mvhghsed5pgl77tgjumqyhdw532y?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 168051
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreiflwd42fya3hpxdlt3ev3heh6jgilk6zylgituxmyfhdvfgknv6cq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 299
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 61
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 158
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 75712
+      },
+      {
+        "method": "GET",
+        "path": "/good/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "bytes": 262144
+      },
+      {
+        "method": "GET",
+        "path": "/bad/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false,
+        "corrupt": true
+      },
+      {
+        "method": "GET",
+        "path": "/oversize/ipfs/bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu?format=raw",
+        "accept": "application/vnd.ipld.raw",
+        "credentialsPresent": false
+      }
+    ],
+    "oversizeClosedEarly": true,
+    "oversizeBytesWritten": 2129920
+  },
+  "configProtection": {
+    "originalUserUnchanged": true,
+    "projectUnchanged": true,
+    "oldDatabaseUnchanged": true,
+    "projectDatabaseAbsent": true
+  },
+  "supersedes": {
+    "sourceCommit": "843e8ecb58d320a9050815eb44dac8379ec4db9e",
+    "evidenceCommit": "af6661c83271fea2e3befb6e39603f9a934e506c",
+    "reason": "??? ecb55bd2 ??? 9648e209 ???????? 843e8ecb ???????????????????",
+    "previousScenarios": 7,
+    "previousConfigurationFailures": 18,
+    "previousContentFailures": 3,
+    "historicalPreviousAttempt": {
+      "scenarios": 6,
+      "configurationFailures": 18,
+      "contentFailuresRecorded": 0,
+      "issue": "???????????????????? requests ?????????????????????????????????",
+      "helpersRemaining": 0,
+      "ownedRootRemoved": true
+    },
+    "historicalRepositoryValidation": {
+      "build": {
+        "command": "pnpm build",
+        "exit": 0,
+        "successfulWorkspaces": 37
+      },
+      "check": {
+        "command": "pnpm check",
+        "exit": 1,
+        "successfulTasks": 66,
+        "totalTasks": 74,
+        "failedPackage": "@potential-guide/check-task",
+        "failures": [
+          "HTTPS restart child readiness timeout",
+          "file restart child readiness timeout"
+        ]
+      },
+      "isolatedRestart": {
+        "command": "pnpm --filter @potential-guide/check-task exec tsx --test test\\restart.test.ts",
+        "exit": 0,
+        "passed": 2
+      },
+      "independentClassification": {
+        "command": "pnpm --filter @potential-guide/objective-monorepo-standard exec tsx --test --test-name-pattern=\"real repository has thirty-seven\" test\\pilot.test.mjs",
+        "exit": 1,
+        "issue": ".agent/skills/component-responsibility-docs/SKILL.md: file-classification unverified"
+      },
+      "harnessSyntax": {
+        "command": "node --check <outer>\\Gateway-Verify.mjs",
+        "exit": 0
+      },
+      "resultRedaction": {
+        "absolutePersonalPathMatches": 0
+      }
+    }
+  },
+  "repositoryValidation": {
+    "sourceCommit": "9648e2094b296b7f559c79c6ac994e19277300ea",
+    "build": {
+      "command": "pnpm build",
+      "exit": 0,
+      "successfulWorkspaces": 37
+    },
+    "sdkRelativeSchemas": {
+      "command": "pnpm --filter @potential-guide/task-sdk exec tsx --test test\\bundle.test.ts",
+      "exit": 0,
+      "passed": 5,
+      "includesBundleRelativeSchemaReferences": true
+    },
+    "gatewayLoaderRegression": {
+      "command": "pnpm exec tsx --test packages\\ipfs-content\\test\\*.test.ts apps\\pguide-task-engine\\test\\*.test.ts packages\\task-engine\\test\\bundle.test.ts packages\\task-engine-server\\test\\bundle.test.ts",
+      "exit": 0,
+      "passed": 16
+    },
+    "fullCheck": {
+      "executedForThisSource": false,
+      "reason": "? parent ???? refresh?? source ? pnpm check ?????? supersedes.historicalRepositoryValidation??????? HEAD ???"
+    },
+    "harnessSyntax": {
+      "command": "node --check <outer>\\Gateway-Verify.mjs",
+      "exit": 0
+    }
+  }
+}

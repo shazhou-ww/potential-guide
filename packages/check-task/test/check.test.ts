@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { resolve, join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
-import { TaskClient } from "@potential-guide/task-engine-http";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import {
   type ContractArtifact,
@@ -12,10 +9,13 @@ import {
   inspectContractFiles,
 } from "@potential-guide/check-artifacts/contracts";
 import { newId } from "@potential-guide/task-engine";
-import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
+import { TaskClient } from "@potential-guide/task-engine-http";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import type { TaskSnapshot, MatchPolicy } from "@potential-guide/task-protocol";
+import type { MatchPolicy, TaskSnapshot } from "@potential-guide/task-protocol";
 import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createFixtureEngine as createTaskEngine } from "../../task-engine/test/driver.js";
 import type { ArtifactSource } from "../src/index.js";
 import { createCheckFixture as createCheckTaskType } from "./type-fixture.js";
@@ -461,10 +461,10 @@ export default(input,context)=>type.run(input,context);`,
     entry,
     outDirectory: join(directory, "bundle"),
   });
-  const packed = await packTaskBundle(built.directory, join(directory, "bundle.tgz"));
-  const bundle = { url: pathToFileURL(packed.archive).href, digest: built.digest };
+  const ipfsClient = new MemoryIpfsClient();
+  const bundle = (await importTaskBundle(built.directory, ipfsClient)).cid;
   const server = await startTaskServer({
-    bundleDirectory: join(directory, "cache"),
+    ipfsClient,
     store,
     port: 0,
     authorize: (who, _operation, scope) => who.scope === scope,

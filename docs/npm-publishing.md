@@ -8,8 +8,6 @@ Potential Guide defines independent CLI, library, and Objective releases:
 | `@potential-guide/task-engine` | `task-engine-vX.Y.Z` |
 | `@potential-guide/task-engine-http` | `task-engine-http-vX.Y.Z` |
 | `@potential-guide/task-engine-storage` | `task-engine-storage-vX.Y.Z` |
-| `@potential-guide/checker-host` | `checker-host-vX.Y.Z` |
-| `@potential-guide/objective-host` | `objective-host-vX.Y.Z` |
 | `@potential-guide/effects` | `effects-vX.Y.Z` |
 | `@potential-guide/git-source` | `git-source-vX.Y.Z` |
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
@@ -39,20 +37,26 @@ Command wrapper packages use the `pguide-` prefix, including grouped
 and keep their responsibility names.
 
 Release packages in manifest dependency order. `effects` and `pilot-protocol`
-are protocol; `check-host` follows `effects`, and `objective-pilot` consumes
-Check Host and both protocols, then `objective-regulator` builds regulation capabilities.
+are protocol; `objective-pilot` consumes both protocols, then
+`objective-regulator` builds regulation capabilities. Checker/Objective Host
+packages and their release tags are retired.
 The generic task packages are independent of those business hosts: release
 `task-protocol` before `task-engine`, `task-engine-http`, and `task-engine-storage`.
 Adding their packaging checks does not publish or deploy them.
-`check-environment`, `task-sdk`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
+`check-environment`, `task-sdk`, `pguide-task-bundle`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
 verification inventory, alongside the artifact support packages. Their MVP
 checks pack/install real consumers, but do not add release tags, bootstrap
 publication, or workflow authorization. A later release requires an explicit
 publication scope and package-specific tag configuration.
+`@potential-guide/pguide-task-engine` and `@potential-guide/task-engine-web-ui`
+are also local-verification-only packages under `apps/`. The command's packed
+production dependencies include the public UI server and browser assets; no
+private workspace dependency is allowed. No new release tags or npm publication
+authorization are introduced by this service-command change.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
-`cli-runtime` consumes Pilot and Git source;
+`cli-runtime` consumes Pilot and artifact/file primitives;
 the command packages consume it and CLI Core. Publish `pguide-pilot` and
 `pguide-config`, `pguide-agents` and `pguide-objectives` before `pguide`, which
 installs all four as production dependencies.
@@ -108,8 +112,6 @@ rules must allow these release tags:
 - `task-engine-v*`
 - `task-engine-http-v*`
 - `task-engine-storage-v*`
-- `checker-host-v*`
-- `objective-host-v*`
 - `objective-monorepo-standard-v*`
 - `objective-package-standard-v*`
 - `objective-devbox-health-v*`
@@ -161,8 +163,6 @@ npm whoami --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-cli-core-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-effects-0.0.0.tgz \
-  --access public --registry=https://registry.npmjs.org/
-npm publish .cache/npm-bootstrap/potential-guide-check-host-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
 npm publish .cache/npm-bootstrap/potential-guide-git-source-0.0.0.tgz \
   --access public --registry=https://registry.npmjs.org/
@@ -334,16 +334,11 @@ than being required as accidental CLI dependencies. Registry modes also check
 the manifest versions of any runtime support packages in that closure.
 Tarball overrides are never used in either registry mode.
 Deployment fixtures use the `worker.cjs` contract, not retired `run.*` checks.
-The installed `pguide-checker-host` launcher and compatibility alias
-`pguide-check-host` require discovery-owned reservations, not user-command
-metadata or help flags. Both verifiers use the shared discovery launcher
-inventory and check their installed executable paths instead.
-The verifier owns a Host loaded from the installed package and closes it before
-removing the consumer workspace.
-Setup and self-check fixtures use the built Objective packages and an explicit
-standalone marker package mapping, including generated workers and exact package
-digest assertions, rather than the obsolete source-only Git setup fixture.
-Git source consumption remains covered by the worker-based regulation fixture.
+The old Host launchers and their deployment fixtures are removed.
+CLI execution checks now verify explicit retirement rather than running legacy
+Probe/Regulation workflows. Static CLI and generic Task Bundle consumers remain
+verified; old setup/self-check CLI execution and continuation are not supported
+until explicitly migrated.
 
 For a separately authorized stable release, update manifests to the reviewed stable
 versions and publish in dependency order first. Then verify the default consumer:

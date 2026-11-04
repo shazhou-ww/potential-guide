@@ -1,5 +1,3 @@
-export const discoveryHostBins = ["pguide-checker-host", "pguide-check-host"];
-
 export const releasePackages = [
   ...[
     ["task-protocol", ["reduce", "project", "isTimedOut", "json"]],
@@ -27,38 +25,6 @@ export const releasePackages = [
     bins: [],
     objective: true,
   })),
-  {
-    id: "checker-host",
-    directory: "check-host",
-    name: "@potential-guide/checker-host",
-    requiredExports: [
-      "CheckKernel",
-      "CheckClient",
-      "connectHost",
-      "connectCheckerHost",
-      "readArtifact",
-      "serve",
-      "CheckerService",
-      "createServiceRouter",
-    ],
-    bins: discoveryHostBins,
-    forbiddenDependencies: ["@potential-guide/objective-pilot", "@potential-guide/cli-core"],
-  },
-  {
-    id: "objective-host",
-    directory: "objective-host",
-    name: "@potential-guide/objective-host",
-    requiredExports: [
-      "ObjectiveService",
-      "ObjectiveTaskClient",
-      "ProbeTask",
-      "createObjectiveRouter",
-      "createUnifiedServices",
-      "serveUnifiedHost",
-    ],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/objective-pilot", "@potential-guide/cli-core"],
-  },
   {
     id: "effects",
     directory: "effects",
@@ -97,7 +63,6 @@ export const releasePackages = [
       "parseCheckEnvelope",
       "createProcessCheckProbe",
       "createHttpCheckProbe",
-      "createWorkerCheckProbe",
     ],
     bins: [],
     forbiddenDependencies: [
@@ -238,6 +203,41 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "pguide-task-engine",
+    workspace: "apps",
+    directory: "pguide-task-engine",
+    name: "@potential-guide/pguide-task-engine",
+    bins: ["pguide-task-engine"],
+    requiredFiles: ["settings.json"],
+  },
+  {
+    id: "task-engine-web-ui",
+    workspace: "apps",
+    directory: "task-engine-web-ui",
+    name: "@potential-guide/task-engine-web-ui",
+    bins: [],
+    sourceOutputDirectory: "dist/src/",
+    requiredFiles: [
+      "dist/src/server.js",
+      "dist/src/server.d.ts",
+      "dist/public/index.html",
+      "dist/public/app.js",
+      "dist/public/style.css",
+    ],
+  },
+  {
+    id: "ipfs-content",
+    directory: "ipfs-content",
+    name: "@potential-guide/ipfs-content",
+    requiredExports: [
+      "createIpfsClient",
+      "createIpfsGatewayClient",
+      "openContent",
+      "importContent",
+    ],
+    bins: [],
+  },
+  {
     id: "check-environment",
     directory: "check-environment",
     name: "@potential-guide/check-environment",
@@ -250,6 +250,12 @@ export const verificationPackages = [
     name: "@potential-guide/task-sdk",
     requiredExports: ["runTask", "RunFailure"],
     bins: [],
+  },
+  {
+    id: "pguide-task-bundle",
+    directory: "pguide-task-bundle",
+    name: "@potential-guide/pguide-task-bundle",
+    bins: ["pguide-task-bundle"],
   },
   {
     id: "probe-task",
@@ -276,7 +282,8 @@ export const verificationPackages = [
     directory: "task-engine-server",
     name: "@potential-guide/task-engine-server",
     requiredExports: ["startTaskServer"],
-    bins: ["task-engine-server"],
+    bins: [],
+    forbiddenFiles: ["dist/main.js"],
     forbiddenDependencies: [
       "@potential-guide/check-task",
       "@potential-guide/probe-task",

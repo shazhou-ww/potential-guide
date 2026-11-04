@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { once } from "node:events";
+import { writeFileSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { writeFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { newId } from "@potential-guide/task-engine";
 import { MemoryStore } from "@potential-guide/task-engine/testing";
@@ -12,7 +12,7 @@ import { startTaskServer } from "@potential-guide/task-engine-server";
 import { TaskError } from "@potential-guide/task-protocol";
 import { startUiServer } from "../src/server.js";
 import { assertDirectoryPreserved, type DirectoryView } from "./directory-invariants.js";
-import { fixtureTypes, fixtureBundles, submitFixture } from "./types.js";
+import { fixtureBundles, fixtureTypes, submitFixture } from "./types.js";
 
 const [executable, directory, reserved = "9223"] = process.argv.slice(2);
 if (!executable || !directory)
@@ -158,7 +158,7 @@ try {
     port: 0,
     store: new MemoryStore(),
     ownStore: true,
-    bundleDirectory: resolve(output, "bundle-cache"),
+    ipfsClient: resources.ipfsClient,
     authorize: (caller, _operation, scope) => caller.scope === scope,
     resolveCaller(request) {
       if (request.headers.get("authorization") !== `Bearer ${token}`)
@@ -300,7 +300,7 @@ try {
   checks.visiblePanels = await evaluate(
     "document.querySelectorAll('main [role=tabpanel]:not([hidden])').length",
   );
-  assert.equal(checks.tabs, 3);
+  assert.equal(checks.tabs, 2);
   assert.equal(checks.visiblePanels, 1);
   checks.actualComponents =
     await evaluate(`['tabs','tabs-list','tabs-trigger','tabs-content','button','input','table','table-row'].every(
@@ -317,7 +317,7 @@ try {
   await pressKey("ArrowRight", 39);
   await wait("document.querySelector('#tab-executions').getAttribute('aria-selected')==='true'");
   await pressKey("ArrowRight", 39);
-  await wait("document.querySelector('#tab-cache').getAttribute('aria-selected')==='true'");
+  await wait("document.querySelector('#tab-tasks').getAttribute('aria-selected')==='true'");
   await pressKey("ArrowLeft", 37);
   await wait("document.querySelector('#tab-executions').getAttribute('aria-selected')==='true'");
   await pressKey("ArrowLeft", 37);
@@ -378,8 +378,8 @@ try {
   await call("Fetch.disable");
   await wait("document.querySelector('#create-title')?.textContent==='编辑参数并新建任务'");
   checks.glyphEditAction = await evaluate(`(() => {
-    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Task Bundle 引用（URL#digest）');
-    return document.getElementById(label.htmlFor).value===${JSON.stringify(`${resources.bundles.survey!.url}#${resources.bundles.survey!.digest}`)};
+    const label=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent==='Task Bundle 引用（根 CID / JSON）');
+    return document.getElementById(label.htmlFor).value===${JSON.stringify(String(resources.bundles.survey))};
   })()`);
   assert.equal(checks.glyphEditAction, true);
   checks.rowControlsIsolated = true;
@@ -519,7 +519,7 @@ try {
   assert.equal(checks.dialogTabTrap, true);
   assert.equal(checks.nonceStylesApplied, true);
   await evaluate(`(() => {
-    for (const [label,value] of [['Task Bundle 引用（URL#digest）',${JSON.stringify(`${resources.bundles.echo!.url}#${resources.bundles.echo!.digest}`)}],['超时预算 timeoutMs（毫秒）','10000']]) {
+    for (const [label,value] of [['Task Bundle 引用（根 CID / JSON）',${JSON.stringify(String(resources.bundles.echo))}],['超时预算 timeoutMs（毫秒）','10000']]) {
       const item=[...document.querySelectorAll('#form-fields label')].find(item=>item.htmlFor&&item.textContent===label);
       document.getElementById(item.htmlFor).value=value;
     }
@@ -1133,80 +1133,13 @@ try {
   await click('#task-detail [data-action="暂停观察"]');
   await wait("document.querySelector('#task-detail')?.textContent.includes('观察已暂停')");
   await closeOverlay();
-  await click("#tab-cache");
-  checks.cachePeerPage = await evaluate(
-    "document.querySelector('#tab-cache').getAttribute('aria-selected')==='true' && !document.querySelector('[role=dialog]') && document.querySelectorAll('main [role=tabpanel]:not([hidden])').length===1",
-  );
-  assert.equal(checks.cachePeerPage, true);
-  await wait(
-    "document.querySelector('#bundle-cache tbody tr [data-action=\"查看契约\"]')?.disabled===false",
-  );
-  await click('#bundle-cache tbody tr:first-child [data-action="查看契约"]');
-  await wait("document.querySelector('#cache-detail details[data-key^=\"cache-detail:\"] pre')");
-  const cachedDetail = await evaluate<{
-    digest: string;
-    leases: number;
-    declaration: { name: string };
-  }>("JSON.parse(document.querySelector('#cache-detail details pre').textContent)");
-  assert.ok(cachedDetail.declaration.name);
-  assert.match(cachedDetail.digest, /^sha256:[a-f0-9]{64}$/);
-  checks.cacheDetail = true;
-  await evaluate("globalThis.smokeCacheSheet=document.querySelector('#cache-detail-sheet');true");
-  await click(".error-launcher");
-  await wait("!!document.querySelector('.error-sheet')");
-  checks.errorsPreserveCacheDetail = await evaluate(`(() => {
-    const errors=document.querySelector('.error-sheet').getBoundingClientRect();
-    return smokeCacheSheet===document.querySelector('#cache-detail-sheet')
-      && Math.abs(errors.bottom-innerHeight)<=2;
-  })()`);
-  assert.equal(checks.errorsPreserveCacheDetail, true);
-  await screenshot("errors-over-detail.png");
-  await click(".error-sheet [data-close]");
-  await wait("!document.querySelector('.error-sheet')");
-  assert.equal(
-    await evaluate("smokeCacheSheet===document.querySelector('#cache-detail-sheet')"),
-    true,
-  );
-  await click("#cache-detail-sheet [data-close]");
-  checks.narrowCacheFits = await evaluate(`(() => {
-    const panel=document.querySelector('#cache'), rect=panel.getBoundingClientRect();
-    return rect.left>=0 && rect.right<=innerWidth+1 && panel.scrollWidth<=panel.clientWidth
-      && document.documentElement.scrollWidth<=innerWidth;
-  })()`);
-  assert.equal(checks.narrowCacheFits, true);
-  await screenshot("narrow-cache.png");
+  assert.equal(await evaluate("document.querySelector('#tab-cache') === null"), true);
   await call("Emulation.setDeviceMetricsOverride", {
     width: 1440,
     height: 1000,
     deviceScaleFactor: 1,
     mobile: false,
   });
-  await screenshot("bundle-cache.png");
-  const taskBeforeEviction = backend.engine.getTask(controlled.taskId, caller);
-  const cacheRow = `#bundle-cache tr[data-key="${cachedDetail.digest}"]`;
-  const cacheDeadline = performance.now() + 10000;
-  while ((await backend.engine.getCachedBundle(cachedDetail.digest, caller)).leases > 0) {
-    assert.ok(performance.now() < cacheDeadline, "cache should become idle after all Run releases");
-    await delay(50);
-  }
-  await click('#bundle-cache [data-action="刷新缓存"]');
-  await wait(`(() => {
-    const button=document.querySelector(${JSON.stringify(`${cacheRow} [data-action="清理此缓存"]`)});
-    return button && !button.disabled;
-  })()`);
-  await click(`${cacheRow} [data-action="清理此缓存"]`);
-  assert.equal((await backend.engine.getCachedBundle(cachedDetail.digest, caller)).cached, true);
-  await click('#cache-confirm [data-action="确认清理"]');
-  await wait(`!document.querySelector(${JSON.stringify(cacheRow)})`);
-  await assert.rejects(backend.engine.getCachedBundle(cachedDetail.digest, caller), {
-    code: "not_found",
-  });
-  const taskAfterEviction = backend.engine.getTask(controlled.taskId, caller);
-  assert.equal(taskAfterEviction.taskId, taskBeforeEviction.taskId);
-  assert.equal(taskAfterEviction.stage, taskBeforeEviction.stage);
-  assert.deepEqual(taskAfterEviction.result, taskBeforeEviction.result);
-  checks.cacheSingleEviction = true;
-  checks.cachePreservesTaskHistory = true;
   await click("#tab-tasks");
   checks.cspViolations = await evaluate("smokeCsp");
   assert.deepEqual(checks.cspViolations, []);

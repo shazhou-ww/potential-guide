@@ -1,0 +1,714 @@
+{
+  "sourceCommit": "9e436e535cd7bafb5034a9be477d44350e8c1bb3",
+  "commands": [
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-agents",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-cli-core",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-pilot",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\cli-runtime",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\check-artifacts",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\check-runtime-files",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\objective-pilot",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\effects",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pilot-protocol",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\objective-declarations",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-config",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-objectives",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\apps\\pguide-task-engine",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\ipfs-content",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-server",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-protocol",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-http",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-storage",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\apps\\task-engine-web-ui",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-sdk",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "install",
+        "--prod",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "install",
+        "--prod",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "<owned-root>\\author",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\runtime\\node_modules\\.bin\\pguide-task-engine.cmd",
+      "args": [
+        "--pguide-command-metadata"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\runtime\\node_modules\\.bin\\pguide.cmd",
+      "args": [
+        "task-engine",
+        "--help",
+        "--format",
+        "json",
+        "--no-global-config"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "version"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "init",
+        "--profile=test"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.API",
+        "/ip4/127.0.0.1/tcp/0"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "config",
+        "Addresses.Gateway",
+        "/ip4/127.0.0.1/tcp/0"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": [
+        "prepare.mjs",
+        "http://127.0.0.1:53807"
+      ],
+      "cwd": "<owned-root>\\author",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\tools\\kubo\\ipfs.exe",
+      "args": [
+        "repo",
+        "stat"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    }
+  ],
+  "scenarios": [
+    {
+      "label": "纯参数 / Engine-only",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "cli/cli.sqlite",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:53807"
+      ],
+      "url": "http://127.0.0.1:53816",
+      "database": "<owned-root>\\runtime\\workspace\\cli\\cli.sqlite",
+      "requestId": "01M6H3CHKETJN446FKW5AQ1MPG",
+      "taskId": "01M6H3CHWXE1R001FY48PH74CQ",
+      "result": {
+        "message": "non-sensitive-outer-proof"
+      },
+      "exited": 0,
+      "graceful": true,
+      "kuboSurvived": true
+    },
+    {
+      "label": "发现 / YAML / CLI 端口覆盖",
+      "entry": "pguide task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--config",
+        "files/server.yaml",
+        "--port",
+        "0"
+      ],
+      "url": "http://127.0.0.1:53826",
+      "database": "<owned-root>\\runtime\\workspace\\files\\yaml.sqlite",
+      "requestId": "01M6H3CN7VP91YTN7GM3VHZ7J0",
+      "taskId": "01M6H3CNH3Q5Y2JZ9BJ60P4S7T",
+      "result": {
+        "message": "non-sensitive-outer-proof"
+      },
+      "exited": 0,
+      "graceful": true,
+      "kuboSurvived": true
+    },
+    {
+      "label": "独立入口 / JSON",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--config",
+        "files/server.json"
+      ],
+      "url": "http://127.0.0.1:53834",
+      "database": "<owned-root>\\runtime\\workspace\\files\\json.sqlite",
+      "requestId": "01M6H3CQ5BJVJMHXBG8WKB5P5T",
+      "taskId": "01M6H3CQF6VK2364QA4QXRFB75",
+      "result": {
+        "message": "non-sensitive-outer-proof"
+      },
+      "exited": 0,
+      "graceful": true,
+      "kuboSurvived": true
+    },
+    {
+      "label": "发现 / 隔离用户 JSONC / 项目排除",
+      "entry": "pguide task-engine",
+      "arguments": [],
+      "url": "http://127.0.0.1:55499",
+      "database": "<owned-root>\\isolated-user\\pguide\\user.sqlite",
+      "requestId": "01M6H3CT0VGF29V2ESS54A76JF",
+      "taskId": "01M6H3CTAJPDDZ6W2ARA8CC0P1",
+      "result": {
+        "message": "non-sensitive-outer-proof"
+      },
+      "exited": 0,
+      "graceful": true,
+      "kuboSurvived": true
+    },
+    {
+      "label": "四层覆盖 / UI HTTP / 实际 RPC",
+      "entry": "pguide-task-engine",
+      "arguments": [
+        "--config",
+        "files/ui.yaml",
+        "--port",
+        "0",
+        "--ipfs-rpc-url",
+        "http://127.0.0.1:53807",
+        "--ui"
+      ],
+      "url": "http://127.0.0.1:55506",
+      "uiUrl": "http://127.0.0.1:55507",
+      "database": "<owned-root>\\runtime\\workspace\\files\\ui.sqlite",
+      "requestId": "01M6H3CW29NQFEQMJSVEC121XY",
+      "taskId": "01M6H3CWE01D7AJ2GHRHE753S4",
+      "result": {
+        "message": "non-sensitive-outer-proof"
+      },
+      "exited": 0,
+      "graceful": true,
+      "kuboSurvived": true
+    },
+    {
+      "label": "发现 / 禁用损坏全局文件",
+      "entry": "pguide task-engine",
+      "arguments": [
+        "--no-global-config",
+        "--config",
+        "files/isolated.json"
+      ],
+      "url": "http://127.0.0.1:54406",
+      "database": "<owned-root>\\runtime\\workspace\\files\\isolated.sqlite",
+      "requestId": "01M6H3CYS6E0HH2XPQCF0RZ2R9",
+      "taskId": "01M6H3CZ2H7M5Q79E2PJ83BX35",
+      "result": {
+        "message": "non-sensitive-outer-proof"
+      },
+      "exited": 0,
+      "graceful": true,
+      "kuboSurvived": true
+    }
+  ],
+  "failures": [
+    {
+      "entry": "pguide-task-engine",
+      "label": "损坏用户配置",
+      "exit": 1
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "被覆盖的非法文件值",
+      "exit": 1
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "非回环监听",
+      "exit": 1
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "执行模块退役",
+      "exit": 1
+    },
+    {
+      "entry": "pguide-task-engine",
+      "label": "被覆盖的非法用户值",
+      "exit": 1
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "损坏用户配置",
+      "exit": 2
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "被覆盖的非法文件值",
+      "exit": 1
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "非回环监听",
+      "exit": 1
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "执行模块退役",
+      "exit": 1
+    },
+    {
+      "entry": "pguide task-engine",
+      "label": "被覆盖的非法用户值",
+      "exit": 1
+    }
+  ],
+  "cleanup": {
+    "kuboSurvivedAllServiceStops": true,
+    "kuboExited": true,
+    "repoLockReleased": true,
+    "signalControllerClosed": true,
+    "remainingOwnedProcesses": 0,
+    "realUserConfigUnchanged": true,
+    "kuboIdentityRemoved": true,
+    "operatingSystemProcessProbeCount": 0,
+    "externalEnvironmentsRemoved": 2,
+    "externalDirectoriesRemaining": 0
+  },
+  "packedPackages": 22,
+  "graphs": {
+    "runtime": {
+      "internalPackages": 21,
+      "allPhysicalPathsInsideConsumer": true,
+      "productionPackageCount": 406,
+      "internalVersions": [
+        {
+          "name": "pguide",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-agents",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/cli-core",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-pilot",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/cli-runtime",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/check-runtime-files",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/objective-pilot",
+          "version": "0.2.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/effects",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pilot-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/objective-declarations",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-config",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-objectives",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-task-engine",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-server",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-storage",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-http",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/ipfs-content",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-web-ui",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "author": {
+      "internalPackages": 5,
+      "allPhysicalPathsInsideConsumer": true,
+      "productionPackageCount": 142,
+      "internalVersions": [
+        {
+          "name": "@potential-guide/task-sdk",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/ipfs-content",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/check-artifacts",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/check-runtime-files",
+          "version": "0.1.0"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
+        }
+      ]
+    }
+  },
+  "kuboVersion": "ipfs version 0.43.1",
+  "kuboArchiveSha512": "e611cecef25cddb10b7f907145383608d9b31219ad7120041aeacfe2313882da1944f2897fda29bc2d959dd357e4950089ec8f2cbd52b29f2fc472bcae4356d0",
+  "kuboPid": 45120,
+  "kuboRpc": "http://127.0.0.1:53807",
+  "bundleCid": "bafybeigm3qxb653kykqlndsebzmzc55bi4qphsq6tbtdt4j5ps46tkoeq4",
+  "configurationProtection": {
+    "realUserConfigUnchanged": true,
+    "projectConfigUnchanged": true,
+    "oldDatabaseSentinelUnchanged": true,
+    "projectDatabaseAbsent": true,
+    "executableConfigMarkerAbsent": true
+  },
+  "verifiedDeploymentContractRevision": "a6cad9f317a8bfc553d506f49a8cbafa6c49bd81",
+  "acceptedImplementationRevision": "97a0be842462e555597cc09defae59d06e2849e7"
+}

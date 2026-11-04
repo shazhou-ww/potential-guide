@@ -1,11 +1,16 @@
 # Implementation
 
+实施固定契约及兼容边界见 [Design.md](Design.md)，可复核命令、结果、源码链接与
+独立 tarball/standalone Web UI 运行步骤统一见 [Evidence.md](Evidence.md)。
+Deployment 项仍由独立部署门禁核验，本文件不授予部署批准。
+
 ## Steps
 
 ### I-S01: 定义诊断日志契约
 
 明确日志级别、Run 归属、顺序、输出背压、容量与保留策略，以及不可用和超限的可见语义。
-对照[现有 Worker 协议](../../../../../docs/task-bundle-worker.md)，明确协议版本与兼容边界，不原地扩写已固定的协议。
+对照[现有 Worker 协议](../../../../../docs/task-bundle-worker.md)，统一在尚未正式发布的 v1 内演进日志契约。
+已移除的 v2 与未来未知版本明确拒绝，不以别名兼容；历史 Evidence 不作为当前 v1 验证。
 以[简短设计与 Worker API 前后对比](Design.md)为可调整的准备期设计候选；实施时固定类型、限额和兼容方案。
 
 ### I-S02: 接通作者与消费链路

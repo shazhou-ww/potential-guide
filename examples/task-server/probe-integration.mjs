@@ -8,11 +8,13 @@ import {
 } from "@potential-guide/check-artifacts/build";
 import { checkerSchemaUri, objectiveSchemaUri } from "@potential-guide/check-artifacts/contracts";
 import { newId } from "@potential-guide/task-engine";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import { composeProbeServer } from "./probe-config.mjs";
 import { buildExampleBundle } from "./build-bundles.mjs";
+import { composeProbeServer } from "./probe-config.mjs";
 
 const directory = resolve(".cache", `probe-integration-${randomUUID()}`);
+const ipfsClient = new MemoryIpfsClient();
 await mkdir(directory, { recursive: true });
 const page = Buffer.from("---\ntitle: Packed\ndescription: Packed\n---\nBody\n");
 const checker = await writeContractArtifact(
@@ -81,6 +83,7 @@ const body = {
 };
 function configure() {
   return composeProbeServer({
+    ipfsClient,
     database: join(directory, "tasks.sqlite"),
     token: "fixture",
   });
@@ -108,8 +111,9 @@ async function observation(reader) {
 }
 let server;
 try {
-  server = await startTaskServer(configure());
+  server = await startTaskServer(await configure());
   const authorOptions = {
+    ipfsClient,
     directory: join(directory, "author"),
     sourceOptions: { allowedOrigins: ["https://example.test"] },
     downloadResources: {
@@ -190,7 +194,7 @@ try {
   assert.ok((await publicHistory.json()).events.some((event) => event.type === "run.exited"));
   assert.equal((await fetch(`${server.url}/tasks/${accepted.taskId}`)).status, 401);
   await server.close();
-  server = await startTaskServer(configure());
+  server = await startTaskServer(await configure());
   const restored = server.engine.getTask(accepted.taskId, caller);
   assert.deepEqual(
     { ...restored, timestamp: "", revision: "" },

@@ -1,6 +1,6 @@
 # Task Engine Server
 
-Generic Node HTTP/SSE assembly and CLI. Requests carry fixed Bundle references;
+Generic Node HTTP/SSE programmatic assembly. Requests carry fixed Bundle references;
 there is no type registry or discovery. It reuses generic artifact primitives,
 without Checker/Objective business hosts or a production Task SDK dependency.
 See [Engine guide](../../docs/task-engine.md).
@@ -12,12 +12,11 @@ console.log(server.url); // listening, Store claimed, recovery complete
 await server.close(); // rejects when physical cleanup cannot be confirmed
 ```
 
-`task-engine-server --config ./trusted-config.mjs` accepts a default exported
-options object or async factory. The CLI alone owns SIGINT/SIGTERM handlers.
-Use `--help` for text or `--help --format json` for machine-readable usage.
-Fatal configuration/import/startup failures terminate the standalone process
-nonzero even when configuration or failed rollback retains handles; the diagnostic
-explicitly states that physical cleanup is unconfirmed, never `ready` or `closed`.
+The executable-module CLI is retired. Install `@potential-guide/pguide-task-engine`
+and use `pguide task-engine` or `pguide-task-engine` with declarative YAML/JSON
+or explicit options. See [service configuration](../../docs/task-server.md).
+Only that foreground command owns SIGINT/SIGTERM handlers; this API preserves
+injected `ipfsClient`, `authorize`, `resolveCaller`, and resource ownership.
 SQLite is the default; programmatic Store injection is supported. Injection
 does not transfer Store ownership unless `ownStore: true`.
 The default shutdown budget is 15,000ms and must cover the configured
@@ -25,9 +24,20 @@ The default shutdown budget is 15,000ms and must cover the configured
 must explicitly configure all three budgets; startup rejects inconsistent limits.
 The 30,000ms request timeout is not an SSE response lifetime.
 
-Configure `bundleDirectory`, optional `bundleLimits`/`bundleConcurrency`, and
+Inject a generic caller-owned `ipfsClient`, including either `createIpfsClient`
+(RPC) or `createIpfsGatewayClient` (read-only Trustless Gateway) from
+`@potential-guide/ipfs-content`. Gateway needs no Kubo RPC; publishing/pinning
+remains separate. Engine shutdown never stops the source, closes the client,
+or removes shared pins. Configure optional `bundleLimits`/`bundleConcurrency`,
+explicit gateway host policy `allowGateway`, and
 the existing authorization/HTTP/Engine limits. `types`, `currentVersions`, and
 `allocationLimits` are rejected legacy configuration.
 `bindService(engine)` remains a trusted composition hook, not registration.
 SQLite v5 refuses old databases before mutation; explicitly select a new path.
-Check/Probe examples are still being switched to fixed Bundle references.
+Check/Probe Task Bundles use root CID references; their business artifact formats
+and business URL/Digest inputs are unchanged.
+Diagnostic logging is configured independently with `ServerOptions.logs`.
+Authenticated Run history and SSE are available at `/runs/:id/logs` and
+`/runs/:id/logs/events`; they use Run read scope authorization, not lifecycle
+history. See [Run Logs](../../docs/task-run-logs.md) for the sole v1 diagnostic contract,
+bounded retention, receipts, and local tarball/standalone UI instructions.

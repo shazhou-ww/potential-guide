@@ -11,7 +11,10 @@ import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import { positive, type Store, TaskError } from "@potential-guide/task-protocol";
 
 export interface ServerOptions {
-  bundleDirectory?: string;
+  logs?: EngineOptions["logs"];
+  ipfsClient: EngineOptions["ipfsClient"];
+  allowGateway?: EngineOptions["allowGateway"];
+  fetchIpfs?: EngineOptions["fetchIpfs"];
   bundleLimits?: EngineOptions["bundleLimits"];
   bundleConcurrency?: number;
   authorize: EngineOptions["authorize"];
@@ -23,7 +26,7 @@ export interface ServerOptions {
   host?: string;
   port?: number;
   limits?: EngineOptions["limits"];
-  http?: Omit<HandlerOptions, "service" | "resolveCaller" | "bundleCache">;
+  http?: Omit<HandlerOptions, "service" | "resolveCaller">;
   shutdownMs?: number;
   requestTimeoutMs?: number;
   maxConnections?: number;
@@ -94,7 +97,9 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
   try {
     if (
       !options ||
-      ["types", "currentVersions", "allocationLimits"].some((key) => Object.hasOwn(options, key)) ||
+      ["types", "currentVersions", "allocationLimits", "bundleDirectory", "fetchBundle"].some(
+        (key) => Object.hasOwn(options, key),
+      ) ||
       typeof options.authorize !== "function" ||
       typeof options.resolveCaller !== "function" ||
       (options.store && options.database) ||
@@ -133,24 +138,36 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
       read: () => underlying.read(),
       append: (...args) => underlying.append(...args),
       compact: (...args) => underlying.compact(...args),
+      ...(underlying.markRunLogsUnavailable
+        ? { markRunLogsUnavailable: underlying.markRunLogsUnavailable.bind(underlying) }
+        : {}),
+      ...(underlying.readRunLogs ? { readRunLogs: underlying.readRunLogs.bind(underlying) } : {}),
+      ...(underlying.writeRunLogs
+        ? { writeRunLogs: underlying.writeRunLogs.bind(underlying) }
+        : {}),
+      ...(underlying.pruneRunLogs
+        ? { pruneRunLogs: underlying.pruneRunLogs.bind(underlying) }
+        : {}),
       close: () => {
         throw new Error("Store lifecycle belongs to the Server.");
       },
     };
     engine = createTaskEngine({
       store: lease,
-      bundleDirectory: options.bundleDirectory ?? `${options.database ?? "tasks.sqlite"}.bundles`,
+      ipfsClient: options.ipfsClient,
+      ...(options.allowGateway ? { allowGateway: options.allowGateway } : {}),
+      ...(options.fetchIpfs ? { fetchIpfs: options.fetchIpfs } : {}),
       ...(options.bundleConcurrency !== undefined
         ? { bundleConcurrency: options.bundleConcurrency }
         : {}),
       ...(options.bundleLimits ? { bundleLimits: options.bundleLimits } : {}),
       authorize: options.authorize,
+      ...(options.logs ? { logs: options.logs } : {}),
       ...(options.limits ? { limits: options.limits } : {}),
     });
     const handler = createTaskHandler({
       ...options.http,
       service: engine,
-      bundleCache: engine,
       resolveCaller: options.resolveCaller,
     });
     const bridge = async (incoming: IncomingMessage, outgoing: ServerResponse) => {

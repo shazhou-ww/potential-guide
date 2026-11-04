@@ -307,17 +307,6 @@ test("three outputs show states and observations rather than per-test setup/tear
   };
   assert.ok(!renderHtml(hostile).includes("<img"));
 });
-test("committed Host manuals are exact derivatives of the sole YAML", async () => {
-  const tree = await loadTree(resolve("test", "check-host", "host.states.yaml"));
-  assert.equal(
-    await readFile(resolve("..", "..", "docs", "check-host-manual.md"), "utf8"),
-    renderMarkdown(tree),
-  );
-  assert.equal(
-    await readFile(resolve("..", "..", "docs", "check-host-manual.html"), "utf8"),
-    renderHtml(tree),
-  );
-});
 test("platform instructions are strict, escaped collapsibles within human state articles", () => {
   const tree = parseTree(source);
   tree.state.before = {

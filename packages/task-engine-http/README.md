@@ -12,7 +12,8 @@ Run/Task/事件游标域独立，页面固定 revision、成员及观察时间�
 一个源事件的全部集合变化在单个封装内原子交付；超限发送无 id 的 task.error，保留最后完整 revision。
 安静流发送不含事件 id 的连接注释，确保 HTTP 连接可确认，但不产生领域事实。
 旧 `/executions` 与 `executionId` 查询明确拒绝。
-Request 使用 Idempotency-Key 和完整 Bundle `{url,digest}`，旧 If-Match 明确拒绝。
+Request 使用 Idempotency-Key 和 Bundle 根 CID 字符串或 `{cid,hint}`，旧 If-Match 明确拒绝。
+目录以 `bundleCid` 精确筛选，缓存接口按 CID 定位；hint 不参与内容匹配。
 POST 返回 preparing（202）或 accepted/rejected（200），preparing 不是 Task。
 GET `/requests/:id` 读取原始意图；GET `/requests/:id/status?waitMs=…`
 独立读取/等待处理结果。long poll 到期不取消准备，断开只结束观察。
@@ -26,3 +27,7 @@ GET `/requests/:id` 读取原始意图；GET `/requests/:id/status?waitMs=…`
 
 展示进度、结构化 checkpoint/Result 证据、deadline、共享与恢复边界见
 [Task Engine](../../docs/task-engine.md)。不支持旧 executionMatch 或旧结果形状 fallback。
+`TaskClient.getRunLogs(id, {afterSequence, limit}, {signal})` reads retained
+diagnostics. `subscribeRunLogs` is an abortable async-generator SSE client with
+bounded frames and explicit gaps/status pages. See
+[Run Logs](../../docs/task-run-logs.md); these APIs are separate from Run events.

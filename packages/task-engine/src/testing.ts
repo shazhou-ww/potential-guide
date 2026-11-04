@@ -3,15 +3,36 @@ import {
   type Clock,
   emptyFacts,
   fail,
+  MemoryRunLogStorage,
   type NewEvent,
   reduce,
   type Store,
+  type StoredRunLogs,
   type StoreView,
 } from "@potential-guide/task-protocol";
 import { newId } from "./identity.js";
 
 /** Explicitly non-durable; useful for tests and disposable hosts only. */
 export class MemoryStore implements Store {
+  private readonly logs = new MemoryRunLogStorage();
+  beforeLogCommit?: () => void;
+  markRunLogsUnavailable(owner: string, id: string, now: number): void {
+    if (this.closed || this.owner !== owner) fail("store_owned", "Owner mismatch.");
+    this.logs.markRunLogsUnavailable(owner, id, now);
+  }
+  readRunLogs(id: string) {
+    if (this.closed) fail("storage_failure", "Store closed.");
+    return this.logs.readRunLogs(id);
+  }
+  writeRunLogs(owner: string, value: StoredRunLogs): void {
+    if (this.closed || this.owner !== owner) fail("store_owned", "Owner mismatch.");
+    this.beforeLogCommit?.();
+    this.logs.writeRunLogs(owner, value);
+  }
+  pruneRunLogs(owner: string, before: number, bytes: number, runs: number): void {
+    if (this.closed || this.owner !== owner) fail("store_owned", "Owner mismatch.");
+    this.logs.pruneRunLogs(owner, before, bytes, runs);
+  }
   private owner: string | undefined;
   private closed = false;
   private readonly domain = newId();
@@ -96,3 +117,4 @@ export class VirtualClock implements Clock {
     return this.timers.size;
   }
 }
+export { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";

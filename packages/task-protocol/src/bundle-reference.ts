@@ -1,52 +1,97 @@
-import { fail, type JsonObject } from "./json.js";
+import { CID } from "multiformats/cid";
+import { fail } from "./json.js";
 
-export interface BundleReference extends JsonObject {
-  url: string;
-  digest: string;
+export type BundleReference = string | { cid: string; hint: string | string[] };
+
+export function bundleCid(value: BundleReference): string {
+  return CID.parse(typeof value === "string" ? value : value.cid)
+    .toV1()
+    .toString();
 }
 
-export function validateBundleReference(value: unknown): BundleReference {
+export function validateBundleReference(
+  value: unknown,
+  maxHints = Number.MAX_SAFE_INTEGER,
+): BundleReference {
+  const cid =
+    typeof value === "string"
+      ? value
+      : value && typeof value === "object"
+        ? Object.getOwnPropertyDescriptor(value, "cid")?.value
+        : undefined;
+  if (typeof cid !== "string" || cid.length > 256)
+    fail("invalid_request", "A Bundle root CID is required.");
+  try {
+    const parsed = CID.parse(cid);
+    if (![0x70, 0x55].includes(parsed.code) || parsed.multihash.code !== 0x12)
+      fail("invalid_request", "Unsupported Bundle CID codec or hash.");
+  } catch {
+    return fail("invalid_request", "Invalid Bundle root CID.");
+  }
+  if (typeof value === "string") return value;
   if (
     !value ||
     typeof value !== "object" ||
     Array.isArray(value) ||
-    Object.keys(value).sort().join(",") !== "digest,url"
+    Object.keys(value).sort().join(",") !== "cid,hint"
   )
-    fail("invalid_request", "A complete Bundle {url,digest} reference is required.");
-  const ref = value as BundleReference;
-  if (typeof ref.url !== "string" || ref.url.length > 4096)
-    fail("invalid_request", "Invalid Bundle URL.");
-  if (typeof ref.digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(ref.digest))
-    fail("invalid_request", "Invalid Bundle content Digest.");
-  let url: URL;
-  try {
-    url = new URL(ref.url);
-  } catch {
-    return fail("invalid_request", "Invalid Bundle URL.");
+    fail("invalid_request", "Bundle references are a CID or {cid,hint}.");
+  const ref = { cid, hint: Object.getOwnPropertyDescriptor(value, "hint")?.value as unknown };
+  const hints = typeof ref.hint === "string" ? [ref.hint] : ref.hint;
+  if (!Array.isArray(hints) || !hints.length)
+    fail("invalid_request", "Gateway hints must not be empty.");
+  if (hints.length > maxHints) fail("capacity_exceeded", "Gateway hint capacity exceeded.");
+  for (const hint of hints) {
+    if (
+      typeof hint !== "string" ||
+      !hint ||
+      hint.length > 4096 ||
+      [...hint].some(
+        (character) =>
+          character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127 || character === "\\",
+      )
+    )
+      fail("invalid_request", "Invalid gateway hint.");
+    let uri: URL;
+    try {
+      uri = new URL(hint);
+    } catch {
+      return fail("invalid_request", "Invalid gateway base URI.");
+    }
+    if (
+      !["https:", "http:"].includes(uri.protocol) ||
+      !/^https?:\/\/[^/]+/i.test(hint) ||
+      hint
+        .slice(hint.indexOf("://") + 3)
+        .split("/", 1)[0]
+        ?.includes("@") ||
+      uri.username ||
+      uri.password ||
+      hint.includes("?") ||
+      hint.includes("#")
+    )
+      fail(
+        "invalid_request",
+        "Gateway requires an HTTP(S) base URI without credentials/query/fragment.",
+      );
   }
-  if (
-    !["file:", "https:", "http:"].includes(url.protocol) ||
-    url.username ||
-    url.password ||
-    ref.url.includes("#") ||
-    (url.protocol === "file:" && (url.search || (url.hostname && url.hostname !== "localhost")))
-  )
-    fail("invalid_request", "Unsupported Bundle URL.");
-  return { url: ref.url, digest: ref.digest };
+  return { cid: ref.cid, hint: typeof ref.hint === "string" ? ref.hint : [...hints] };
 }
 
 export function parseBundleReference(value: string): BundleReference {
-  if (typeof value !== "string")
-    fail("invalid_request", "A complete Bundle URL#Digest reference is required.");
-  const separator = value.indexOf("#");
-  if (separator < 0) fail("invalid_request", "A complete Bundle URL#Digest reference is required.");
-  return validateBundleReference({
-    url: value.slice(0, separator),
-    digest: value.slice(separator + 1),
-  });
+  if (typeof value !== "string") fail("invalid_request", "A Bundle CID reference is required.");
+  let parsed: unknown = value;
+  if (value.trim().startsWith("{")) {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return fail("invalid_request", "Invalid Bundle reference JSON.");
+    }
+  }
+  return validateBundleReference(parsed);
 }
 
 export function formatBundleReference(value: BundleReference): string {
   const ref = validateBundleReference(value);
-  return `${ref.url}#${ref.digest}`;
+  return typeof ref === "string" ? ref : JSON.stringify(ref);
 }

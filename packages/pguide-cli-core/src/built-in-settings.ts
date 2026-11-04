@@ -374,6 +374,107 @@ export const builtInSettings = [
         }
       }
     }
+  },
+  {
+    "name": "@potential-guide/pguide-task-bundle",
+    "description": {
+      "schemaVersion": 1,
+      "namespace": "task-bundle",
+      "settings": {
+        "task-bundle.ipfsRpc": {
+          "description": "Publisher-owned Kubo RPC URL. Used only by artifact publish; --ipfs-rpc overrides it.",
+          "schema": {
+            "type": "string",
+            "pattern": "^https?://",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "@potential-guide/pguide-task-engine",
+    "description": {
+      "schemaVersion": 1,
+      "namespace": "task-engine",
+      "settings": {
+        "task-engine.host": {
+          "description": "Fixed loopback binding; localhost normalizes to 127.0.0.1.",
+          "schema": {
+            "enum": [
+              "127.0.0.1",
+              "localhost",
+              "::1"
+            ]
+          }
+        },
+        "task-engine.port": {
+          "description": "Engine TCP port; zero selects an available port.",
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          }
+        },
+        "task-engine.database": {
+          "description": "SQLite filename, relative to the source file directory.",
+          "schema": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "task-engine.ipfsGatewayUrl": {
+          "description": "Required explicit read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. No default node.",
+          "schema": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "task-engine.scope": {
+          "description": "Single local Caller scope. Other scopes are denied.",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+          }
+        },
+        "task-engine.ui": {
+          "description": "Start the HTTP-only local Web UI.",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        "task-engine.uiOptions": {
+          "description": "Whole UI setting, replaced rather than deep merged. All properties required.",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "host",
+              "port",
+              "favoritesFile"
+            ],
+            "properties": {
+              "host": {
+                "enum": [
+                  "127.0.0.1",
+                  "localhost",
+                  "::1"
+                ]
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              "favoritesFile": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
   }
 ];
 "use strict";
@@ -1941,6 +2042,366 @@ validate25.errors = vErrors;
 return errors === 0;
 }
 
+export const setting16 = validate26;
+const schema27 = {"type":"string","pattern":"^https?://","minLength":1};
+const func2 = require("ajv/dist/runtime/ucs2length").default;
+const pattern13 = new RegExp("^https?://", "u");
+
+function validate26(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data === "string"){
+if(func2(data) < 1){
+const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if(!pattern13.test(data)){
+const err1 = {instancePath,schemaPath:"#/pattern",keyword:"pattern",params:{pattern: "^https?://"},message:"must match pattern \""+"^https?://"+"\""};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+}
+else {
+const err2 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+validate26.errors = vErrors;
+return errors === 0;
+}
+
+export const setting17 = validate27;
+const schema28 = {"enum":["127.0.0.1","localhost","::1"]};
+
+function validate27(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(!(((data === "127.0.0.1") || (data === "localhost")) || (data === "::1"))){
+const err0 = {instancePath,schemaPath:"#/enum",keyword:"enum",params:{allowedValues: schema28.enum},message:"must be equal to one of the allowed values"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+validate27.errors = vErrors;
+return errors === 0;
+}
+
+export const setting18 = validate28;
+const schema29 = {"type":"integer","minimum":0,"maximum":65535};
+
+function validate28(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(!(((typeof data == "number") && (!(data % 1) && !isNaN(data))) && (isFinite(data)))){
+const err0 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if((typeof data == "number") && (isFinite(data))){
+if(data > 65535 || isNaN(data)){
+const err1 = {instancePath,schemaPath:"#/maximum",keyword:"maximum",params:{comparison: "<=", limit: 65535},message:"must be <= 65535"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+if(data < 0 || isNaN(data)){
+const err2 = {instancePath,schemaPath:"#/minimum",keyword:"minimum",params:{comparison: ">=", limit: 0},message:"must be >= 0"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+}
+validate28.errors = vErrors;
+return errors === 0;
+}
+
+export const setting19 = validate29;
+const schema30 = {"type":"string","minLength":1};
+
+function validate29(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data === "string"){
+if(func2(data) < 1){
+const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+}
+else {
+const err1 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+validate29.errors = vErrors;
+return errors === 0;
+}
+
+export const setting20 = validate30;
+const schema31 = {"type":"string","minLength":1};
+
+function validate30(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data === "string"){
+if(func2(data) < 1){
+const err0 = {instancePath,schemaPath:"#/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+}
+else {
+const err1 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+validate30.errors = vErrors;
+return errors === 0;
+}
+
+export const setting21 = validate31;
+const schema32 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
+const pattern14 = new RegExp("^[a-zA-Z0-9_-]{1,64}$", "u");
+
+function validate31(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data === "string"){
+if(!pattern14.test(data)){
+const err0 = {instancePath,schemaPath:"#/pattern",keyword:"pattern",params:{pattern: "^[a-zA-Z0-9_-]{1,64}$"},message:"must match pattern \""+"^[a-zA-Z0-9_-]{1,64}$"+"\""};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+}
+else {
+const err1 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+validate31.errors = vErrors;
+return errors === 0;
+}
+
+export const setting22 = validate32;
+const schema33 = {"type":"boolean"};
+
+function validate32(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(typeof data !== "boolean"){
+const err0 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+validate32.errors = vErrors;
+return errors === 0;
+}
+
+export const setting23 = validate33;
+const schema34 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
+
+function validate33(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(data && typeof data == "object" && !Array.isArray(data)){
+if(data.host === undefined){
+const err0 = {instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: "host"},message:"must have required property '"+"host"+"'"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if(data.port === undefined){
+const err1 = {instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: "port"},message:"must have required property '"+"port"+"'"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+if(data.favoritesFile === undefined){
+const err2 = {instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: "favoritesFile"},message:"must have required property '"+"favoritesFile"+"'"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+for(const key0 in data){
+if(!(((key0 === "host") || (key0 === "port")) || (key0 === "favoritesFile"))){
+const err3 = {instancePath,schemaPath:"#/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key0},message:"must NOT have additional properties"};
+if(vErrors === null){
+vErrors = [err3];
+}
+else {
+vErrors.push(err3);
+}
+errors++;
+}
+}
+if(data.host !== undefined){
+let data0 = data.host;
+if(!(((data0 === "127.0.0.1") || (data0 === "localhost")) || (data0 === "::1"))){
+const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema34.properties.host.enum},message:"must be equal to one of the allowed values"};
+if(vErrors === null){
+vErrors = [err4];
+}
+else {
+vErrors.push(err4);
+}
+errors++;
+}
+}
+if(data.port !== undefined){
+let data1 = data.port;
+if(!(((typeof data1 == "number") && (!(data1 % 1) && !isNaN(data1))) && (isFinite(data1)))){
+const err5 = {instancePath:instancePath+"/port",schemaPath:"#/properties/port/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err5];
+}
+else {
+vErrors.push(err5);
+}
+errors++;
+}
+if((typeof data1 == "number") && (isFinite(data1))){
+if(data1 > 65535 || isNaN(data1)){
+const err6 = {instancePath:instancePath+"/port",schemaPath:"#/properties/port/maximum",keyword:"maximum",params:{comparison: "<=", limit: 65535},message:"must be <= 65535"};
+if(vErrors === null){
+vErrors = [err6];
+}
+else {
+vErrors.push(err6);
+}
+errors++;
+}
+if(data1 < 0 || isNaN(data1)){
+const err7 = {instancePath:instancePath+"/port",schemaPath:"#/properties/port/minimum",keyword:"minimum",params:{comparison: ">=", limit: 0},message:"must be >= 0"};
+if(vErrors === null){
+vErrors = [err7];
+}
+else {
+vErrors.push(err7);
+}
+errors++;
+}
+}
+}
+if(data.favoritesFile !== undefined){
+let data2 = data.favoritesFile;
+if(typeof data2 === "string"){
+if(func2(data2) < 1){
+const err8 = {instancePath:instancePath+"/favoritesFile",schemaPath:"#/properties/favoritesFile/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err8];
+}
+else {
+vErrors.push(err8);
+}
+errors++;
+}
+}
+else {
+const err9 = {instancePath:instancePath+"/favoritesFile",schemaPath:"#/properties/favoritesFile/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err9];
+}
+else {
+vErrors.push(err9);
+}
+errors++;
+}
+}
+}
+else {
+const err10 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err10];
+}
+else {
+vErrors.push(err10);
+}
+errors++;
+}
+validate33.errors = vErrors;
+return errors === 0;
+}
+
 export const builtInValidators = {
   "pguide.commandDirectories": setting0,
   "pguide.diagnoseAhpTimeoutMs": setting1,
@@ -1958,4 +2419,12 @@ export const builtInValidators = {
   "regulate.retentionDays": setting13,
   "regulate.quota": setting14,
   "regulate.permissions": setting15,
+  "task-bundle.ipfsRpc": setting16,
+  "task-engine.host": setting17,
+  "task-engine.port": setting18,
+  "task-engine.database": setting19,
+  "task-engine.ipfsGatewayUrl": setting20,
+  "task-engine.scope": setting21,
+  "task-engine.ui": setting22,
+  "task-engine.uiOptions": setting23,
 };

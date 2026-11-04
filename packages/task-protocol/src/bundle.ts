@@ -12,10 +12,19 @@ export const taskSchemaUri =
 export const taskBundleSchema = {
   $id: taskSchemaUri,
   $comment:
-    "Git SHA-256 root tree identity. One CommonJS Worker per Run; generation-scoped ready, run, ping/pong, ack, progress, checkpoint, complete, failed, message, cancel, stopping and released messages.",
+    "IPFS UnixFS directory root CID identity. One CommonJS Worker per Run; generation-scoped business messages and independent log/log-ack, bounded cumulative log-drop/log-drop-ack diagnostics.",
   type: "object",
   additionalProperties: false,
-  required: ["$schema", "name", "runtime", "entry", "inputSchema", "resultSchema", "messageSchema"],
+  required: [
+    "$schema",
+    "name",
+    "runtime",
+    "entry",
+    "include",
+    "inputSchema",
+    "resultSchema",
+    "messageSchema",
+  ],
   properties: {
     $schema: { const: taskSchemaUri },
     name: {
@@ -37,6 +46,17 @@ export const taskBundleSchema = {
       },
     },
     entry: { const: "worker.cjs" },
+    include: {
+      type: "array",
+      minItems: 2,
+      maxItems: 256,
+      uniqueItems: true,
+      items: {
+        type: "string",
+        pattern:
+          "^(?:task\\.yaml|worker\\.cjs|(?:schemas|resources)/[^\\\\:*?<>|\\u0000-\\u001f]+)$",
+      },
+    },
     inputSchema: { type: "object" },
     resultSchema: { type: ["object", "boolean"] },
     messageSchema: { type: ["object", "boolean"] },
@@ -48,6 +68,7 @@ export interface TaskBundleDeclaration {
   name: string;
   runtime: { type: "node"; minVersion: string };
   entry: "worker.cjs";
+  include: string[];
   inputSchema: JsonObject;
   resultSchema: JsonSchema;
   messageSchema: JsonSchema;
@@ -55,38 +76,73 @@ export interface TaskBundleDeclaration {
 export interface ResolvedTaskBundle extends Omit<TaskBundleDeclaration, "inputSchema"> {
   inputSchema: InputSchema;
 }
-export interface BundleCacheEntry {
-  digest: string;
-  cached: boolean;
-  preparing: boolean;
-  leases: number;
-  name?: string;
-  bytes?: number;
-  files?: number;
-}
-export interface BundleCachePage {
-  items: BundleCacheEntry[];
-  observedAt: string;
-  next?: string;
-}
-export interface BundleCacheDetail extends BundleCacheEntry {
-  declaration?: TaskBundleDeclaration;
-  resolved?: ResolvedTaskBundle;
-}
-/** Endpoint-wide operator access, not a scope-filtered business catalog. */
-export interface BundleCacheService {
-  listCachedBundles(
-    page: { after?: string; limit?: number },
-    caller: import("./types.js").Caller,
-  ): Promise<BundleCachePage>;
-  getCachedBundle(digest: string, caller: import("./types.js").Caller): Promise<BundleCacheDetail>;
-  removeCachedBundle(digest: string, caller: import("./types.js").Caller): Promise<void>;
-}
 const validator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(taskBundleSchema);
 export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
   const parsed = json(value, 1_048_576);
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    !Object.hasOwn(parsed, "include")
+  )
+    fail(
+      "invalid_bundle",
+      "Task Bundle has no exact include manifest. Rebuild with the current Task Bundle authoring tools and use the new CID.",
+    );
   if (!validator(parsed)) fail("invalid_bundle", "Invalid task.yaml declaration.");
-  return parsed as unknown as TaskBundleDeclaration;
+  const declaration = parsed as unknown as TaskBundleDeclaration;
+  const folded = new Set<string>();
+  const spellings = new Map<string, string>();
+  for (const path of declaration.include) {
+    if (
+      path !== path.normalize("NFC") ||
+      Buffer.byteLength(path) > 1024 ||
+      path
+        .split("/")
+        .some(
+          (part) =>
+            !part ||
+            part === "." ||
+            part === ".." ||
+            /[. ]$/.test(part) ||
+            Buffer.byteLength(part) > 255 ||
+            part.toLowerCase() === "node_modules" ||
+            /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part) ||
+            part.includes("\u007f"),
+        ) ||
+      folded.has(path.toLowerCase())
+    )
+      fail("invalid_bundle", "Task Bundle include requires unique, portable exact file paths.");
+    folded.add(path.toLowerCase());
+    let prefix = "";
+    for (const part of path.split("/")) {
+      prefix = prefix ? `${prefix}/${part}` : part;
+      const previous = spellings.get(prefix.toLowerCase());
+      if (previous !== undefined && previous !== prefix)
+        fail("invalid_bundle", "Task Bundle include has ambiguous path casing.");
+      spellings.set(prefix.toLowerCase(), prefix);
+    }
+  }
+  for (const path of declaration.include)
+    if (declaration.include.some((parent) => path.startsWith(`${parent}/`)))
+      fail("invalid_bundle", "Task Bundle include has a file/directory collision.");
+  if (!folded.has("task.yaml") || !folded.has("worker.cjs"))
+    fail("invalid_bundle", "Task Bundle include must contain task.yaml and worker.cjs.");
+  return declaration;
+}
+export function validateTaskBundleFiles(
+  declaration: TaskBundleDeclaration,
+  paths: Iterable<string>,
+): void {
+  const actual = new Set(paths);
+  if (
+    actual.size !== declaration.include.length ||
+    declaration.include.some((path) => !actual.has(path))
+  )
+    fail(
+      "invalid_bundle",
+      "Task Bundle has missing or undeclared files; rebuild the complete artifact.",
+    );
 }
 const objectSchema = (value: Json | undefined): value is JsonObject =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -116,7 +172,17 @@ const schemaArrays = new Set(["allOf", "anyOf", "oneOf", "prefixItems"]);
 export function resolveBundleSchemas(
   declaration: TaskBundleDeclaration,
   resources: readonly JsonObject[],
+  resourcePaths?: readonly string[],
 ): ResolvedTaskBundle {
+  if (
+    resourcePaths &&
+    (resourcePaths.length !== resources.length ||
+      new Set(resourcePaths).size !== resourcePaths.length ||
+      resourcePaths.some(
+        (path) => !path.startsWith("schemas/") || !declaration.include.includes(path),
+      ))
+  )
+    fail("invalid_schema", "Schema resource paths must match the exact Bundle manifest.");
   const registry = new Map<string, { node: JsonSchema; base: string }>();
   const locations = new WeakMap<JsonObject, string>();
   const rootBase = "https://task.invalid/declaration";
@@ -183,6 +249,10 @@ export function resolveBundleSchemas(
     }
     collect(resource, id);
   }
+  resourcePaths?.forEach((path, index) => {
+    const resource = resources[index]!;
+    add(absolute(path, `${rootBase}/`), resource, locations.get(resource)!);
+  });
   const roots = [declaration.inputSchema, declaration.resultSchema, declaration.messageSchema];
   roots.forEach((root, index) => {
     const base = `${rootBase}/${index}`;
@@ -230,18 +300,25 @@ export function resolveBundleSchemas(
       url.hash = "";
       const resource = registry.get(url.href);
       if (!resource) fail("invalid_schema", "Missing offline Schema resource.");
-      let selected: Json = resource.node;
-      if (fragment && !fragment.startsWith("/")) fail("invalid_schema", "Missing Schema anchor.");
-      for (const part of fragment.split("/").slice(1)) {
-        if (/~(?:[^01]|$)/.test(part)) fail("invalid_schema", "Invalid Schema JSON Pointer.");
-        const key = part.replaceAll("~1", "/").replaceAll("~0", "~");
-        if ((!objectSchema(selected) && !Array.isArray(selected)) || !Object.hasOwn(selected, key))
-          fail("invalid_schema", "Missing Schema JSON Pointer.");
-        selected = (selected as JsonObject)[key]!;
+      if (fragment && !fragment.startsWith("/")) {
+        target = registry.get(`${resource.base}#${fragment}`);
+        if (!target) fail("invalid_schema", "Missing Schema anchor.");
+      } else {
+        let selected: Json = resource.node;
+        for (const part of fragment.split("/").slice(1)) {
+          if (/~(?:[^01]|$)/.test(part)) fail("invalid_schema", "Invalid Schema JSON Pointer.");
+          const key = part.replaceAll("~1", "/").replaceAll("~0", "~");
+          if (
+            (!objectSchema(selected) && !Array.isArray(selected)) ||
+            !Object.hasOwn(selected, key)
+          )
+            fail("invalid_schema", "Missing Schema JSON Pointer.");
+          selected = (selected as JsonObject)[key]!;
+        }
+        if (typeof selected !== "boolean" && !objectSchema(selected))
+          fail("invalid_schema", "Reference does not select a Schema.");
+        target = { node: selected, base: resource.base };
       }
-      if (typeof selected !== "boolean" && !objectSchema(selected))
-        fail("invalid_schema", "Reference does not select a Schema.");
-      target = { node: selected, base: resource.base };
     }
     const resolved = expand(target.node, target.base, path);
     return Object.keys(result).length

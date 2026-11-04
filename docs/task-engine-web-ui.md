@@ -1,6 +1,14 @@
 # 任务引擎 Web 工作台
 
-`apps/task-engine-web-ui` 是可选、私有的 Node/TypeScript 应用。它独立于
+Run 详情的独立 **Logs · 诊断日志** 支持跟随/暂停、历史分页、按序号续接与
+并发/切换隔离；浏览器保留最多 300 条 / 1 MiB，显示未知尾部、缺口、截断、
+过期、不支持和故障。详见 [Run Logs 与独立安装](task-run-logs.md)。
+
+`apps/task-engine-web-ui` 是可选的 Node/TypeScript 应用，其本地产物提供
+`@potential-guide/task-engine-web-ui/server` 与完整浏览器资源供服务命令消费。
+可通过 `pguide task-engine --ui` 前台组合启动，也可继续独立连接既有 HTTP 服务；
+见[声明式服务配置](task-server.md#declarative-local-service)。这不表示已经发布 npm。
+它独立于
 Task Server，仅使用公开 HTTP 协议；不会创建 Engine、读其 SQLite、加载业务
 执行器，或因抽屉/页面/流/UI Server 关闭而取消 Task。示例执行器只属于显式启动的
 fixture，生产 UI 入口不导入它。
@@ -53,7 +61,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
 
 连接需后端支持当前 Task Bundle 协议：`POST /tasks`、
 `GET /requests/:requestId/status`、`GET /tasks`、`GET /runs` 及请求/实体/事件接口。
-提交携带准确 Bundle URL 和完整内容 Digest，不查询 `/task-types`，不发送旧 `If-Match` guard。
+提交携带准确 Bundle 根 CID 字符串或 `{cid,hint}`，不查询 `/task-types`，不发送旧 `If-Match` guard。
 旧服务或缺失接口明确报错，不用本机已见 Run 代替服务目录。
 `list-runs` 是独立授权操作；它与 Task 的 `list`、`submit`、`request`、`task`、
 `history`、`subscribe` 均不互相授予权限。没有提交或详情权限也不关闭目录入口。
@@ -111,7 +119,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   状态栏仍明确表示数据陈旧或查询不可用，不因重连增删错误行。
   关联 Run 筛选放在任务列筛选面板中。表格滚动容器预留滚动条空间，底部信息
   不参与滚动锚定，避免状态变化造成表头抖动。
-  名称/完整 ID 搜索、状态筛选作用于已加载记录；Bundle Digest、带明确时区的时间
+  名称/完整 ID 搜索、状态筛选作用于已加载记录；Bundle CID、带明确时区的时间
   范围仍通过表格底部“重新查询 / 刷新执行目录”提交服务端。收藏开关位于收藏列的弹出面板。
   底部支持每页 10/25/50/100 条、上一页/下一页和清除列筛选与排序；该清除操作不改
   服务端查询输入。原“目录下一页 / 执行目录下一页”独立加载原查询快照的下一批，
@@ -119,12 +127,6 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   记录，不宣称服务端全量命中数或支持随机跳页。完整基线仍保留最多 10,000 条 /
   8 MiB 的预算，不再只展示前 1000 条。实时更新保留列筛选、排序、分页和弹出面板状态；
   数据缩减会收敛页码，新查询回到首页，切换 Endpoint 清除本地列筛选与排序。
-- **Bundle 缓存**：与任务、Run 并列的独立页面，管理当前 Endpoint 机器上的内容缓存，不是浏览器本地文件。
-  提供分页列表、大小/占用、声明契约及显式确认的单项清理；与 Task/Run 目录权限独立。
-  行内操作使用固定尺寸图标按钮；声明契约使用与 Task/Run 相同的右侧详情抽屉，
-  清理确认使用模态弹窗，不在表格下追加内容。
-  忙碌内容清理被拒绝，清理不删除任务历史或原归档；后续运行可能需要重新获取。
-  详细权限、并发与接口见 [Endpoint Task Bundle 缓存管理](./task-bundle-cache.md)。
 - **数据行导航**：Task 与 Run 目录的类型是普通文字，不是按钮。点击数据行，或聚焦行后
   按 Enter / Space 打开详情；关闭 Sheet 回原行，表格仍保留真实 table/row/cell 语义。
   星标、重做/编辑及整个操作单元格（包括空白、禁用按钮和提示包装区域）独立处理，
@@ -135,10 +137,11 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   可访问名称；Esc 可关闭提示，Enter 仍执行原动作。新建、提交、实体名称、取消、
   未知回执重试保留文字，不把所有按钮机械图标化。`data-action` 和稳定 key 不变，
   图标按钮另有 `data-glyph-action`，不会因文字隐藏而改变提交身份或业务回调。
-- **三个主 Tab**：标题、任务/Run/Bundle 缓存 Tabs、受控服务选择合在顶栏。
+- **两个主 Tab**：标题、任务/Run Tabs、受控服务选择合在顶栏。
   主导航使用舒展的文字和下划线选中态，窄屏时独立成行。
   默认任务页，整合当前/历史目录、筛选、选中详情与星标。
-  Run 页查询整个 Endpoint 获授权且保留的运行记录，缓存页提供缓存列表、契约与单项清理。
+  Run 页查询整个 Endpoint 获授权且保留的运行记录，不提供 Bundle 缓存页。
+  IPFS 内容由独立节点管理，Engine 内存复用不作为公开管理接口。
   一次只有一页进入布局和
   键盘顺序；Tab 箭头键、弹窗 Esc/焦点回归可用，跨 Tab 保留筛选、选中项和输入。
 - **全宽列表与详情抽屉**：两个目录独占页面可用宽度，点击任务/执行后从右侧覆盖，
@@ -152,15 +155,14 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   不自动弹出、不推挤表格，也不关闭已有详情。条目可折叠、单项或全部清理；
   同一来源的重复错误聚合计次，恢复后保留记录并标记已恢复。
   最多保留 100 个问题，刷新页面后清空。清理记录不等于故障恢复，不取消任务或停止观察。
-- **Bundle 引用**：新建任务使用单个 `Task Bundle 引用（URL#digest）` 字段，
-  填写获取 URL 与完整 `sha256:` 摘要。共享协议辅助函数解析和校验后，
-  请求仍提交结构化 `{url, digest}`。编辑重做从原引用拼合，不改写 URL 或摘要。
-  Task/Run 目录与缓存表格仅展示名称、短实体 ID 和 12 位内容 Digest，不显示获取 URL；
-  悬停可查看完整 Digest，详情支持复制完整 Digest。短值不用于判等或查询。
-  Task 详情与提交回执保留完整引用为可选取的纯文本，不访问该 URL；
-  Run 详情的 Bundle 标识仅展示完整 Digest，原始快照不被改写。
-  内容判等与缓存仍以完整 Digest 为准。
-- **新建弹窗**：填写固定 `URL#digest` Bundle 引用、timeoutMs 和可选时间/匹配参数，
+- **Bundle 引用**：新建任务使用单个 `Task Bundle 引用（根 CID / JSON）` 字段，
+  填写根 CID 或 `{cid,hint}` JSON；hint 为单个或有序多个 HTTP(S) gateway 基址，
+  不参与内容身份。共享协议函数校验后保留引用形状与 hint 顺序，
+  编辑重做、原始历史和星标不偷偷改写引用。
+  Task/Run 目录展示名称、短实体 ID 和短 CID；悬停及详情可复制完整 CID，
+  短值不用于判等或查询。原始引用是纯文本，UI 不访问 hint。
+  内容判等、`bundleCid` 查询和缓存都以完整规范化 CID 为准。
+- **新建弹窗**：填写固定根 CID / JSON Bundle 引用、timeoutMs 和可选时间/匹配参数，
   在独立 JSON 对象编辑器输入业务字段。UI 不下载或执行 Bundle，不猜测其业务 Schema，
   不再从类型发现生成业务表单；完整输入校验由服务取得 Bundle 后按声明契约执行。
   业务字段不得覆盖 Bundle、Request 身份或通用时间参数。
@@ -180,8 +182,8 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   明确生成新 ULID，可能产生另一 Task。成功项不会被整批重发。
   快捷提交合并 300ms 内的重复激活，即使首个回执很快返回也不把双击解释为主动新做；
   这只是交互防重，不取代服务 Idempotency-Key。
-- **契约与内容身份**：Bundle Digest 固定完整内容，名称只用于展示。
-  修改 URL、Digest 或业务输入是新意图，需用新身份提交；重做不会偷偷改投最新内容。
+- **契约与内容身份**：Bundle 根 CID 固定完整内容，名称只用于展示。
+  修改 CID、hint 形状/顺序或业务输入是新意图，需用新身份提交；重做不会偷偷改投最新内容。
   服务端拒绝旧类型发现 guard；UI 不提供双协议选择或自动迁移旧参数。
 - **Task / Run**：独立 Tab，以服务提供的 runId 关联。完整请求
   单独读 `/requests/:requestId`，Task 快照显示取消/阶段/结果/错误与关联 Run；
@@ -215,7 +217,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   摘要也可提供这一证据。运行超时不是执行停止，迟到完成仍保留超时标签。
   取消后的未知释放关系不猜测，允许手动暂停。暂停/自动结束仅释放流，仍可分页历史；
   “重新观察”重新读取事实并建立新流（已结束对象会据实再次收尾），不创建或取消 Task。
-- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。按 Bundle Digest 精确匹配，
+- **任务目录**：整合在任务页，独立向后端查询，含其他客户端授权任务。按 Bundle CID 精确匹配，
   receivedAt 含下界、不含上界，必须填写带时区时间；固定 created-desc。完整基线使用集合 SSE，
   按完整源 revision 原子应用成员加入、更新和移出；尚有下一页时每 5 秒采样一次。
   采样从无 cursor 的新查询开始，按已加载页数读取同一冻结快照，全部成功后整体替换
@@ -230,7 +232,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   本机预算不足或不完整基线不得截断后伪装成完整集合。
   详情可能比摘要更新，摘要不含业务结果。
   页和错误状态绑定同一查询世代，旧查询的成功/失败不能覆盖新的结果或错误。
-- **Run 目录**：直接 `GET /runs`，按 Bundle Digest / startedAt 的含下界、不含上界
+- **Run 目录**：直接 `GET /runs`，按 Bundle CID / startedAt 的含下界、不含上界
   筛选，started-desc 排序，同刻 runId 升序。摘要不含输入、准备证据、结果、
   Task 身份；共享执行只出现一次。Run 目录游标与任务/事件游标分开，
   使用与任务目录相同的完整集合 SSE / 分页窗口采样机制，410 要明确重查。
@@ -244,7 +246,7 @@ binding 指纹；不接收后端 URL 或凭据。相对 `favoritesFile` 按 **UI
   原目标缺失/重绑的星标仍可查看，但禁止改投。历史无 Task 身份的旧参数收藏完整
   保留在新建弹窗的“旧参数模板”兼容入口，不冒充服务任务。
   历史直接或编辑后重做只取原请求、剥离 requestId，不注入摘要 version、不改
-  URL/digest/seriesId/eligibleAt，不自动补锁或解锁。原参数无权读取或已清理时
+  CID/hint/seriesId/eligibleAt，不自动补锁或解锁。原参数无权读取或已清理时
   明确失败，不使用空输入；已有星标可以明确选用此前保存的完整副本。编辑重做也用
   新建弹窗，派生不会修改原收藏。
 - **切换目标**：关闭自己持有的观察流、隔离迟到响应。原目标提交回执仍保留
@@ -279,7 +281,7 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
 
 打开终端 B 打印的准确 URL（端口自动分配）：
 
-1. 在任务页打开“新建任务”，填入终端 A 打印的 `echo` 或 `survey` Bundle URL/Digest，
+1. 在任务页打开“新建任务”，填入终端 A 打印的 `echo` 或 `survey` Bundle 根 CID，
    以及 timeoutMs。echo 的业务 JSON 示例为 `{"text":"hello","durationMs":100}`；
    survey 示例为 `{"subject":{"name":"demo","active":true},"scores":[1,2],"mode":"brief"}`。
    验证 preparing 回执不冒充 Task，accepted 后能打开真实任务、完整结果及事件。
@@ -298,10 +300,10 @@ pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.jso
    原参数发起新身份，编辑后发送不改原星标。Run 终结且回收后自动停流，
    Task 仍可继续观察取消与时间变化；停流后仍可分页历史。
    打开 Run 详情查看结果、故障与退出诊断，不把无历史权限误解为没有结果。
-   用窄窗口和 Tab/Enter/Esc 操作三个页面、新建/批量弹窗和详情。
+   用窄窗口和 Tab/Enter/Esc 操作两个页面、新建/批量弹窗和详情。
 
-关键自动化入口：`#tab-tasks` / `#tab-executions` / `#tab-cache`、
-`#tasks` / `#executions` / `#cache`（tabpanel）、`#bundle-cache`（缓存列表与详情）、
+关键自动化入口：`#tab-tasks` / `#tab-executions`、
+`#tasks` / `#executions`（tabpanel）、
 `#new-task` / `#create-dialog`、`#only-favorites`、`.star[aria-pressed]`、
 `#create-dialog #batches` / `#bar-count`（批量与回执）、`#directory` / `#execution-directory`、
 `#task-detail-sheet` / `#execution-detail-sheet`（`[data-slot="sheet-content"]`）、

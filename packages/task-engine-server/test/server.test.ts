@@ -3,25 +3,27 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { resolve, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
-import { TaskClient } from "@potential-guide/task-engine-http";
+import { join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { newId } from "@potential-guide/task-engine";
-import { MemoryStore } from "@potential-guide/task-engine/testing";
+import { MemoryIpfsClient, MemoryStore } from "@potential-guide/task-engine/testing";
+import { TaskClient } from "@potential-guide/task-engine-http";
 import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import {
-  taskSchemaUri,
-  TaskError,
-  type TaskPage,
   type BundleReference,
   type SubmissionResult,
+  TaskError,
+  type TaskPage,
+  taskSchemaUri,
 } from "@potential-guide/task-protocol";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { type ServerOptions, startTaskServer } from "../src/index.js";
 
 const authoredRoot = resolve(".cache", `server-author-${randomUUID()}`);
 let reference: BundleReference;
+const ipfsClient = new MemoryIpfsClient();
 let authoring: Promise<void> | undefined;
 test.after(() => rm(authoredRoot, { recursive: true, force: true }));
 async function config(): Promise<ServerOptions> {
@@ -51,14 +53,13 @@ const type=createEcho({});export default(input,context)=>type.run(input,context)
       entry,
       outDirectory: join(authoredRoot, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(authoredRoot, "bundle.tgz"));
-    reference = { url: pathToFileURL(packed.archive).href, digest: built.digest };
+    reference = (await importTaskBundle(built.directory, ipfsClient)).cid;
   })();
   await authoring;
   return {
     store: new MemoryStore(),
     port: 0,
-    bundleDirectory: join(authoredRoot, randomUUID()),
+    ipfsClient,
     authorize: (caller, _operation, scope) =>
       caller.scope === scope && caller.subject === "allowed",
     resolveCaller(request) {
@@ -159,7 +160,7 @@ test("import has no signals; real HTTP auth, permission, bounded body, history a
     if (decision.status !== "accepted") throw Error("Expected accepted.");
     const task = await client.getTask(decision.taskId);
     const directory = await fetch(
-      `${server.url}/tasks?bundleDigest=${encodeURIComponent(reference.digest)}`,
+      `${server.url}/tasks?bundleCid=${encodeURIComponent(String(reference))}`,
       { headers },
     );
     assert.equal(directory.status, 200);

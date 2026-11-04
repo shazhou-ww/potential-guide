@@ -1,14 +1,14 @@
 import {
   type CoordinatorService,
-  type TaskService,
-  type TaskRequest,
   object,
+  type TaskRequest,
+  type TaskService,
   validateBundleReference,
 } from "@potential-guide/task-protocol";
 
 export const fixtureBundle = {
-  url: "https://fixture.test/echo.tar.gz",
-  digest: `sha256:${"a".repeat(64)}`,
+  cid: "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy",
+  hint: "http://localhost:8080",
 };
 /** Controlled coordinator for transport races, not a production Bundle-consumption proof. */
 export function coordinatorService(core: CoordinatorService): TaskService {

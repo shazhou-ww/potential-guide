@@ -1,18 +1,22 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
-import { taskSchemaUri, TaskError } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
+import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { createTaskHandler, TaskClient } from "../src/index.js";
 
 test("V10: client rejects legacy Task-shaped receipts, mismatched tracking tokens and incomplete Bundle references", async () => {
   const request = {
     requestId: newId(),
-    bundle: { url: "https://example.test/task", digest: `sha256:${"a".repeat(64)}` },
+    bundle: {
+      cid: "bafybeigdyrzt5sfp7udm7hu76u7ydwfmksn3y3sc57x4taoj7c3x2m3yuy",
+      hint: "http://localhost:8080",
+    },
     timeoutMs: 1000,
   };
   let value: unknown = { requestId: request.requestId, taskId: newId(), stage: "initial" };
@@ -29,7 +33,7 @@ test("V10: client rejects legacy Task-shaped receipts, mismatched tracking token
   await assert.rejects(client.getRequestStatus(request.requestId), { code: "invalid_response" });
   const before = fetched;
   await assert.rejects(
-    client.submit({ ...request, bundle: { digest: request.bundle.digest } } as never),
+    client.submit({ ...request, bundle: { cid: request.bundle.cid } } as never),
     { code: "invalid_request" },
   );
   assert.equal(fetched, before);
@@ -69,18 +73,21 @@ test("V03/V05/V10: HTTP client observes Request preparation separately; disconne
     entry: callback,
     outDirectory: join(directory, "bundle"),
   });
-  const packed = await packTaskBundle(built.directory, join(directory, "bundle.tar.gz"));
-  const bytes = await readFile(packed.archive);
+  const ipfs = new MemoryIpfsClient();
+  await importTaskBundle(built.directory, ipfs);
   const engine = createTaskEngine({
     store,
     clock,
-    bundleDirectory: join(directory, "cache"),
     authorize: () => true,
     limits: { requestResultRetentionMs: 20 },
-    fetchBundle: async (_url, init) => {
-      downloadSignal = init!.signal!;
-      await pending;
-      return new Response(bytes);
+    ipfsClient: {
+      block: {
+        get: async (cid, init) => {
+          downloadSignal = init!.signal!;
+          await pending;
+          return ipfs.block.get(cid, init);
+        },
+      },
     },
   });
   await engine.start();
@@ -100,7 +107,7 @@ test("V03/V05/V10: HTTP client observes Request preparation separately; disconne
   });
   const request = {
     requestId: newId(clock.now()),
-    bundle: { url: "https://example.test/task", digest: built.digest },
+    bundle: built.cid,
     value: 1,
     timeoutMs: 1000,
   };

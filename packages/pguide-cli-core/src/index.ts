@@ -719,7 +719,10 @@ export async function readJsonSubject(
 
 const globalValues = new Set(["--cwd", "--format", "--color", "--log-level"]);
 
-export function extractGlobals(argv: readonly string[]): {
+export function extractGlobals(
+  argv: readonly string[],
+  policy: { serviceConfig?: boolean } = {},
+): {
   options: GlobalOptions;
   rest: string[];
 } {
@@ -735,7 +738,11 @@ export function extractGlobals(argv: readonly string[]): {
       rest.push(argument);
       continue;
     }
-    if (!stopped && (argument === "--config" || argument.startsWith("--config=")))
+    if (
+      !stopped &&
+      (argument === "--config" || argument.startsWith("--config=")) &&
+      !policy.serviceConfig
+    )
       throw new CliError(
         "--config is retired. Use the user config.jsonc or nearest project .pguide/config.jsonc selected by --cwd.",
       );

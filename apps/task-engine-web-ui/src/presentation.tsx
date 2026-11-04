@@ -8,7 +8,6 @@ import {
   RefreshCw,
   RotateCcw,
   SquarePen,
-  FileSearch,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -58,8 +57,6 @@ const inlineActions = {
   编辑保存参数: { Icon: SquarePen, label: "编辑保存参数后新建" },
   编辑后新建: { Icon: SquarePen, label: "编辑保存参数后新建" },
   "查看来源 / 模板": { Icon: Eye, label: "查看来源或保存模板" },
-  查看契约: { Icon: FileSearch, label: "查看 Bundle 契约" },
-  清理此缓存: { Icon: Trash2, label: "清理此缓存（需要确认）" },
   移除此本机星标: { Icon: Trash2, label: "移除此本机星标" },
 } as const;
 export type InlineAction = keyof typeof inlineActions;
@@ -223,9 +220,7 @@ function ActionButton({
       size={glyph ? "icon" : props.size}
       aria-label={glyph?.label ?? props["aria-label"]}
       data-glyph-action={action.glyph}
-      className={
-        action.glyph === "清理此缓存" ? "text-destructive hover:text-destructive" : props.className
-      }
+      className={props.className}
       disabled={disabled || busy}
       data-busy={busy || undefined}
       onClick={(event) => {
@@ -480,7 +475,7 @@ function DirectoryPanel({ view, kind }: { view: WorkbenchView; kind: "tasks" | "
           <>
             <Field
               id={task ? "history-type" : "execution-type"}
-              label="Bundle Digest（服务端查询）"
+              label="Bundle CID（服务端查询）"
               placeholder="完整 sha256:…（可选）"
             />
             <p>修改后点击表格底部“{task ? "重新查询" : "刷新执行目录"}”。</p>
@@ -535,9 +530,6 @@ function Workbench({ view }: { view: WorkbenchView }) {
             >
               Run
             </TabsTrigger>
-            <TabsTrigger id="tab-cache" aria-controls="cache" value="cache" data-tab="cache">
-              Bundle 缓存
-            </TabsTrigger>
           </TabsList>
           <label className="endpoint-label" htmlFor="endpoint">
             服务
@@ -589,21 +581,6 @@ function Workbench({ view }: { view: WorkbenchView }) {
             <div className="list-pane">
               <DirectoryPanel view={view} kind="runs" />
             </div>
-          </TabsContent>
-          <TabsContent
-            value="cache"
-            id="cache"
-            aria-labelledby="tab-cache"
-            forceMount
-            hidden={nav.tab !== "cache"}
-          >
-            <div className="page-heading">
-              <p>所选 Endpoint 的 Task Bundle 缓存</p>
-            </div>
-            <p className="secondary">
-              缓存位于服务机器，不是浏览器本地文件；清理不删除任务历史或原归档。
-            </p>
-            <Port view={view} id="bundle-cache" role="region" aria-label="Bundle 缓存列表与详情" />
           </TabsContent>
         </main>
       </Tabs>
@@ -714,7 +691,7 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
   const protectErrors = (event: Event) => {
     if (view.errorsOpen) event.preventDefault();
   };
-  if (id === "task-detail" || id === "execution-detail" || id === "cache-detail") {
+  if (id === "task-detail" || id === "execution-detail") {
     return (
       <Sheet open onOpenChange={close}>
         <SheetContent
@@ -727,17 +704,9 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
         >
           <SheetHeader>
             <SheetTitle id={`${id}-title`} tabIndex={-1} className="outline-none">
-              {id === "task-detail"
-                ? "任务详情"
-                : id === "cache-detail"
-                  ? "Bundle 契约"
-                  : "执行详情"}
+              {id === "task-detail" ? "任务详情" : "执行详情"}
             </SheetTitle>
-            <SheetDescription>
-              {id === "cache-detail"
-                ? "服务端缓存的声明与解析后契约"
-                : "独立事实与公开事件 · 关闭不会取消任务"}
-            </SheetDescription>
+            <SheetDescription>独立事实与公开事件 · 关闭不会取消任务</SheetDescription>
           </SheetHeader>
           <div className="detail-scroll">
             <Port view={view} id={id} tabIndex={-1} />
@@ -758,45 +727,37 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
         onEscapeKeyDown={protectErrors}
       >
         <DialogHeader>
-          <DialogTitle id={id === "create-dialog" ? "create-title" : `${id}-title`} tabIndex={-1}>
-            {id === "create-dialog"
-              ? (view.content("create-title") ?? "新建任务")
-              : "清理 Bundle 缓存"}
+          <DialogTitle id="create-title" tabIndex={-1}>
+            {view.content("create-title") ?? "新建任务"}
           </DialogTitle>
           <DialogDescription>
-            {id === "create-dialog"
-              ? "直接提交当前任务，或加入批量后统一提交。关闭弹窗保留输入、批量草稿与回执。"
-              : "只清理缓存内容，不删除任务历史或原归档。"}
+            直接提交当前任务，或加入批量后统一提交。关闭弹窗保留输入、批量草稿与回执。
           </DialogDescription>
         </DialogHeader>
-        {id === "create-dialog" ? (
-          <div id="create">
-            <Port view={view} id="dialog-notice" role="status" aria-live="polite" />
-            {port("discovery-status", "secondary")}
-            <SchemaIsland view={view} />
-            <details className="secondary">
-              <summary>表单契约</summary>
-              {port("contract")}
-            </details>
-            {port("contract-actions")}
-            {port("create-actions", "actions")}
-            <section className="submission-batches" aria-labelledby="batch-title">
-              <h3 id="batch-title" tabIndex={-1}>
-                批量草稿与提交回执 <span id="bar-count">{view.content("bar-count") ?? "0 项"}</span>
-              </h3>
-              <p className="secondary">
-                批量按序发出，不等待任务完成；未知结果保留原身份，可在这里核对。
-              </p>
-              {port("batches")}
-            </section>
-            <details id="legacy-templates" className="secondary" hidden={!view.legacy}>
-              <summary>旧参数模板（没有任务身份）</summary>
-              {port("favorites-list")}
-            </details>
-          </div>
-        ) : (
-          port("cache-confirmation")
-        )}
+        <div id="create">
+          <Port view={view} id="dialog-notice" role="status" aria-live="polite" />
+          {port("discovery-status", "secondary")}
+          <SchemaIsland view={view} />
+          <details className="secondary">
+            <summary>表单契约</summary>
+            {port("contract")}
+          </details>
+          {port("contract-actions")}
+          {port("create-actions", "actions")}
+          <section className="submission-batches" aria-labelledby="batch-title">
+            <h3 id="batch-title" tabIndex={-1}>
+              批量草稿与提交回执 <span id="bar-count">{view.content("bar-count") ?? "0 项"}</span>
+            </h3>
+            <p className="secondary">
+              批量按序发出，不等待任务完成；未知结果保留原身份，可在这里核对。
+            </p>
+            {port("batches")}
+          </section>
+          <details id="legacy-templates" className="secondary" hidden={!view.legacy}>
+            <summary>旧参数模板（没有任务身份）</summary>
+            {port("favorites-list")}
+          </details>
+        </div>
         <ErrorButton view={view} />
       </DialogContent>
     </Dialog>

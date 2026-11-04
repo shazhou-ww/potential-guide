@@ -3,25 +3,36 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
-import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
-import { discoveryHostBins } from "./release-packages.mjs";
 import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
+import { checkTaskServiceConsumer } from "./check-task-service-consumer.mjs";
+import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run, only) {
   const manifests = new Map();
-  for (const { name, directory } of definitions) {
+  for (const { name, directory, workspace } of definitions) {
     manifests.set(
       name,
-      JSON.parse(await readFile(join(root, "packages", directory, "package.json"), "utf8")),
+      JSON.parse(
+        await readFile(join(root, workspace ?? "packages", directory, "package.json"), "utf8"),
+      ),
     );
   }
   const scenarios = [
-    ["task-sdk", ["@potential-guide/task-sdk", "@potential-guide/task-protocol"]],
+    [
+      "task-sdk",
+      [
+        "@potential-guide/task-sdk",
+        "@potential-guide/task-protocol",
+        "@potential-guide/ipfs-content",
+      ],
+    ],
     [
       "probe-task",
       [
+        "@potential-guide/ipfs-content",
         "@potential-guide/probe-task",
         "@potential-guide/check-task",
         "@potential-guide/check-artifacts",
@@ -36,6 +47,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-server",
       [
+        "@potential-guide/ipfs-content",
         "@potential-guide/task-engine-server",
         "@potential-guide/task-engine",
         "@potential-guide/task-protocol",
@@ -44,6 +56,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-check",
       [
+        "@potential-guide/ipfs-content",
         "@potential-guide/task-sdk",
         "@potential-guide/check-task",
         "@potential-guide/task-engine-server",
@@ -66,22 +79,9 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       "npm-objectives",
       [
         ...definitions.filter((entry) => entry.objective).map((entry) => entry.name),
-        "@potential-guide/checker-host",
         "@potential-guide/cli-runtime",
-        "@potential-guide/objective-pilot",
-        "@potential-guide/effects",
-        "@potential-guide/regulation-coordinator",
-        "pguide",
-        "@potential-guide/pguide-pilot",
-        "@potential-guide/pguide-regulate",
-      ],
-    ],
-    [
-      "artifact-hosts",
-      [
-        "@potential-guide/check-artifacts",
-        "@potential-guide/checker-host",
-        "@potential-guide/objective-host",
+        "@potential-guide/check-runtime-files",
+        "@potential-guide/pilot-protocol",
       ],
     ],
     ["protocol", ["@potential-guide/pilot-protocol"]],
@@ -92,6 +92,25 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
+    [
+      "task-service",
+      [
+        "pguide",
+        "@potential-guide/pguide-task-engine",
+        "@potential-guide/ipfs-content",
+        "@potential-guide/task-protocol",
+        "@potential-guide/task-sdk",
+      ],
+    ],
+    [
+      "bundle-authoring",
+      [
+        "pguide",
+        "@potential-guide/pguide-task-bundle",
+        "@potential-guide/task-sdk",
+        "@potential-guide/ipfs-content",
+      ],
+    ],
     [
       "combined",
       [
@@ -123,6 +142,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
       ),
     };
+    if (label === "bundle-authoring") manifest.dependencies["@sinclair/typebox"] = "0.34.52";
     await writeFile(join(directory, "package.json"), JSON.stringify(manifest, null, 2));
     await run(
       "pnpm",
@@ -171,7 +191,115 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     if (label === "task-sdk") {
       await checkTaskSdkConsumer(directory, run);
     }
-    if (label.startsWith("task-") && label !== "task-sdk") {
+    if (label === "task-service") await checkTaskServiceConsumer(root, directory, run);
+    if (label === "bundle-authoring") {
+      const bin = join(directory, "node_modules", ".bin");
+      const home = join(directory, "home");
+      await mkdir(home);
+      const env = {
+        ...process.env,
+        APPDATA: home,
+        XDG_CONFIG_HOME: home,
+        PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+      };
+      const pguide = join(directory, "node_modules", "pguide", "dist", "bin.js");
+      const metadata = JSON.parse(
+        await run("pguide-task-bundle", ["--pguide-command-metadata"], directory, env),
+      );
+      assert.equal(metadata.command, "task-bundle");
+      const help = JSON.parse(
+        await run(
+          process.execPath,
+          [pguide, "task-bundle", "--help", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.deepEqual(help.subcommands, ["init", "check", "build", "publish"]);
+      const initialized = JSON.parse(
+        await run(
+          process.execPath,
+          [pguide, "task-bundle", "init", "minimal", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(initialized.status, "ok");
+      assert.equal(initialized.result.packageCreated, false);
+      assert.equal(initialized.result.packageFile, join(directory, "package.json"));
+      const minimal = JSON.parse(
+        await run(
+          "pguide-task-bundle",
+          ["build", "minimal/task.build.yaml", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      const minimalArtifact = JSON.parse(
+        await run(
+          "pguide-task-bundle",
+          ["check", "artifact", "minimal/dist", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(minimalArtifact.result.cid, minimal.result.cid);
+      await writeFile(
+        join(directory, "contract.ts"),
+        `import {Type} from "@sinclair/typebox";export default {input:Type.Object({text:Type.String()}),result:Type.String(),message:Type.Never()};`,
+      );
+      await writeFile(
+        join(directory, "main.ts"),
+        `import type {BundleCallback} from "@potential-guide/pguide-task-bundle";
+import type contract from "./contract.js";
+const callback:BundleCallback<typeof contract>=async input=>input.text;
+export default callback;`,
+      );
+      await writeFile(
+        join(directory, "task.build.yaml"),
+        JSON.stringify({
+          $schema:
+            "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json",
+          name: "Packed author",
+          runtime: { minVersion: "22.13.0" },
+          source: { entry: "main.ts", contract: "contract.ts" },
+          outDirectory: "bundle",
+        }),
+      );
+      const checked = JSON.parse(
+        await run(
+          "pguide-task-bundle",
+          ["check", "author", "task.build.yaml", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(existsSync(join(directory, "bundle")), false);
+      const built = JSON.parse(
+        await run(
+          process.execPath,
+          [pguide, "task-bundle", "build", "task.build.yaml", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(built.result.cid, checked.result.cid);
+      await writeFile(
+        join(directory, "contract.ts"),
+        "throw new Error('Artifact checks must not evaluate author code');",
+      );
+      const artifact = JSON.parse(
+        await run(
+          "pguide-task-bundle",
+          ["check", "artifact", "bundle", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(artifact.result.cid, built.result.cid);
+      await checkBundleAuthoringConsumer(directory, built.result.cid, tarballs, manifests, run);
+    }
+    if (["task-protocol", "task-engine", "task-adapters"].includes(label)) {
       const script = join(directory, "generic-task.mjs");
       await writeFile(
         join(directory, "type-worker.mjs"),
@@ -190,11 +318,12 @@ assert.deepEqual(json({value:2}),{value:2});
 `
     : `
 import {createTaskEngine,newId} from "@potential-guide/task-engine";
-import {MemoryStore} from "@potential-guide/task-engine/testing";
+import {MemoryIpfsClient,MemoryStore} from "@potential-guide/task-engine/testing";
 import {readFile} from "node:fs/promises";
-import {pathToFileURL} from "node:url";
 const binding=JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "binding.json"))},"utf8"));
-const bundle={url:pathToFileURL(${JSON.stringify(join(scratch, "task-sdk", "fixture", "bundle.tar.gz"))}).href,digest:binding.digest};
+const bundle=binding.cid;
+const ipfsClient=new MemoryIpfsClient();
+for(const [cid,hex] of JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "blocks.json"))},"utf8")))ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
 ${
   label === "task-adapters"
     ? `
@@ -204,7 +333,7 @@ const store=openSqliteStore("consumer.sqlite");
 `
     : "const store=new MemoryStore();"
 }
-const engine=createTaskEngine({store,bundleDirectory:"bundle-cache",authorize:()=>true});
+const engine=createTaskEngine({store,ipfsClient,authorize:()=>true});
 await engine.start();
 const caller={scope:"consumer",subject:"fixture"};
 let decision=await engine.submit({requestId:newId(),bundle,text:"packed",timeoutMs:10000},caller);
@@ -228,179 +357,40 @@ await engine.close();store.close();
       );
       await run(process.execPath, [script], directory);
     }
-    if (label === "artifact-hosts") {
-      const script = join(directory, "artifact-hosts.mjs");
+    if (label === "npm-objectives") {
+      const script = join(directory, "static-objectives.mjs");
       await writeFile(
         script,
         `
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
-import {mkdir,readFile,writeFile} from "node:fs/promises";
-import {resolve,join} from "node:path";
-import {checkerSchemaUri,objectiveSchemaUri} from "@potential-guide/check-artifacts";
-import {buildCheckerArtifact,writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
-import {ContractStore,CheckKernel,CheckerService,CheckerMaterializer,createServiceRouter,serveServices,closePrivateFileBackend} from "@potential-guide/checker-host";
-import {CheckTaskClient} from "@potential-guide/checker-host/v3";
-import {ObjectiveService,ObjectiveTaskClient,createObjectiveRouter} from "@potential-guide/objective-host";
-const root=resolve("fixture");
-await mkdir(root);
-const page=Buffer.from("---\\ntitle: Packed\\ndescription: Independent consumer\\n---\\nBody\\n");
-await writeFile(join(root,"entry.cjs"),"exports.execute=async()=>({status:200,message:'',payload:{ok:true,problems:[]}});");
-await writeFile(join(root,"checker.md"),page);
-const built=await buildCheckerArtifact({
-  manifest:Buffer.from(JSON.stringify({$schema:checkerSchemaUri,runtime:{type:"node",minVersion:"22.13.0"},entry:"checker.cjs",subjectSchema:{type:"object"},languages:["en"],problems:[]})),
-  entry:join(root,"entry.cjs"),references:{"references/en/checker.md":join(root,"checker.md")},
-  outDirectory:join(root,"checker")
-});
-const packedCheck=await packContractArtifact(built.directory,join(root,"checker.tgz"));
-const checkUrl="https://example.test/checker/1.tgz";
-const objective=await writeContractArtifact(new Map([
-  ["objective.yaml",Buffer.from(JSON.stringify({
-    $schema:objectiveSchemaUri,subjectSchema:{type:"object"},languages:["en"],
-    levels:[{id:"ready",checks:["pass"]}],
-    checkers:{pass:{url:checkUrl,digest:built.digest,subjectMapping:"$"}}
-  }))],
-  ["references/en/objective.md",page],["references/en/levels/ready.md",page]
-]),join(root,"objective"));
-const packedObjective=await packContractArtifact(objective.directory,join(root,"objective.tgz"));
-const objectiveUrl="https://example.test/objective/1.tgz";
-const archives=new Map([[checkUrl,await readFile(packedCheck.archive)],[objectiveUrl,await readFile(packedObjective.archive)]]);
-const repository=new ContractStore(["https://example.test"],undefined,async(url)=>{
-  const bytes=archives.get(url);assert.ok(bytes,"Unexpected artifact source");return bytes;
-});
-const kernel=await CheckKernel.create(join(root,"snapshots"));
-const checks=new CheckerService(repository,new CheckerMaterializer(join(root,"run")),kernel,["en"]);
-const objectives=new ObjectiveService(repository,checks,["en"]);
-const token=randomUUID();
-const host=await serveServices([createServiceRouter(checks,"/checks","checker"),createObjectiveRouter(objectives,"/probes")],token,async()=>{
-  await objectives.close();await checks.close();repository.close();await closePrivateFileBackend();
-});
-const address={endpoint:host.endpoint,token};
-const checkerClient=new CheckTaskClient(address,"/checks");
-const client=new ObjectiveTaskClient(address,"/probes");
-try{
-  assert.equal((await client.resolveArtifact(objectiveUrl)).digest,objective.digest);
-  const task=await client.probe({objective:{url:objectiveUrl,digest:objective.digest},subject:{}});
-  const observed=await task.result();
-  assert.equal(observed.result.current.levelId,"ready");
-  assert.equal(observed.evidence.checks[0].snapshot.evidence.runtime.version,process.versions.node);
-  assert.equal(observed.evidence.checks[0].snapshot.freshness,"started-after-request");
-  assert.match(observed.evidence.checks[0].snapshot.evidence.revision,/^[a-f0-9]{64}$/);
-  const checked=await checkerClient.check({checker:{url:checkUrl,digest:built.digest},subject:{}});
-  assert.deepEqual((await checked.result()).result,{ok:true,problems:[]});
-  assert.equal((await client.reference(objective.digest,"checkers/pass")).origin.artifactDigest,built.digest);
-  await assert.rejects(()=>client.reference(objective.digest,"system/404"),/not found/);
-}finally{
-  client.close();checkerClient.close();await host.close();
+import {createRequire} from "node:module";
+import {dirname,join,resolve} from "node:path";
+import {readFile} from "node:fs/promises";
+import {prepareObjectivePackage,withPilot} from "@potential-guide/cli-runtime";
+import {readArtifact} from "@potential-guide/check-runtime-files";
+import {parseManifest} from "@potential-guide/pilot-protocol";
+const require=createRequire(import.meta.url);
+const origins=${JSON.stringify(Object.fromEntries(tarballs))};
+const names=${JSON.stringify(definitions.filter((entry) => entry.objective).map((entry) => entry.name))};
+let count=0;
+for(const name of names){
+ const source=dirname(require.resolve(name+"/objective.yaml"));
+ const options={cacheDirectory:resolve(".cache","packages")};
+ const prepared=await prepareObjectivePackage(source,process.cwd(),options);
+ const exact=await prepareObjectivePackage(origins[name],process.cwd(),options);
+ assert.equal(prepared.source.packageName,name);
+ assert.equal(prepared.source.packageDigest,exact.source.packageDigest);
+ const manifest=parseManifest(await readFile(join(prepared.directory,"objective.yaml"),"utf8"));
+ for(const level of manifest.levels)for(const check of level.checks){
+  assert.match((await readArtifact(join(prepared.directory,"checks",check.id))).revision,/^[a-f0-9]{64}$/);
+  count++;
+ }
+ await assert.rejects(withPilot(source,process.cwd(),undefined,async()=>assert.fail("Legacy execution must not run")),/Legacy Pilot execution is retired/);
 }
+assert.equal(count,16);
 `,
       );
       await run(process.execPath, [script], directory);
-    }
-    if (label === "npm-objectives") {
-      const { defaultPolicy } = await import(
-        pathToFileURL(join(root, "packages", "objective-monorepo-standard", "dist", "index.js"))
-          .href
-      );
-      const reportFile = join(root, ".cache", `npm-objectives-installed-${Date.now()}.json`);
-      await writeFile(
-        join(directory, "objective-consumption.mjs"),
-        `
-import assert from "node:assert/strict";
-import {dirname,resolve,join} from "node:path";
-import {createRequire} from "node:module";
-import {mkdir,writeFile} from "node:fs/promises";
-import {randomUUID} from "node:crypto";
-import {prepareObjectivePackage,withPilot} from "@potential-guide/cli-runtime";
-import {CheckKernel,readArtifact,terminal,serve,ensurePrivateDirectory,publishPrivateFile,removePrivateFile} from "@potential-guide/checker-host";
-import {observe} from "@potential-guide/objective-pilot";
-import {Effect} from "@potential-guide/effects";
-import {RequestModel as R,CoordinatorModel as M,coordinatorViews} from "@potential-guide/regulation-coordinator";
-const require=createRequire(import.meta.url);
-process.env.PGUIDE_CHECK_HOST_DIRECTORY=resolve(".cache","owned-host");
-const names=${JSON.stringify(definitions.filter((entry) => entry.objective).map((entry) => entry.name))};
-const origins=${JSON.stringify(Object.fromEntries(tarballs))};
-const packageSpecs=Object.fromEntries(names.map(name=>[name,dirname(require.resolve(name+"/objective.yaml"))]));
-const cacheDirectory=resolve(".cache","frozen");
-const kernel=await CheckKernel.create(resolve(".cache","snapshots"));
-await ensurePrivateDirectory(process.env.PGUIDE_CHECK_HOST_DIRECTORY);
-const token=randomUUID(),host=await serve(kernel,token);
-const descriptor=JSON.stringify({endpoint:host.endpoint,token,pid:process.pid,instance:randomUUID()});
-assert.equal(await publishPrivateFile(process.env.PGUIDE_CHECK_HOST_DIRECTORY,"host.json",descriptor,null),true);
-const inventory={node:process.version,platform:process.platform,graph:${JSON.stringify(graph)},packages:[],artifacts:[]};
-let runs=0;
-try{
- for(const name of names){
-  const prepared=await prepareObjectivePackage(packageSpecs[name],process.cwd(),{cacheDirectory:join(cacheDirectory,"packages")});
-  const original=await prepareObjectivePackage(origins[name],process.cwd(),{cacheDirectory:join(cacheDirectory,"packages")});
-  assert.equal(prepared.source.packageDigest,original.source.packageDigest,"Installed tree differs from the exact delivery tarball.");
-  inventory.packages.push({name,installedSource:prepared.source,tarballSource:original.source});
-  assert.equal(prepared.source.packageName,name);
-  assert.equal(prepared.source.spec,packageSpecs[name]);
-  await withPilot(packageSpecs[name],process.cwd(),undefined,async(spec)=>{
-   assert.equal(spec.objectiveId,name);
-   assert.equal(spec.version,prepared.source.packageDigest);
-   for(const level of spec.manifest.levels)for(const check of level.checks){
-    const artifact=await readArtifact(join(prepared.directory,"checks",check.id));
-    inventory.artifacts.push({objectiveId:name,levelId:level.id,checkId:check.id,revision:artifact.revision});
-    const checkId="installed-"+runs++;
-    await kernel.executeCheck({checkId,directory:artifact.directory,revision:artifact.revision,subject:{}});
-    while(!terminal(kernel.sample(checkId)))await new Promise(done=>setTimeout(done,10));
-    const state=kernel.sample(checkId);
-    assert.equal(state.state,"Failed");
-    assert.doesNotMatch(state.error,/initialization timed out|Cannot find module|dependencies must be bundled|verified worker source/i);
-   }
-  },{cacheDirectory,packageSpecs,reports:{enabled:false}});
- }
- assert.equal(runs,16);
- assert.equal(kernel.diagnostics().executions,16);
- const target=resolve(".cache","target");
- const own={root:target,directory:"packages/shared",roles:["internal"],runtime:"universal",allows:[],entries:["src/index.ts"],generated:[],joins:[],deliveries:[]};
- const files={
-  "package.json":JSON.stringify({name:"independent-target",private:true}),
-  "README.md":"# Independent",
-  "pnpm-workspace.yaml":"packages: [packages/*, apps/*]",
-  "turbo.json":JSON.stringify({tasks:{build:{outputs:["dist/**"],dependsOn:["^build"]},check:{outputs:[]}}}),
-  "packages/shared/package.json":JSON.stringify({name:"shared",private:true,scripts:{build:"MUST_NOT_EXECUTE",check:"MUST_NOT_EXECUTE"}}),
-  "packages/shared/README.md":"# Shared",
-  "packages/shared/src/index.ts":"export const value=1;",
-  "packages/shared/objectives.yaml":JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/objectives/v1.json",objectives:{standardize:{description:"Package preparation",objective:"@potential-guide/objective-package-standard",inputSchema:{type:"object",additionalProperties:false,maxProperties:0},subject:JSON.stringify(own)}}})
- };
- for(const [name,bytes] of Object.entries(files)){const path=join(target,name);await mkdir(dirname(path),{recursive:true});await writeFile(path,bytes);}
- let rootSpec,rootObservation;
- const subject={context:{repo:{rootPath:target,origin:null},path:"."},policy:${JSON.stringify(defaultPolicy)},deliveries:[]};
- await withPilot(packageSpecs["@potential-guide/objective-monorepo-standard"],process.cwd(),undefined,async(spec,runtime)=>{
-  rootSpec=spec;
-  const result=await Effect.runPromise(observe({spec,subject},runtime));
-  assert.equal(result.status,200,result.message);
-  assert.equal(result.payload.current.levelId,"standardized",JSON.stringify(result));
-  assert.equal(Object.keys(result.payload.versions).length,2);
-  assert.ok(Object.values(result.payload.sources).every(source=>source.kind==="npm-package"));
-  rootObservation=result;
- },{cacheDirectory,packageSpecs,reports:{enabled:false}});
- let state=M.createCoordinatorState("installed-consumer");
- const fact=(value)=>{state=M.reduceCoordinatorState({revision:state.revision+1,occurredAt:"2026-10-24T00:00:00Z",fact:value},state);};
- fact({type:"request",command:{type:"request",requestRef:"installed-npm",objective:rootSpec,subject,desiredLevel:"terminal",priority:0,origin:{kind:"external"}}});
- const binding={id:"installed-fixture",configuration:{}};
- fact({type:"resources",allocation:{kind:"configured",bindings:[{binding,capacity:1}]}});
- const run={id:"installed-consumer:3",requestRef:"installed-npm",resourceRevision:2,hostBindingRevisionId:M.bindingRevisionId("installed-consumer",binding),limits:{timeoutMs:1000,maxAgentRuns:1,maxStallRuns:1}};
- fact({type:"run-start",run});
- fact({type:"run-phase",runId:run.id,phase:"running"});
- fact({type:"observation",runId:run.id,observation:rootObservation});
- fact({type:"run-end",runId:run.id,outcome:{kind:"target-reached"}});
- const replay=M.restoreCoordinatorState(JSON.parse(JSON.stringify(state)));
- assert.deepEqual(coordinatorViews([replay]),coordinatorViews([state]));
- assert.equal(R.requestDetails(replay.requests,"installed-npm").objectiveRevision.packageDigest,rootSpec.version);
- assert.equal(R.requestDetails(replay.requests,"installed-npm").objectiveRevision.commit,undefined);
- inventory.businessObservation=rootObservation;
- inventory.coordinator={objective:R.requestDetails(replay.requests,"installed-npm").objective,packageDigest:rootSpec.version,events:state.events.length,replay:true,views:true};
- await writeFile(${JSON.stringify(reportFile)},JSON.stringify(inventory,null,2)+"\\n",{flag:"wx"});
- console.log(JSON.stringify({packages:names.length,checks:runs,source:"installed-package-directories",runtime:"installed-cli-runtime",workspaceFallback:false,report:${JSON.stringify(reportFile)}}));
-}finally{await host.close();await removePrivateFile(process.env.PGUIDE_CHECK_HOST_DIRECTORY,"host.json",descriptor);}
-`,
-      );
-      await run(process.execPath, [join(directory, "objective-consumption.mjs")], directory);
-      console.log(`Installed Objective evidence: ${reportFile}`);
     }
     if (label === "coordinator") {
       for (const name of [
@@ -612,7 +602,6 @@ try{
       for (const bin of definition.bins ?? []) {
         const executable = join(binaries, process.platform === "win32" ? `${bin}.cmd` : bin);
         assert.ok(existsSync(executable), `Missing installed executable: ${bin}`);
-        if (discoveryHostBins.includes(bin)) continue;
         const result = JSON.parse(
           await run(executable, ["--help", "--format", "json"], directory, env),
         );

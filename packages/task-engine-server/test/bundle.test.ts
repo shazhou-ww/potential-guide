@@ -3,18 +3,19 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { pathToFileURL } from "node:url";
 import { newId } from "@potential-guide/task-engine";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { TaskClient } from "@potential-guide/task-engine-http";
-import { taskSchemaUri, TaskError } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "@potential-guide/task-sdk/build";
+import { TaskError, taskSchemaUri } from "@potential-guide/task-protocol";
+import { buildTaskBundle } from "@potential-guide/task-sdk/build";
+import { importTaskBundle } from "@potential-guide/task-sdk/publish";
 import { startTaskServer } from "../src/index.js";
 
 test("V06/V10: real authenticated TCP Server executes the SDK entry, reopens SQLite v5 without content or business replay", async () => {
   const root = resolve(".cache", `server-bundle-${randomUUID()}`);
   await mkdir(root, { recursive: true });
   const database = join(root, "new-domain-v5.sqlite");
-  const bundleDirectory = join(root, "cache");
+  const ipfsClient = new MemoryIpfsClient();
   const marker = join(root, "loads.txt");
   let server: Awaited<ReturnType<typeof startTaskServer>> | undefined;
   try {
@@ -42,12 +43,12 @@ appendFileSync(${JSON.stringify(marker)},"loaded\\n");export default async input
       entry: callback,
       outDirectory: join(root, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(root, "bundle.tar.gz"));
+    await importTaskBundle(built.directory, ipfsClient);
     await rm(callback);
     const options = {
       port: 0,
       database,
-      bundleDirectory,
+      ipfsClient,
       authorize: () => true,
       resolveCaller(request: Request) {
         if (request.headers.get("authorization") !== "Bearer test")
@@ -59,7 +60,7 @@ appendFileSync(${JSON.stringify(marker)},"loaded\\n");export default async input
     let client = new TaskClient({ url: server.url, headers: { Authorization: "Bearer test" } });
     const request = {
       requestId: newId(),
-      bundle: { url: pathToFileURL(packed.archive).href, digest: built.digest },
+      bundle: built.cid,
       text: "production",
       timeoutMs: 10_000,
     };
@@ -85,8 +86,7 @@ appendFileSync(${JSON.stringify(marker)},"loaded\\n");export default async input
     );
     await server.close();
     server = undefined;
-    await rm(bundleDirectory, { recursive: true });
-    await rm(packed.archive);
+    ipfsClient.blocks.clear();
     server = await startTaskServer(options);
     client = new TaskClient({ url: server.url, headers: { Authorization: "Bearer test" } });
     assert.equal((await client.getTask(accepted.taskId)).revision, original.revision);

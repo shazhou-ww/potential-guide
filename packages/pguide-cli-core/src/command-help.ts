@@ -22,9 +22,9 @@ type Handler = Parameters<typeof commandMain>[1];
 export const commandDescriptions: Record<Command, string> = {
   agents: "Manage independent user and project Agent resources",
   objectives: "Discover and manage user and directory Objective declarations",
-  probe: "Observe an Objective Pilot",
-  regulate: "Run Pilot regulation with per-Agent execution limits",
-  continue: "Continue a persisted Regulation",
+  probe: "Pilot probe (execution retired pending Task Bundle migration)",
+  regulate: "Pilot regulation (execution retired pending Task Bundle migration)",
+  continue: "Persisted Regulation (continuation retired pending Task Bundle migration)",
   scaffold: "Create an Objective Pilot skeleton",
   validate: "Validate an Objective Pilot",
 };
@@ -71,7 +71,7 @@ const help: Record<Command, CommandHelp> = {
   },
   probe: {
     description:
-      "Observe the current Objective level and all blocking problems. Does not run regulation.",
+      "Host-based execution is retired. This command rejects until migrated to Task Bundles.",
     usage: "pguide probe (--objective <name> | --pilot <directory|Git URI|legacy-alias>) [options]",
     sections: [
       {
@@ -104,10 +104,9 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Notes",
         lines: [
-          "  objective.json artifacts require an exact digest; no npm identity/build is needed.",
-          "  Legacy Git Pilot repositories must be clean and committed. Checks may execute tools;",
-          "  a self-check Pilot includes one Agent sanity task. Read the Pilot before running.",
-          "  Exit 0 means observation succeeded, not that the Objective reached terminal.",
+          "  Execution returns exit 2 and pilot-error before source acquisition or Agent work.",
+          "  Build Task Bundles with @potential-guide/task-sdk/build and submit exact references.",
+          "  Static scaffold/validate and Objective declaration management remain available.",
           "  Manage declarations with pguide objectives; config aliases are legacy sources only.",
           "  Use @name to require a registered Objective; bare names resolve when registered.",
           "  Next: pguide regulate --help",
@@ -117,7 +116,7 @@ const help: Record<Command, CommandHelp> = {
   },
   regulate: {
     description:
-      "Observe, run an Agent when needed, and re-observe until a target or finite quota is reached.",
+      "Host-based regulation is retired. Execution rejects before Agent work or state mutation.",
     usage:
       "pguide regulate (--objective <name> | --pilot <directory|Git URI|legacy-alias>) --target <level> [options]",
     sections: [
@@ -154,17 +153,16 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Notes",
         lines: [
-          "  May invoke a real Agent and consume tokens. Repair tool requests require configured grants.",
-          "  regulate.quota bounds the run; pilot.probe controls checks.",
-          "  The saved regulation ID can be resumed with pguide continue <regulation-id>.",
-          "  Recovery retains the resolved source and commit, even if a registered name changes.",
+          "  Execution returns exit 2 and pilot-error until migrated to Task Bundles.",
+          "  Existing records are not pruned, rewritten, converted or replayed.",
+          "  Help and command discovery remain available; no Agent is started.",
         ],
       },
     ],
   },
   continue: {
     description:
-      "Start another bounded attempt using a persisted regulation's pinned Pilot and subject.",
+      "Legacy continuation is retired. Existing records are left unchanged and are not replayed.",
     usage: "pguide continue <regulation-id> [--report <path>]",
     sections: [
       {
@@ -179,9 +177,8 @@ const help: Record<Command, CommandHelp> = {
       {
         title: "Notes",
         lines: [
-          "  Restores the saved target, subject, Agent recipe and quotas; does not accept a new --pilot.",
-          "  Current permission grants apply. A required Agent session must be resumable.",
-          "  Use the same --cwd and user/project config.jsonc context to find the saved state directory.",
+          "  Execution returns exit 2 and pilot-error before reading or changing a saved record.",
+          "  No implicit conversion to Task Bundles and no automatic replay are provided.",
         ],
       },
     ],
@@ -218,14 +215,15 @@ const help: Record<Command, CommandHelp> = {
         title: "Next steps",
         lines: [
           "  Replace TODO guidance and implement the generated check. IDs use lowercase kebab-case.",
-          "  Validate with pguide validate pilot .\\objective\\objective.yaml, then commit before probing.",
+          "  Validate with pguide validate pilot .\\objective\\objective.yaml.",
+          "  CLI execution is retired; author Task Bundles explicitly for the generic Engine.",
         ],
       },
     ],
   },
   validate: {
     description:
-      "Validate a Pilot manifest and its localized reference graph without executing checks.",
+      "Validate static Pilot references or local Objective artifact files without executing checks or resolving external artifact closure.",
     usage: "pguide validate pilot <objective.yaml> | artifact <directory>",
     sections: [
       {

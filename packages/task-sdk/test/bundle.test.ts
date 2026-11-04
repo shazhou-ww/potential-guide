@@ -5,25 +5,23 @@ import { mkdir, readFile, rm, rmdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import {
-  gitTreeDigest,
-  parseArtifactYaml,
-  readArtifactFiles,
-  unpackArtifactFiles,
-} from "@potential-guide/check-artifacts/files";
+import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/check-artifacts/files";
+import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import {
   compileInputSchema,
   resolveBundleSchemas,
   taskSchemaUri,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
-import { buildTaskBundle, packTaskBundle } from "../src/build.js";
+import { buildTaskBundle } from "../src/build.js";
+import { importTaskBundle } from "../src/publish.js";
 
 const declaration = {
   $schema: taskSchemaUri,
   name: "相同展示名称",
   runtime: { type: "node", minVersion: "22.13.0" },
   entry: "worker.cjs",
+  include: ["task.yaml", "worker.cjs"],
   inputSchema: { $ref: "https://example.test/input" },
   resultSchema: { $ref: "https://example.test/result" },
   messageSchema: false,
@@ -86,10 +84,9 @@ export default async (input, context) => {
       schemas,
       outDirectory: join(directory, "bundle"),
     });
-    const packed = await packTaskBundle(built.directory, join(directory, "bundle.tar.gz"));
-    assert.equal(packed.digest, built.digest);
-    const files = await unpackArtifactFiles(await readFile(packed.archive));
-    assert.equal(gitTreeDigest(files), built.digest);
+    const published = await importTaskBundle(built.directory, new MemoryIpfsClient());
+    assert.equal(published.cid, built.cid);
+    const files = await readArtifactFiles(built.directory);
     assert.equal([...files.keys()].filter((name) => name.startsWith("schemas/")).length, 3);
     const resolved = resolveBundleSchemas(
       validateTaskBundle(parseArtifactYaml(files.get("task.yaml")!)),
@@ -113,7 +110,7 @@ export default async (input, context) => {
         generation,
         maxInFlight: 8,
         maxPayloadBytes: 65_536,
-        bundle: { digest: built.digest, declaration: resolved },
+        bundle: { cid: built.cid, declaration: resolved },
       },
     });
     let completed = false;
@@ -218,6 +215,79 @@ test("V01: build fails on changed Schema locks, incomplete closure, conflicts an
     );
     for (const name of ["", " leading", "trailing ", "a\nb", "a\tb"])
       assert.throws(() => validateTaskBundle({ ...declaration, name }), /Invalid task.yaml/);
+  });
+});
+test("Bundle-relative Schema files resolve alongside absolute IDs, fragments and shared references", () => {
+  const resources = [
+    {
+      $id: "https://example.test/input",
+      type: "object",
+      properties: { text: { $ref: "./shared#text" } },
+      required: ["text"],
+    },
+    { $id: "https://example.test/shared", $defs: { text: { $anchor: "text", type: "string" } } },
+  ];
+  const paths = ["schemas/input.json", "schemas/shared.json"];
+  const bundle = validateTaskBundle({
+    ...declaration,
+    include: ["task.yaml", "worker.cjs", ...paths],
+    inputSchema: { $ref: "schemas/input.json" },
+    resultSchema: { $ref: "./schemas/shared.json#/$defs/text" },
+    messageSchema: { $ref: "schemas/shared.json#text" },
+  });
+  const resolved = resolveBundleSchemas(bundle, resources, paths);
+  assert.deepEqual(compileInputSchema(resolved.inputSchema).validate({ text: "ok" }), {
+    text: "ok",
+  });
+  assert.throws(() => compileInputSchema(resolved.inputSchema).validate({ text: 1 }));
+  assert.deepEqual(resolved.resultSchema, { type: "string" });
+  assert.deepEqual(resolved.messageSchema, { type: "string" });
+  assert.throws(() => resolveBundleSchemas(bundle, resources), /Missing offline/);
+  assert.throws(() => resolveBundleSchemas(bundle, resources, paths.slice(1)), /paths.*manifest/);
+  assert.throws(
+    () => resolveBundleSchemas(bundle, resources, ["schemas/unknown.json", paths[1]!]),
+    /paths.*manifest/,
+  );
+  assert.throws(
+    () =>
+      resolveBundleSchemas(
+        { ...bundle, inputSchema: { $ref: "schemas/missing.json" } },
+        resources,
+        paths,
+      ),
+    /Missing offline/,
+  );
+});
+test("removed Task v2 and future schemas cannot build or import Workers", async () => {
+  await workspace(async (directory) => {
+    const yaml = join(directory, "task.yaml");
+    const callback = join(directory, "callback.ts");
+    await writeFile(callback, "export default async input => input;");
+    const bundle = join(directory, "bundle");
+    await mkdir(bundle);
+    await writeFile(join(bundle, "worker.cjs"), "throw Error('must not run');");
+    for (const version of ["v2", "v3"]) {
+      const manifest = JSON.stringify({
+        ...declaration,
+        $schema: taskSchemaUri.replace("v1", version),
+        inputSchema: { type: "object" },
+        resultSchema: true,
+      });
+      await writeFile(yaml, manifest);
+      await writeFile(join(bundle, "task.yaml"), manifest);
+      await assert.rejects(
+        buildTaskBundle({
+          declaration: yaml,
+          entry: callback,
+          outDirectory: join(directory, version),
+        }),
+        { code: "invalid_bundle" },
+      );
+      await assert.rejects(importTaskBundle(bundle, new MemoryIpfsClient()), {
+        code: "invalid_bundle",
+      });
+      assert.equal(existsSync(join(directory, version)), false);
+    }
   });
 });
 test("V01: unsupported dynamic imports and native extensions cannot become self-contained Workers", async () => {

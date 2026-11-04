@@ -53,8 +53,6 @@ export {
   createHttpCheckProbe,
   createMemoryCheckProbe,
   createProcessCheckProbe,
-  createWorkerCheckProbe,
-  createArtifactCheckProbe,
 } from "./probes.js";
 export {
   compileSubjectProjection,
@@ -84,4 +82,3 @@ export {
   parseStrictYaml,
   validateSubject,
 } from "./validation.js";
-export * from "./service.js";

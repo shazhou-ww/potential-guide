@@ -6,6 +6,10 @@
     "outDir": "dist",
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/task-sdk.tsbuildinfo"
   },
-  "references": [{ "path": "../task-protocol" }, { "path": "../check-artifacts" }],
+  "references": [
+    { "path": "../task-protocol" },
+    { "path": "../check-artifacts" },
+    { "path": "../ipfs-content" }
+  ],
   "include": ["src/**/*.ts"]
 }
