@@ -255,6 +255,7 @@ export async function prepareCheckArtifact(
   const timeoutMs = options.timeoutMs ?? 30_000;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new Error("Invalid Check preparation timeout.");
+  // Retain deadline ownership through streamed bodies, including on Node 22.
   const deadline = new AbortController();
   const timer = setTimeout(
     () => deadline.abort(new DOMException("Check preparation timed out.", "TimeoutError")),

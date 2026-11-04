@@ -148,6 +148,8 @@ Its digest is
   255 per component, 72 MiB transfer and 66 MiB expanded tar including metadata.
   A preparation AbortSignal and bounded timeout govern fetch/parsing/publication;
   bounded local filesystem operations finish before the next cancellation check.
+  The timeout also aborts stalled response bodies with or without a caller signal;
+  its timer is released when preparation finishes.
 - HTTPS requires normal certificate verification. Embedded credentials and URL
   fragments are rejected; automatic redirects, ambient registry authentication,
   cookies and custom executable fetch hooks are not supported. Supply a trusted,
