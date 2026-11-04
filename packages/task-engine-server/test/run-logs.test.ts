@@ -338,7 +338,8 @@ test("write/storage fault gives unavailable receipts and durable missing status,
     }
   });
 });
-test("slow consumers replay pages, retention reports explicit gaps, and subscriptions have a hard capacity", async () => {
+test("slow consumers replay pages, retention reports explicit gaps, and subscriptions have a hard capacity", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: Date.now() });
   await fixture(async ({ directory, bundle }) => {
     const server = await startTaskServer({
       ...options(directory),
@@ -356,7 +357,7 @@ test("slow consumers replay pages, retention reports explicit gaps, and subscrip
         code: "capacity_exceeded",
       });
       assert.equal(subscription.pull().entries[0]?.sequence, 2);
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      t.mock.timers.tick(250);
       const expired = subscription.pull();
       assert.equal(expired.state.availability, "expired");
       const gap = await api.getRunLogs(id, { afterSequence: 0 });

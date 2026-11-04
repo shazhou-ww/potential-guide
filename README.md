@@ -71,6 +71,11 @@ pnpm test
 ```
 
 Run `pnpm check` for the complete repository verification.
+The test command runs at most two workspace suites at once because each suite
+can also start parallel test files, child processes and Workers.
+Generated `.test-*` fixture directories are ignored by Git and Biome; keep
+new runtime fixtures under `.cache/` so repository scans do not race their
+cleanup, and hand-written test sources under `test/`.
 
 ## CLI
 

@@ -9,7 +9,7 @@ import type { BuildFailure } from "esbuild";
 import { compileTaskBundle } from "../src/build.js";
 
 test("binding candidate manifests ignore only absence and propagate I/O and JSON failures", async (t) => {
-  const directory = resolve(".test-binding-manifest", randomUUID());
+  const directory = resolve(".cache", "binding-manifest", randomUUID());
   const foreign = join(directory, "foreign");
   const manifest = join(foreign, "package.json");
   await mkdir(join(foreign, "dist"), { recursive: true });

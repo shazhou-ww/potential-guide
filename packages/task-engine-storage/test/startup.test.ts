@@ -25,7 +25,7 @@ for (const boundary of ["before", "after"]) {
       const timer = setTimeout(() => {
         child.kill();
         reject(new Error("startup fixture stalled"));
-      }, 10000);
+      }, 60_000);
       child.once("exit", (code) => {
         clearTimeout(timer);
         resolveExit(code);

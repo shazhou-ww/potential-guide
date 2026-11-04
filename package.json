@@ -34,7 +34,7 @@
     "format:check": "biome format .",
     "lint": "turbo run lint && biome lint scripts config",
     "pack:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "pnpm settings:check && pnpm schemas:check && pnpm workers:build && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && pnpm task-workers:check && turbo run test && node --test scripts/*.test.mjs",
+    "test": "pnpm settings:check && pnpm schemas:check && pnpm workers:build && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && pnpm task-workers:check && turbo run test --concurrency=2 && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
