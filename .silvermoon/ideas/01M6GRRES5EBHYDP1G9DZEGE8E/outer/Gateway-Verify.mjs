@@ -28,6 +28,10 @@ const report = {
   platform: process.platform, node: process.version, commands: [], scenarios: [],
   configurationFailures: [], contentFailures: [], cleanup: {}, errors: [],
 };
+if (process.argv[3]) {
+  assert.equal(report.sourceCommit, process.argv[3], "Source moved outside the pinned refresh.");
+  report.requestedSourceCommit = process.argv[3];
+}
 const children = new Set();
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
 async function bounded(promise, message, ms = 30_000) {
@@ -186,7 +190,9 @@ export default async function(input,context) {
 }`);
   await writeFile(join("author", "payload.bin"), Buffer.alloc(600_000, 42));
   await writeFile(join("author", "prepare.mjs"), `
-import {writeFile} from "node:fs/promises";
+import assert from "node:assert/strict";
+import {readFile,writeFile} from "node:fs/promises";
+import {join} from "node:path";
 import {buildTaskBundle} from "@potential-guide/task-sdk/build";
 import {importTaskBundle} from "@potential-guide/task-sdk/publish";
 import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
@@ -199,10 +205,14 @@ const built=await buildTaskBundle({
 });
 const memory=new MemoryIpfsClient();
 await importTaskBundle(built.directory,memory);
+const taskYaml=await readFile(join("bundle","task.yaml"),"utf8");
+assert.equal(taskYaml.trimStart().startsWith("{"),false,"SDK must emit clean YAML, not JSON");
+assert.doesNotMatch(taskYaml,/^resolved:/m,"Private resolved metadata must not enter the declaration");
+assert.equal(memory.blocks.size,7,"Keep the bounded seven-block resource fixture");
 const published=await importTaskBundle(built.directory,await createIpfsClient(process.argv[2]));
 if(published.cid!==built.cid)throw Error("Publication CID mismatch");
-await writeFile("../blocks.json",JSON.stringify([...memory.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("base64")])));
-console.log(JSON.stringify({cid:built.cid,blocks:memory.blocks.size,pinned:memory.pins.has(built.cid)}));
+await writeFile(join("..","blocks.json"),JSON.stringify([...memory.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("base64")])));
+console.log(JSON.stringify({cid:built.cid,blocks:memory.blocks.size,pinned:memory.pins.has(built.cid),cleanYaml:true,noPrivateResolvedMetadata:true}));
 `);
   const publication = JSON.parse((await run(process.execPath, ["prepare.mjs", rpc], "author", env)).stdout);
   assert.equal(publication.pinned, true);

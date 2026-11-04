@@ -6,9 +6,9 @@
 未修改部署要求、源码 deliverable、Inner、Ideal 或 events，也未提交门限事件或 push。
 原 [RPC 证据](Evidence.md)、Results.json 和 Verify.mjs 保留为历史，没有覆盖。
 
-- 消费源码提交：`843e8ecb58d320a9050815eb44dac8379ec4db9e`。
+- 消费源码提交：`9648e2094b296b7f559c79c6ac994e19277300ea`。
 - 已接受 implementation revision：`095469bdb16c88c15f92b7b0b71282339da4d5ec`。
-- 执行前已同步 deployment revision：`2d3bc56c5f850ae0a8580d63b88d280a43936639`。
+- 执行前已同步 deployment revision：`681ac1346b428796ba00a26acf0c0b21656bed2c`。
 - Deployment.md Git blob：`4a05b865cfeaf1e5380b97044a1f3d453882a15d`，本次保持不变。
 - 开始观测的事件 digest：`9a0abf35782ba9f6d57a09eb10797db47a76494a`。
 - Windows，Node `v24.11.1`，pnpm `11.22.0`；未发布 npm。
@@ -21,12 +21,13 @@
 
 ## 仓库外安装与独立内容源
 
-使用两个新建、带 owner marker 的仓库外目录，均已清理。
-第一轮完成 6 个成功场景和 18 个非法配置检查，但 harness 错误假设
-拒绝准备也会进入已接受 requests 投影，导致首个坏块场景的 SQL 断言失败。
-仅修正外部检查脚本：成功请求验证 SQL 锚点，拒绝请求验证公开拒绝响应与空 Task 目录；
-没有修改产品。随后在另一个全新目录重跑完整矩阵，本文采用第二轮结果。
-结果 JSON 单列第一轮限制，不把未完成轮次当作通过。
+因主线集成 `ecb55bd2` 的 Bundle loader/protocol/SDK 修改，本次固定在
+`9648e209` 重新构建、打包和执行完整矩阵，不继续追逐其他并发主线。
+使用一个全新、带 owner marker 的仓库外目录，单次完整执行成功并已清理。
+**先前 `843e8ecb` 的成功实测已被本次集成实测整体替代**，不是只重标 sourceCommit。
+旧执行和其最初 harness SQL 断言问题仅作为 `Gateway-Results.json` 的
+`supersedes` 历史保存，不作为当前 HEAD 的证明；旧文件版本仍可在
+`af6661c83271fea2e3befb6e39603f9a934e506c` 查看。
 
 `pnpm build` 成功，37/37 workspace；从该提交本地产物打包 **22** 个内部包。
 分别写入新的消费 manifest 与本地 tarball overrides 后执行
@@ -46,12 +47,14 @@ dependency/peer/optional 版本和物理路径；全部留在各自外部 consum
 
 安装后的 SDK 构建同一非敏感标准 UnixFS Bundle（**7** 个唯一块），含 600,000 字节资源；
 作者用标准 importer 将实际块保存为外部内容源的只读数据，不向服务注入内存 client。
+本轮 harness 限定 sourceCommit，并额外断言 SDK 输出 clean YAML 而非 JSON、
+声明没有私有 `resolved` 元数据，仍为七块资源 fixture；未改源码或 Inner。
 
 ```text
-bafybeifm7us25vela4vsc6xtecjxp2gllzslexat4r2nvwfw3fydao6bfu
+bafybeiaybqzipbsrydabmstgkfwk6msd42n6xbin6bfjpeaorslxjkcmnu
 ```
 
-raw-block 源为独立 Node 进程 **11956**，地址 `http://127.0.0.1:59480`。
+raw-block 源为独立 Node 进程 **26856**，地址 `http://127.0.0.1:50968`。
 它与所有 Engine/UI PID 不同，仅用 HTTP 提供真实块字节。
 记录 **44** 次 raw 请求：42 次正常请求覆盖全部 7 个唯一块，加坏块和超限各 1 次；
 均为 GET、`?format=raw`、Accept `application/vnd.ipld.raw`，无 Cookie/Authorization。
@@ -62,13 +65,13 @@ raw-block 源为独立 Node 进程 **11956**，地址 `http://127.0.0.1:59480`�
 
 | 成功场景 | 实际入口与覆盖 | 监听 | 数据库，相对 `<owned-root>` |
 | --- | --- | --- | --- |
-| 纯参数，Engine-only | standalone，CLI 显式 Gateway，禁用用户层 | `127.0.0.1:59481` | `runtime\workspace\cli\cli.sqlite` |
-| YAML + CLI | pguide 发现，YAML Gateway/base 尾斜杠，CLI port 0 覆盖 2345 | `127.0.0.1:59489` | `runtime\workspace\files\yaml.sqlite` |
-| JSON | standalone，指定 JSON Gateway，禁用用户层 | `127.0.0.1:59498` | `runtime\workspace\files\json.sqlite` |
-| 用户 JSONC | pguide 发现，注释/尾逗号，非法项目服务字段被排除 | `127.0.0.1:59508` | `isolated-user\pguide\user.sqlite` |
-| 四层与 UI | standalone，用户 RPC 被 YAML Gateway 覆盖，文件错误 Gateway URL 被 CLI 正确 URL 覆盖，CLI port 0 | Engine `127.0.0.1:59516`；UI `127.0.0.1:59517` | `runtime\workspace\files\ui.sqlite` |
-| 全局完全禁用 | pguide 发现，存在损坏用户文件，JSON Gateway + CLI 数据库 | `127.0.0.1:59531` | `runtime\workspace\cli\isolated.sqlite` |
-| 默认 RPC 对照 | pguide 发现，不提供 transport；同时给真实 RPC 与无用 Gateway URL | `127.0.0.1:59563` | `runtime\workspace\cli\rpc.sqlite` |
+| 纯参数，Engine-only | standalone，CLI 显式 Gateway，禁用用户层 | `127.0.0.1:50969` | `runtime\workspace\cli\cli.sqlite` |
+| YAML + CLI | pguide 发现，YAML Gateway/base 尾斜杠，CLI port 0 覆盖 2345 | `127.0.0.1:64831` | `runtime\workspace\files\yaml.sqlite` |
+| JSON | standalone，指定 JSON Gateway，禁用用户层 | `127.0.0.1:61568` | `runtime\workspace\files\json.sqlite` |
+| 用户 JSONC | pguide 发现，注释/尾逗号，非法项目服务字段被排除 | `127.0.0.1:54224` | `isolated-user\pguide\user.sqlite` |
+| 四层与 UI | standalone，用户 RPC 被 YAML Gateway 覆盖，文件错误 Gateway URL 被 CLI 正确 URL 覆盖，CLI port 0 | Engine `127.0.0.1:52223`；UI `127.0.0.1:52225` | `runtime\workspace\files\ui.sqlite` |
+| 全局完全禁用 | pguide 发现，存在损坏用户文件，JSON Gateway + CLI 数据库 | `127.0.0.1:52239` | `runtime\workspace\cli\isolated.sqlite` |
+| 默认 RPC 对照 | pguide 发现，不提供 transport；同时给真实 RPC 与无用 Gateway URL | `127.0.0.1:56766` | `runtime\workspace\cli\rpc.sqlite` |
 
 每个成功场景关闭后，用 SQLite 只读查询准确的 `request_id → task_id` 验证目标文件；
 不仅推断文件存在。数据库分别锚定 CLI CWD、指定文件目录、用户文件目录；
@@ -107,7 +110,7 @@ UI 对跨站 Origin 返回 403。
 | 独立失败场景 | 公开拒绝结果 | 外部事实 |
 | --- | --- | --- |
 | 请求正确 CID，源返回错误块字节 | `bundle_fetch_failed` / `IPFS acquisition or CID verification failed.` | 无 Task，源标记实际返回 corrupt 字节 |
-| raw MIME、无长度的 3 MiB chunked 流 | `capacity_exceeded` / `IPFS acquisition exceeds host capacity.` | 无 Task；源在写出 **2,162,688** 字节后观察到提前断开，小于完整 3 MiB |
+| raw MIME、无长度的 3 MiB chunked 流 | `capacity_exceeded` / `IPFS acquisition exceeds host capacity.` | 无 Task；源在写出 **2,129,920** 字节后观察到提前断开，小于完整 3 MiB |
 | 已释放随机端口上的不可达 Gateway | `bundle_fetch_failed` | 无 Task；不切换到 RPC |
 
 三个失败各用新数据库/新服务，均经真实 HTTP 请求与状态轮询确认；
@@ -125,9 +128,9 @@ e611cecef25cddb10b7f907145383608d9b31219ad7120041aeacfe2313882da1944f2897fda29bc
 ```
 
 独立 `IPFS_PATH`，`init --profile=test`、API/Gateway 随机回环端口、`daemon --offline`。
-作者阶段 PID **38728** / RPC `127.0.0.1:59466`，真实写块与 recursive pin 成功，
+作者阶段 PID **7208** / RPC `127.0.0.1:62873`，真实写块与 recursive pin 成功，
 `block/stat`、`pin/ls` 均返回 200；随后关闭，Gateway 验证期不运行。
-Gateway 验证全部结束后才重启为 PID **42348** / RPC `127.0.0.1:59560`，
+Gateway 验证全部结束后才重启为 PID **9296** / RPC `127.0.0.1:56763`，
 默认 RPC 服务通过同一已发布 Bundle 执行成功。
 同时设置 Gateway URL 不会自动改变 transport，`/unused-rpc` 收到 0 请求。
 CLI 停止后真实 Kubo 仍返回 version 200，最后仅由 harness 关闭。
@@ -147,15 +150,23 @@ CLI 停止后真实 Kubo 仍返回 version 200，最后仅由 harness 关闭。
 - 真实用户配置的内存 fingerprint 前后相同，未落盘其内容/摘要；
   项目 fixture 与 owned old-database sentinel 字节不变。
 - 最终 tracked helper **0**；额外按已记录 PID 和独立外部路径做 OS 检查为 **0**。
-  核对 owner marker 后删除两轮仓库外环境，含 tarballs、安装图、数据库、Kubo 私有 repo/tools；
+  核对 owner marker 后删除本轮新建仓库外环境，含 tarballs、安装图、数据库、Kubo 私有 repo/tools；
   生成 JSON 的最终 cleanup 字段由这一步实际结果补充。无遗留 owned 服务或目录。
 
-外部部署验收没有 blocker。项目要求的本轮 `pnpm check` 仍退出 1：
-并发全量中 `check-task/test/restart.test.ts` 的 HTTPS/file 两项子进程 readiness 超时；
-随后正确 package CWD 下独立重跑该文件 **2/2 通过**，不隐瞒并发失败。
-另独立重跑原 monorepo 分类项，仍因
-`.agent/skills/component-responsibility-docs/SKILL.md` 为 `unverified` 而退出 1。
-未改这些源码/规则，不声明全量通过，也未沿用旧会话的 type-supervisor 超时结论。
+本轮固定集成源码的附加回归：
+
+- `pnpm --filter @potential-guide/task-sdk exec tsx --test test\bundle.test.ts`：
+  **5/5 通过**，包含新 Bundle-relative Schema 路径、绝对 ID、fragment 与共享引用解析。
+- `pnpm exec tsx --test packages\ipfs-content\test\*.test.ts apps\pguide-task-engine\test\*.test.ts packages\task-engine\test\bundle.test.ts packages\task-engine-server\test\bundle.test.ts`：
+  **16/16 通过**，含合并后的 loader、原 RPC、程序化 Server、Gateway 和 UI 回归。
+
+外部部署验收没有 blocker。按 parent 的有界 refresh 要求，**未在 `9648e209` 重跑
+`pnpm check`，不声明当前 HEAD 全量通过**。以下只保留旧 `843e8ecb` 的准确说明：
+其全量 check 退出 1，`check-task/test/restart.test.ts` 的 HTTPS/file 两项
+子进程 readiness 超时，随后独立重跑 **2/2 通过**；独立 monorepo 分类项仍因
+`.agent/skills/component-responsibility-docs/SKILL.md` 为 `unverified` 退出 1。
+这些历史结果放在 JSON 的 `supersedes.historicalRepositoryValidation`，
+不冒充本次重跑；本轮未修改相关源码/规则。
 
 ## 复现
 
@@ -173,12 +184,13 @@ $expected = ((Get-Content tools\kubo_v0.43.1_windows-amd64.zip.sha512) -split '\
 $actual = (Get-FileHash tools\kubo_v0.43.1_windows-amd64.zip -Algorithm SHA512).Hash
 if ($actual.ToLower() -ne $expected.ToLower()) { throw 'Checksum mismatch.' }
 Expand-Archive tools\kubo_v0.43.1_windows-amd64.zip -DestinationPath tools
-node $harness $source *> run.log
+node $harness $source 9648e2094b296b7f559c79c6ac994e19277300ea *> run.log
 if ($LASTEXITCODE -ne 0) { throw 'Inspect owned Gateway-Results.json.' }
 ```
 
 脚本拒绝非新建目录，写入 owner marker；结果先落在该外部目录。
 退出后回到源码目录，保存脱敏结果，核对 marker 与所有记录 PID 已不存在后，
 只删除本次专用环境；确认目录不存在并补充结果的最终 cleanup 字段。
-不要复制真实 Kubo repo/身份或广泛删除其他路径。旧两轮的实际环境均已删除；
-JSON 保留的是可复核的安装、HTTP 与生命周期结果，不是可复用的用户环境。
+不要复制真实 Kubo repo/身份或广泛删除其他路径。本轮与历史轮次的实际环境均已删除；
+JSON 的顶层安装、HTTP 与生命周期结果均来自 `9648e209`，
+不是旧执行的复制或可复用的用户环境。
