@@ -211,7 +211,35 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
           env,
         ),
       );
-      assert.deepEqual(help.subcommands, ["check", "build", "publish"]);
+      assert.deepEqual(help.subcommands, ["init", "check", "build", "publish"]);
+      const initialized = JSON.parse(
+        await run(
+          process.execPath,
+          [pguide, "task-bundle", "init", "minimal", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(initialized.status, "ok");
+      assert.equal(initialized.result.packageCreated, false);
+      assert.equal(initialized.result.packageFile, join(directory, "package.json"));
+      const minimal = JSON.parse(
+        await run(
+          "pguide-task-bundle",
+          ["build", "minimal/task.build.yaml", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      const minimalArtifact = JSON.parse(
+        await run(
+          "pguide-task-bundle",
+          ["check", "artifact", "minimal/dist", "--format", "json"],
+          directory,
+          env,
+        ),
+      );
+      assert.equal(minimalArtifact.result.cid, minimal.result.cid);
       await writeFile(
         join(directory, "contract.ts"),
         `import {Type} from "@sinclair/typebox";export default {input:Type.Object({text:Type.String()}),result:Type.String(),message:Type.Never()};`,

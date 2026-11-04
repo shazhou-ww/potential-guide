@@ -553,7 +553,7 @@ test("CLI exposes pguide metadata, structured help and explicit check modes", as
   const help = JSON.parse(
     (await execute(process.execPath, [bin, "--help", "--format", "json"])).stdout,
   );
-  assert.deepEqual(help.subcommands, ["check", "build", "publish"]);
+  assert.deepEqual(help.subcommands, ["init", "check", "build", "publish"]);
   await fixture(async (root, file) => {
     const checked = JSON.parse(
       (await execute(process.execPath, [bin, "check", "author", file, "--format", "json"])).stdout,

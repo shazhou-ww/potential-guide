@@ -6,6 +6,7 @@ binary on PATH (or in `pguide.commandDirectories`); no Engine/server is installe
 or started. Node >=22.13 and TypeBox **@sinclair/typebox 0.34.52** are supported.
 
 ```text
+pguide task-bundle init [directory]
 pguide task-bundle check author task.build.yaml
 pguide task-bundle build task.build.yaml
 pguide task-bundle check artifact dist
@@ -23,6 +24,59 @@ Check results contain `declaration`, `resolved`, `cid` and exact `files`;
 build returns `directory`, `cid` and `declaration`; publish returns only `cid`.
 Help and discovery use the existing CLI metadata contracts. Errors and exit
 statuses use the shared pguide CLI handling, not a second diagnostics protocol.
+
+## Start a minimal task
+
+```text
+pguide task-bundle init my-task
+cd my-task
+pnpm install
+pnpm run build
+pnpm run clean
+```
+
+`init` defaults to the current directory and honors `--cwd`. It creates
+`.gitignore`, `task.build.yaml`, `src/contract.ts` and `src/main.ts`: a typed Echo callback with
+object input/result and no messages or resources. It needs only TypeBox, not a
+local installation of the CLI or Task SDK.
+The generated `.gitignore` excludes `node_modules/` and `dist/`. An existing
+regular `.gitignore` is preserved byte for byte; add these rules yourself if
+needed. Directory or linked `.gitignore` paths are rejected.
+
+Starting at the target directory, `init` searches upward for the nearest
+`package.json`. If found, it reuses that package and adds
+`@sinclair/typebox: "0.34.52"` to `dependencies` only when TypeBox is not already
+declared in dependencies, devDependencies, optionalDependencies or
+peerDependencies. Existing version specifications and other package fields are
+preserved; it does not change module type or package manager.
+If no ancestor package exists, it creates a private ESM `package.json` in the
+target directory with that dependency.
+
+Only when the task directory has its own `package.json` (new or existing),
+`init` fills in missing `scripts.build` and `scripts.clean`.
+Build runs `pguide task-bundle build task.build.yaml`; clean uses a
+cross-platform Node command that removes only this task's `dist` directory.
+Cleaning missing output succeeds; sources and dependencies are retained.
+Other scripts and existing `build`/`clean` are preserved.
+When reusing an ancestor package, `init` only declares the dependency:
+it never adds or changes that package's scripts.
+The CLI must be available on PATH (for example through the global link).
+
+Initialization is offline: it declares dependencies but never runs an install,
+updates a lockfile or starts an Engine. Run your package manager's install command
+in the returned **packageDirectory**, which can be above the task directory;
+then run the generated build script from that package directory. When reusing
+an ancestor package or if `build` already existed, invoke
+`pguide task-bundle build task.build.yaml` from the task
+directory instead. The example uses pnpm; existing npm/yarn/bun
+projects keep using their own package manager. Existing TypeBox versions must
+remain compatible with the supported version above.
+
+Existing template files, directory links and malformed manifests fail without
+overwriting user files. Use a separate target directory if an existing package
+already has `src/main.ts` or `task.build.yaml`. JSON init results include
+`directory`, `buildFile`, `packageDirectory`, `packageFile`, `packageCreated`,
+`dependencyAdded`, `buildScriptAdded`, `cleanScriptAdded`, written `files` and `nextSteps`.
 
 ## Author input
 
