@@ -1,10 +1,10 @@
 # Implementation
 
-本契约是准备阶段的实施初版，具体方案与性能目标在建立可比较基线后细化。
+默认 `pnpm check` 保留源码漂移、构建/分层、格式、lint、生产与测试类型、测试和 tarball 结构检查；完整隔离消费者独立为 `pnpm consumers:check`，也完整保留在跨平台 `deployment:verify` 中。CI 的完整消费者由五轮收敛为 Linux/macOS/Windows 三轮，保留 macOS file fail-closed 等平台独有断言；Node 22/24 矩阵继续执行默认检查。完整交付入口为 `pnpm check && pnpm deployment:verify`，不包含发布。
 
-调研参考：[成功 CI](https://github.com/shazhou-ww/potential-guide/actions/runs/41828329611) 的 Node 22/24 完整检查分别约 8 分 40 秒和 8 分 03 秒，其中包测试约 6 分 13 秒和 5 分 11 秒，打包检查约 79 秒和 101 秒。该运行与调研提交的检查编排一致，但有三处消费者实现差异，不能直接作为实施前后对照。
+Objective 的 `.staging/<package>` 纳入各自 Turbo build outputs；测试入口以快照保护已检入的 settings/task Worker 源码，在构建提供校验所需依赖后检测漂移，并无条件恢复原始源码，避免构建静默修复漂移；保留所有生成运行时和 schema 校验。修复 self-check bundler 对调用目录的隐式依赖，确保从 workspace 构建和根目录校验产生相同字节。HTTPS 测试在停止监听后主动关闭遗留活动连接，保留双 digest、重定向、大小、超时、篡改和离线复用断言，并设置测试等待上限。不调整测试并发。
 
-本地 Windows 的完整运行被符号链接权限错误中断，单独打包检查发现残留输出，因此没有获得本地完整成功基线。重复的 `workers:build` 单独约 12.2 秒；同一个 HTTPS 集成测试在 Node 22 CI 约 303.6 秒、Node 24 CI 约 3 秒，本地 Node 24 单独运行约 5.4 秒。异常等待根因尚未确认，也不能将单测耗时差直接视为整轮收益。
+性能测量使用独立 workflow，对精确提交在同类 Ubuntu runner、同版本 Node/pnpm 下运行完整成功的冷、热 `pnpm check`。冷缓存仅指无构建/Turbo 产物，不含依赖安装；热缓存在同一 checkout 紧接冷运行。历史运行和本地权限失败仅作诊断，不作为收益证据。完整结果、覆盖映射和复现命令在本阶段辅助证据中记录。
 
 ## Steps
 
@@ -14,7 +14,7 @@
 
 ### I-S02: 收敛重复执行与异常等待
 
-优先处理隔离消费者在 Node 检查与部署验证中的重复、Objective 构建后立即校验的重复，以及 HTTPS 测试异常等待。迁移调用前补齐中间产物依赖与缓存恢复条件；测试并发只在测量稳定性与资源开销后调整。
+分离结构与隔离消费者入口并迁移 CI；补齐 Objective staging 缓存输出和生成器输入后，移除测试入口的无条件 workers 重建，但保留独立生成一致性校验；为 HTTPS 服务端清理增加有界回归。
 
 ### I-S03: 验证覆盖并更新开发入口
 
