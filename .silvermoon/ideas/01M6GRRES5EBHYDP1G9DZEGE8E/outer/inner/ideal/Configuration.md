@@ -1,22 +1,20 @@
 # 配置边界与改造范围
 
-本文件服务于 [Idea](Idea.md)，记录用户更新后的范围及待审阅候选，
-不表示代码已实现或构想已接受，也不把所有内部回调变成配置字段。
-当前核对基线为 `893532280b46e5ac0e2a7c5b9b3bd452b0b0c8c4`。
+本文件服务于 [Idea](Idea.md)，保留已交付声明式服务的边界，并新增标准只读 Gateway 方向。
+本次新增范围不由旧验收自动覆盖，也不把所有内部回调变成配置字段。
+已交付基线为 `05c97fcaa9e4f6d6a4fe18c2e37f2f6e59e8c799`。
 
 ## 当前问题
 
-- [CLI 入口][cli]仅接受 `--config <trusted-local-module.mjs>`，
-  动态导入模块并执行默认 factory，再把返回值交给 `startTaskServer`。
-- [ServerOptions][server]要求 `ipfsClient`，并支持授权、Caller 解析、Store、
-  gateway 策略、资源关闭等程序化注入。CLI 目前没有声明式装配层。
-- [示例配置][example]在 JavaScript 中读取 `IPFS_API` 并调用
-  [createIpfsClient][ipfs]；环境变量约定属于该示例，不是 CLI 的统一配置协议。
+- [CLI 入口][cli]已支持声明式四层配置、Engine 与可选 UI；旧模块配置已退役。
+- [ServerOptions][server]保留 client、授权和资源回调注入；运行端内容接口实际只要求
+  `block.get(cid)`，并由[内容层][ipfs]逐块校验 CID。
+- [示例配置][example]已为 YAML；历史 `IPFS_API` 不属于隐式配置层。
 - [pguide][pguide] 已发现并分派 `pguide-<command>` binary；[设置机制][settings]
   使用用户/项目 JSONC、包级设置描述和完整 setting ID，不需要另一套全局目录。
 - Web UI 已有独立 JSON 配置和公开 HTTP 客户端边界。本次新增可选启动装配，
   不把 UI 变成 Engine 的进程内调用方，也不改变现有独立连接能力。
-- 服务仍连接独立 Kubo RPC，不需要知道 Kubo 可执行文件和数据仓库位置。
+- 当前服务装配仍固定连接独立 Kubo RPC；新增只读 Gateway 后，运行端不再必须使用 RPC。
 
 ## 本候选的目标与规则
 
@@ -55,7 +53,7 @@
 被高层覆盖的非法值仍必须报错，不丢弃后回退默认值。只有未提供的设置才使用默认值。
 禁用的用户层不读取、不参与校验。各来源使用同一字段契约，不保留四套合法性规则。
 
-以下表达目标使用方式；IPFS RPC 命名按下述约定，其余字段及 flag 映射在实施时统一定义：
+以下保留既有 RPC 使用方式，新增 Gateway 的声明式入口规则见下一节：
 
 ```powershell
 pguide task-engine --config server.yaml --port 3001
@@ -69,11 +67,33 @@ database: ./tasks.sqlite
 ipfsRpcUrl: http://127.0.0.1:5001
 ```
 
-IPFS 连接只需一个 Kubo RPC URL 字符串：服务文件使用单层 `ipfsRpcUrl`，
+原 RPC 连接保留一个 Kubo RPC URL 字符串：服务文件使用单层 `ipfsRpcUrl`，
 CLI 使用 `--ipfs-rpc-url`，pguide 用户设置使用完整 ID `task-engine.ipfsRpcUrl`。
 该 ID 的点号表示设置命名空间，不是嵌套对象。地址指向 Kubo RPC，不是 IPFS HTTP Gateway；
 不使用含义模糊的 `ipfsEndpoint` 别名，也不预设 `ipfs.rpcUrl` 两层结构。
-未来确有其他连接配置需求时再评估结构，不为未出现的需求提前嵌套。
+新增 Gateway 使用不同字段和明确 transport，不重解释旧 RPC URL。
+
+### 标准只读 Gateway
+
+- 使用 [IPFS Trustless Gateway 标准](https://specs.ipfs.tech/http-gateways/trustless-gateway/) 的
+  raw-block 接口：`GET /ipfs/{cid}?format=raw`，请求类型为 `application/vnd.ipld.raw`。
+  客户端自行解释 UnixFS/DAG 并验证每个块的 CID，不接受任意文件下载替代内容身份校验。
+- 服务文件增加 `ipfsTransport: rpc | gateway` 和 `ipfsGatewayUrl`；
+  CLI 对应 `--ipfs-transport`、`--ipfs-gateway-url`，用户设置对应完整 ID
+  `task-engine.ipfsTransport`、`task-engine.ipfsGatewayUrl`。
+  默认 transport 仍为 `rpc`，保留既有 `ipfsRpcUrl`、默认值和旧调用语义。
+  显式选择 `gateway` 时必须提供有效 Gateway URL，不因默认 RPC 而连接或回退 RPC；
+  URL 不隐式改变 transport，配置错误应明确提示。
+- 两个新增设置遵循同一四层覆盖及逐层校验规则，包括被覆盖的非法值仍失败；
+  禁用用户层仍完全不读取。Gateway 是独立可用的主读取后端，不是 RPC 失败后的必需 fallback。
+- URL 仅 HTTP(S)，不携带用户凭据、query 或 fragment；保留显式 base path 的含义，
+  拒绝重定向，不隐式继承用户凭据。响应类型与流读取受约束：
+  有超时、取消、逐块字节上限和现有 DAG/总量上限，不能先无界缓冲再检查。
+  错误状态、错误内容类型、CID 不匹配、超限与不可达均明确失败，不悄悄切换内容源。
+- Engine-only、可选 UI、程序化内容注入和本机访问策略不变；Gateway 后端可由任意兼容
+  HTTP 服务提供，不要求本机 Kubo 可执行文件、RPC、节点管理或网络 peer 功能。
+- 作者导入、写块和 pin 仍可使用现有 Kubo RPC；读取与发布分离，不增加写入 Gateway 协议，
+  不承诺远端内容可用性或持久保存，不把公共 Gateway 的稳定性作为验收前提。
 
 配置仅描述数据，不执行 JavaScript、模块导入或安装钩子。
 旧 `.mjs` 配置必须明确拒绝并给出迁移提示，不能作为隐式回退继续执行。
@@ -106,7 +126,7 @@ CLI 使用 `--ipfs-rpc-url`，pguide 用户设置使用完整 ID `task-engine.ip
   禁用用户层时不使用其中的 commandDirectories，仍使用既有可用发现来源，
   找不到扩展时明确失败，不悄悄读回用户配置。
 - `--help` 说明优先级、路径规则、默认全局配置路径和隔离开关；
-  帮助显示不应依赖成功连接 Kubo 或执行用户配置。
+  帮助显示不应依赖成功连接 Kubo、Gateway 或执行用户配置。
 
 现有 pguide 通用参数解析会拒绝 `--config`，通用设置加载会合并项目层。
 实施须对服务命令提供必要、显式的参数透传及来源选择适配，并测试从顶层入口到实际启动的完整链路；
@@ -127,7 +147,7 @@ CLI 使用 `--ipfs-rpc-url`，pguide 用户设置使用完整 ID `task-engine.ip
 
 ### 装配与失败边界
 
-- CLI 读取并校验最终配置，再根据 RPC 地址创建 IPFS client，传入 Server。
+- CLI 读取并校验最终配置，再根据显式 transport 创建 RPC 或 Gateway 读取 client，传入 Server。
   程序化 `startTaskServer({ipfsClient, ...})` 继续保持资源注入方式；
   不要求 Engine 自行寻找节点、读取 Kubo 数据仓库或启动 daemon。
 - 未知字段、非法类型/值和配置解析错误明确报错，不返回成功形默认值。
@@ -147,7 +167,7 @@ CLI 使用 `--ipfs-rpc-url`，pguide 用户设置使用完整 ID `task-engine.ip
 | pguide 扩展入口 | 扩展包、binary、发现及 help 协议，必要的参数和来源选择适配 | 独立安装后发现/分派；两种入口配置、禁用和错误行为一致 |
 | Server CLI | 参数解析、文件/全局读取、统一校验与装配；退役执行模块配置入口 | 参数/文件启动与非法输入进程测试，证明旧模块不会被执行 |
 | 可选 Web UI | 显式前台启动装配和仅本次资源的关闭责任 | 仅 Engine 不启动 UI；带 UI 经 HTTP 消费，失败清理不影响既有服务 |
-| IPFS 装配 | RPC 地址由有效配置确定，CLI 创建 client；程序化注入保持 | 受控 RPC 地址覆盖测试和真实节点消费测试 |
+| IPFS 装配 | transport 与对应地址由有效配置确定，Gateway 无 RPC 依赖；程序化注入保持 | 无 RPC 的标准 raw-block HTTP 消费、逐块完整性与限额拒绝、原 RPC 回归 |
 | Server 参数与访问 | 显式映射字段、loopback 与本地 Caller 策略，保留程序化回调 | 非回环和跨站访问拒绝；程序化回归与监听、数据库、资源关闭验证 |
 | pguide 用户设置 | 既有 JSONC 路径与描述机制，排除项目服务值，支持禁用 | 隔离用户目录与冲突项目设置矩阵；损坏用户文件在禁用后不读取 |
 | 覆盖规则 | 四层完整设置覆盖；逐层校验且区分省略与显式值 | 被覆盖的非法值仍失败；对象/数组替换及多来源路径矩阵 |
@@ -162,13 +182,13 @@ CLI 使用 `--ipfs-rpc-url`，pguide 用户设置使用完整 ID `task-engine.ip
 不实现系统 daemon、后台常驻管理、托盘、开机自启或热重载；仅做服务入口所需的 UI 配置映射，
 不重构无关 UI 功能或重建已移除的公开 Bundle 缓存 API/UI。
 不管理 Kubo 的启动/停止、IPFS_PATH、pin 或 GC；不改变 Task/Run/Bundle 领域语义。
-当前仅准备构想和下游种子，不操作本机已经运行的服务，不修改现有本地配置。
+当前修订 Gateway 构想和下游种子；原 RPC 验收证据仅证明旧范围，不操作已有服务或真实用户配置。
 发布命令、安装级配置定位和独立验证可以使用本地产物，不构成 npm 发布授权。
 旧 Ideal 提交不覆盖这次实质范围变更；新候选须同步并重新 submitIdeal 后等待明确验收。
 
-[cli]: ../../../../../../packages/task-engine-server/src/main.ts
+[cli]: ../../../../../../apps/pguide-task-engine/src/main.ts
 [server]: ../../../../../../packages/task-engine-server/src/index.ts
-[example]: ../../../../../../examples/task-server/echo-config.mjs
+[example]: ../../../../../../examples/task-server/server.yaml
 [ipfs]: ../../../../../../packages/ipfs-content/src/index.ts
 [pguide]: ../../../../../../packages/pguide/README.md
 [settings]: ../../../../../../docs/package-settings.md

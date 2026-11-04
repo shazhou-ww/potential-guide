@@ -18,6 +18,14 @@
       "description": "Kubo HTTP(S) RPC base URL, not a Gateway; no URL credentials.",
       "schema": { "type": "string", "minLength": 1 }
     },
+    "task-engine.ipfsTransport": {
+      "description": "Explicit read transport; defaults to rpc. A Gateway URL alone does not select gateway.",
+      "schema": { "enum": ["rpc", "gateway"] }
+    },
+    "task-engine.ipfsGatewayUrl": {
+      "description": "Read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. Required for gateway transport.",
+      "schema": { "type": "string", "minLength": 1 }
+    },
     "task-engine.scope": {
       "description": "Single local Caller scope. Other scopes are denied.",
       "schema": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" }

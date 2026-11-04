@@ -1,4 +1,4 @@
-import { createIpfsClient } from "@potential-guide/ipfs-content";
+import { createIpfsClient, createIpfsGatewayClient } from "@potential-guide/ipfs-content";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { startUiServer, validateUiConfig } from "@potential-guide/task-engine-web-ui/server";
 import {
@@ -7,7 +7,7 @@ import {
   type Operation,
   TaskError,
 } from "@potential-guide/task-protocol";
-import { type ServiceConfig, validateLayer } from "./config.js";
+import { type ServiceConfig, validateLayer, validateTransport } from "./config.js";
 
 const operations = new Set<Operation>([
   "submit",
@@ -51,6 +51,7 @@ export function localPolicy(scope: string, origin: () => string) {
 
 export async function startService(raw: ServiceConfig) {
   const config = validateLayer(raw, process.cwd(), "effective configuration") as ServiceConfig;
+  validateTransport(config);
   const uiConfig = {
     ...config.uiOptions,
     endpoints: [
@@ -65,7 +66,10 @@ export async function startService(raw: ServiceConfig) {
     host: config.host,
     port: config.port,
     database: config.database,
-    ipfsClient: await createIpfsClient(config.ipfsRpcUrl),
+    ipfsClient:
+      config.ipfsTransport === "gateway"
+        ? createIpfsGatewayClient(config.ipfsGatewayUrl!)
+        : await createIpfsClient(config.ipfsRpcUrl),
     ...policy,
   });
   origin = server.url;

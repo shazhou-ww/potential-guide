@@ -229,7 +229,12 @@ export const verificationPackages = [
     id: "ipfs-content",
     directory: "ipfs-content",
     name: "@potential-guide/ipfs-content",
-    requiredExports: ["createIpfsClient", "openContent", "importContent"],
+    requiredExports: [
+      "createIpfsClient",
+      "createIpfsGatewayClient",
+      "openContent",
+      "importContent",
+    ],
     bins: [],
   },
   {

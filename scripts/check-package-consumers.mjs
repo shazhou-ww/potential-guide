@@ -89,7 +89,15 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
-    ["task-service", ["pguide", "@potential-guide/pguide-task-engine"]],
+    [
+      "task-service",
+      [
+        "pguide",
+        "@potential-guide/pguide-task-engine",
+        "@potential-guide/ipfs-content",
+        "@potential-guide/task-sdk",
+      ],
+    ],
     [
       "bundle-authoring",
       [

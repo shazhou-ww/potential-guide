@@ -25,6 +25,8 @@ async function main() {
         "--port <0..65535>",
         "--database <path>",
         "--ipfs-rpc-url <Kubo RPC URL>",
+        "--ipfs-transport <rpc|gateway>",
+        "--ipfs-gateway-url <HTTP(S) Gateway base URL>",
         "--scope <local-scope>",
         "--ui",
         "--no-ui",
@@ -48,6 +50,7 @@ async function main() {
         port: 3000,
         database: "tasks.sqlite",
         ipfsRpcUrl: "http://127.0.0.1:5001",
+        ipfsTransport: "rpc",
         scope: "local",
         ui: false,
         uiOptions: { host: "127.0.0.1", port: 4310, favoritesFile: "task-favorites.json" },
@@ -55,7 +58,7 @@ async function main() {
       security:
         "No token; fixed loopback only (localhost becomes 127.0.0.1; ::1 supported). Caller local-cli is limited to the configured scope. Host/Origin/fetch-site, GET/POST and JSON writes are checked. Do not expose through a proxy. Other local users/processes are not isolated.",
       lifecycle:
-        "Foreground only. Stops only this invocation's Engine/UI on SIGINT/SIGTERM. Never starts, stops or manages Kubo. No UI unless --ui. Old .mjs configs must be manually migrated.",
+        "Foreground only. Stops only this invocation's Engine/UI on SIGINT/SIGTERM. Never starts, stops or manages Kubo. No UI unless --ui. Old .mjs configs must be manually migrated. Gateway requires an explicit transport and URL (no credentials/query/fragment); base paths are appended with /ipfs/{cid}?format=raw. Raw blocks only, no redirects, 2 MiB/block and 30 s/read. Gateway never connects or falls back to RPC; publishing/pinning still uses RPC.",
     };
     console.log(
       parsed.options.format === "json"

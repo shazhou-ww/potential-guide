@@ -8,7 +8,10 @@ diagnostics (index/kind/problem ID, not parameter/environment dumps) through
 The generic server installs Engine/HTTP/Storage/Server, **not** SDK, Check or Probe.
 Install `@potential-guide/pguide-task-engine` and run
 `pguide-task-engine --config ./server.yaml` against an independently managed
-Kubo RPC. See [service configuration](../../docs/task-server.md) for user settings,
+Kubo RPC, or select `--ipfs-transport gateway --ipfs-gateway-url http://127.0.0.1:8080`
+for read-only consumption without RPC. A Gateway URL alone does not change the
+default RPC transport; authors still write/pin through RPC.
+See [service configuration](../../docs/task-server.md) for user settings,
 precedence, `--no-global-config` and optional `--ui`.
 The token-free CLI is fixed-loopback and single-scope only.
 The `.mjs` examples are **programmatic composition helpers**, never CLI config

@@ -1,42 +1,52 @@
 # Implementation
 
-实施候选已完成，等待主代理审查、同步与门限决策；本工作者未记录提交或接受事件。
-实现与验证映射见[实施证据](Evidence.md)，接续边界见[实施交接](Handoff.md)。
-`pnpm check` 与完整打包消费的既存基线失败在证据中单列，不宣称全仓库检查通过。
-范围与已确认规则见[配置边界](ideal/Configuration.md)。
+原声明式 RPC 服务已验收；[旧实施证据](Evidence.md)仅证明原范围。
+本次在其上增加独立标准 Gateway 读取后端，范围见[配置边界](ideal/Configuration.md)。
+以下步骤与证明需针对新增范围重新执行，不把历史全量命令当作当前通过。
+本次实现与验证结果见 [Gateway 实施证据](Gateway-Evidence.md)；
+全量 `pnpm check` 的既存分类基线失败单列，不声明全量通过。
 
 ## Steps
 
 ### I-S01: 定义服务设置与扩展入口
 
 复用 pguide 的发现与包级设置机制，定义扩展 binary、字段和服务参数透传；
-落实 CLI/指定 YAML 或 JSON/用户 JSONC/默认四层规则、逐层校验及来源路径，
+为 transport 与 Gateway URL 落实 CLI/指定 YAML 或 JSON/用户 JSONC/默认四层规则、逐层校验及来源路径，
 不引入项目服务配置层、隐藏全局目录或可执行配置。
+已补齐 `ipfsTransport`、`ipfsGatewayUrl` 的参数、包级设置及生成的内置验证器；
+逐层校验提供的字段，合并后校验 Gateway 必需 URL，不凭 URL 自动选择 transport。
 
 ### I-S02: 装配 Engine 与可选 UI 并迁移调用方
 
-由有效配置装配 IPFS client、本机访问策略及可选 Web UI，保持 HTTP 和程序化注入边界；
+由有效配置装配独立 raw-block Gateway 或原 RPC client、本机访问策略及可选 Web UI，保持 HTTP 和程序化注入边界；
+复用逐块 CID 校验与限额，约束流读取、响应类型、超时、取消和重定向，不让 Gateway 模式依赖或回退 RPC；
 明确本次资源所有权，更新直接调用方、help、示例和文档，拒绝旧模块配置，
 不实现 Bundle 作者工具或 Kubo 管理。
+`createIpfsGatewayClient` 提供独立 raw-block 主读取，并复用于已有受策略约束的 Gateway hint；
+两者共用流限额、MIME、重定向、超时与取消约束，后续仍由原内容层校验 CID 和解码 UnixFS。
 
 ### I-S03: 验证发现配置与服务生命周期
 
 覆盖顶层与独立入口、四层配置、全局禁用、项目层排除、非法覆盖值、路径与本地访问边界；
-验证带 UI/不带 UI 的启动、失败清理和退出，执行相关构建测试与 `pnpm check`，区分基线问题。
+验证带 UI/不带 UI 的 Gateway 成功执行、错误内容/超限/不可达/取消，以及原 RPC 启动、失败清理和退出；
+执行相关构建测试与 `pnpm check`，区分基线问题。
+已执行定向 16 项、作者 4 项、程序化 Server 8 项及本地 tarball 消费；
+独立与发现入口均能无 RPC 执行，带 UI 的服务组合通过公开 HTTP 执行。
 
 ## Acceptance criteria
 
 ### I-AC01: 扩展入口与四层设置一致
 
 以发现/分派及两种入口配置矩阵证明共享用户设置可用、项目服务值不参与，
-优先级与路径锚点正确；被覆盖的非法值仍失败，全局禁用贯穿上层发现到启动。
+transport 与对应 URL 的优先级、路径锚点正确；被覆盖的非法值仍失败，全局禁用贯穿上层发现到启动。
 
 ### I-AC02: 装配保持本机访问与 HTTP 边界
 
 以旧模块副作用拒绝、非回环/跨站拒绝及本地 Caller 范围测试证明装配边界；
-验证 RPC 生效、程序化回归、可选 UI 仅经 HTTP 工作，失败和退出不遗留本次服务。
+验证 Gateway 单独生效且不访问 RPC，损坏块/错误响应/限额被拒绝；
+原 RPC、程序化回归和可选 UI 仍仅经 HTTP 工作，失败和退出不遗留本次服务。
 
 ### I-AC03: 入口文档与范围一致
 
-以 CLI/help、示例消费和相关测试证明服务入口及迁移说明一致，保存 `pnpm check` 结果；
+以 CLI/help、示例消费和相关测试证明 Gateway 与 RPC 的选择、读取与发布职责说明一致，保存当前 `pnpm check` 结果；
 不更改用户配置或数据库，不接管既有服务、不引入 daemon、Bundle 作者命令或 Kubo 生命周期所有权。

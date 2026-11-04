@@ -96,9 +96,13 @@ test("gateway raw blocks are CID verified, ordered and subject to host access po
     fetch: async (input) => {
       const url = new URL(String(input));
       visited.push(url.hostname);
-      if (url.hostname === "corrupt.test") return new Response(new Uint8Array([0]));
+      const headers = { "content-type": "application/vnd.ipld.raw" };
+      if (url.hostname === "corrupt.test") return new Response(new Uint8Array([0]), { headers });
       const block = source.blocks.get(url.pathname.split("/").at(-1)!);
-      return new Response(block ? Uint8Array.from(block) : null, { status: block ? 200 : 404 });
+      return new Response(block ? Uint8Array.from(block) : null, {
+        status: block ? 200 : 404,
+        headers,
+      });
     },
   });
   try {

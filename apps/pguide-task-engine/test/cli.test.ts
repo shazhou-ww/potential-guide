@@ -62,7 +62,7 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
   const cwd = join(directory, "work");
   await writeFile(
     join(cwd, ".pguide", "config.jsonc"),
-    '{"task-engine.port":"invalid project service setting"}',
+    '{"task-engine.port":"invalid project service setting","task-engine.ipfsTransport":"invalid","task-engine.ipfsGatewayUrl":false}',
   );
   await writeFile(
     join(cwd, "server.yaml"),
@@ -82,6 +82,46 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
     assert.equal(help.code, 0, help.stderr + help.stdout);
     assert.equal(JSON.parse(help.stdout).globalConfig, userFile);
     assert.match(help.stdout, /Project service settings are never read/);
+    assert.match(help.stdout, /--ipfs-transport/);
+    assert.match(help.stdout, /--ipfs-gateway-url/);
+    assert.equal(JSON.parse(help.stdout).defaults.ipfsTransport, "rpc");
+    const matrix = join(cwd, "gateway.json");
+    for (const [userValues, fileValues, flags, expected] of [
+      [{}, {}, ["--ipfs-transport", "gateway"], /requires ipfsGatewayUrl/],
+      [
+        { "task-engine.ipfsTransport": "invalid" },
+        {},
+        ["--ipfs-transport", "rpc"],
+        /configuration|config/,
+      ],
+      [
+        { "task-engine.ipfsGatewayUrl": "file:///bad" },
+        {},
+        ["--ipfs-gateway-url", "https://valid.test"],
+        /configuration|config/,
+      ],
+      [{}, { ipfsTransport: "invalid" }, ["--ipfs-transport", "rpc"], /ipfsTransport/],
+      [
+        {},
+        { ipfsGatewayUrl: "https://user:password@example.test" },
+        ["--ipfs-gateway-url", "https://valid.test"],
+        /ipfsGatewayUrl/,
+      ],
+    ] as const) {
+      await writeFile(userFile, JSON.stringify(userValues));
+      await writeFile(matrix, JSON.stringify(fileValues));
+      const result = await capture(
+        entry,
+        [...prefix, "--cwd", cwd, "--config", matrix, ...flags],
+        directory,
+        env,
+      );
+      assert.notEqual(result.code, 0);
+      assert.match(result.stderr + result.stdout, expected);
+      assert.doesNotMatch(result.stdout, /"event":"ready"/);
+      assert.doesNotMatch(result.stderr + result.stdout, /password@example/);
+    }
+    await writeFile(userFile, "{malformed");
     const invalid = await capture(
       entry,
       [...prefix, "--cwd", cwd, "--config", "server.yaml", "--port", "bad", "--no-global-config"],
