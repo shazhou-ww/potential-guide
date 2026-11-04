@@ -1,6 +1,6 @@
 # Deployment
 
-Gateway 修订的外部验证种子。原 [RPC 外部证据](Evidence.md)保留为历史，
+Gateway-only 修订的外部验证种子。原 [RPC 外部证据](Evidence.md)及双 transport 证据保留为历史，
 不能替代本次证明。实施验收后使用本地产物、隔离用户配置目录和新数据库验证，
 不覆盖真实全局配置，不发布 npm，不接管用户已有 Kubo。
 
@@ -10,24 +10,26 @@ Gateway 修订的外部验证种子。原 [RPC 外部证据](Evidence.md)保留�
 
 从仓库外消费本地扩展产物，验证 pguide 发现和独立 binary；
 以纯参数、指定 YAML/JSON、隔离 pguide 用户 JSONC 及冲突项目文件检查四层规则、
-全局禁用、显式 transport、实际 Gateway 与数据定位，使用随机端口和新数据库。
+全局禁用、实际 Gateway 与数据定位，使用随机端口和新数据库；证明无 transport 参数即可启动，
+旧 RPC/transport 输入和缺 URL 在两种入口均明确失败。
 
 ### D-S02: 验证可选 UI 与隔离生命周期
 
 分别仅启动 Engine 和带 UI 启动，连接仓库外独立 raw-block HTTP 内容源；
 运行环境不提供可用 Kubo RPC，经公开 HTTP 执行非敏感 Bundle，
 验证内容完整性、超限、不可达、本机访问限制和退出清理。
-另验证原 RPC 兼容；关闭服务不停止独立内容源，不接管父会话的 Server/UI/Kubo。
+关闭服务不停止独立内容源，不接管父会话的 Server/UI/Kubo；作者写入不属于服务运行依赖。
 
 ## Acceptance criteria
 
 ### D-AC01: 扩展服务无需 JavaScript 配置
 
 记录独立安装发现、两种入口启动及公开响应，证明参数、文件、共享用户设置和覆盖均无需配置模块，
-无第二套全局目录，项目服务值不参与；Gateway 模式不访问 RPC，实际监听和数据位置符合约定。
+无第二套全局目录，项目服务值不参与；服务无 RPC/transport 设置或回退，旧输入拒绝可核验，
+实际监听和数据位置符合约定。
 
 ### D-AC02: 可选 UI 与资源隔离可核验
 
 以两种启动模式、UI 的 HTTP 消费、Task 精确成功结果、坏块/超限失败及关闭后探测证明
-无 Kubo RPC 仍可执行且逐块可信，原 RPC 保持；服务可停止、失败明确、内容源独立，
+无 Kubo RPC 仍可执行且逐块可信；服务可停止、失败明确、内容源独立，
 真实用户配置、旧数据库和非本次服务未被改动。
