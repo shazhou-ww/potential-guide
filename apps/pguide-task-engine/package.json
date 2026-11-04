@@ -29,6 +29,9 @@
     "@potential-guide/task-protocol": "workspace:^",
     "yaml": "catalog:"
   },
+  "devDependencies": {
+    "@potential-guide/task-sdk": "workspace:^"
+  },
   "engines": {
     "node": ">=22.13.0"
   },

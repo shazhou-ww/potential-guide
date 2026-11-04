@@ -21,6 +21,7 @@ through existing `pguide.commandDirectories`. Both entries share one parser:
 ```powershell
 pguide task-engine --config .\server.yaml --port 0
 pguide-task-engine --no-global-config --database .\new-tasks.sqlite --port 0 --ipfs-rpc-url http://127.0.0.1:5001
+pguide task-engine --no-global-config --ipfs-transport gateway --ipfs-gateway-url http://127.0.0.1:8080
 pguide task-engine --help --format json
 ```
 
@@ -29,6 +30,7 @@ host: localhost
 port: 3000
 database: ./tasks.sqlite
 ipfsRpcUrl: http://127.0.0.1:5001
+ipfsTransport: rpc
 scope: local
 ui: true
 uiOptions:
@@ -45,13 +47,38 @@ No project service values or environment service overrides are added.
 
 The user file uses complete setting IDs, for example
 `{"task-engine.port":3001,"task-engine.database":"./tasks.sqlite"}`. Settings are
-`task-engine.host`, `.port`, `.database`, `.ipfsRpcUrl`, `.scope`, `.ui` and
+`task-engine.host`, `.port`, `.database`, `.ipfsRpcUrl`, `.ipfsTransport`,
+`.ipfsGatewayUrl`, `.scope`, `.ui` and
 `.uiOptions`; dots identify complete settings, not nested property paths.
 Other namespaces remain valid shared settings. Objects replace as a whole:
 `uiOptions` must contain exactly host, port and favoritesFile in every layer
 that supplies it. CLI equivalent is `--ui-options '<complete JSON object>'`.
 Use `--ui` / `--no-ui` for an explicit boolean, and `--ipfs-rpc-url` for Kubo
 RPC (not an HTTP Gateway). No `ipfsEndpoint` or `ipfs.rpcUrl` aliases exist.
+
+`ipfsTransport` / `--ipfs-transport` selects `rpc` (default, backward compatible)
+or `gateway`. The latter requires `ipfsGatewayUrl` / `--ipfs-gateway-url`, for example:
+
+```yaml
+ipfsTransport: gateway
+ipfsGatewayUrl: http://127.0.0.1:8080/content
+```
+
+Equivalent user settings are
+`{"task-engine.ipfsTransport":"gateway","task-engine.ipfsGatewayUrl":"http://127.0.0.1:8080/content"}`.
+A URL alone never selects a transport. Both URLs accept only HTTP(S) without
+credentials, query or fragment, even when overridden or not selected. Gateway
+base paths are preserved: `/content` and `/content/` both request
+`/content/ipfs/{cid}?format=raw` with Accept `application/vnd.ipld.raw`.
+Gateway is an independent primary read backend: it never connects or falls back
+to RPC, including on failure. Non-200 status, wrong MIME, encoded bodies,
+redirects, corrupt CIDs and capacity violations fail explicitly.
+Responses are streamed with a 2 MiB/block limit and a 30-second timeout through
+body completion; preparation cancellation aborts reads. Existing verified UnixFS
+export, DAG, file and total protection limits remain in force.
+No local Kubo executable or management API is required in Gateway mode.
+Authors still import/write/pin with RPC; Gateway does not publish or promise
+availability/persistence. Engine-only and optional UI use the same read backend.
 
 The existing user path is `%APPDATA%\pguide\config.jsonc` on Windows
 (fallback `~\AppData\Roaming\pguide\config.jsonc`) and
@@ -95,7 +122,8 @@ authentication/callbacks must use the unchanged programmatic assembly below.
 ## Trusted assembly
 
 Pass `authorize`, `resolveCaller`, and a caller-owned generic `ipfsClient`
-connected to an independently managed local Kubo RPC endpoint; optional
+(for example `await createIpfsClient(rpcUrl)` or
+`createIpfsGatewayClient(gatewayUrl)` from `@potential-guide/ipfs-content`); optional
 `bundleLimits` and `bundleConcurrency` govern preparation. Registry options
 `types`, `currentVersions`, and `allocationLimits` are rejected.
 `resolveCaller` authenticates every HTTP request (including SSE reconnect);

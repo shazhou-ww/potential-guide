@@ -3,6 +3,8 @@
 原声明式 RPC 服务已验收；[旧实施证据](Evidence.md)仅证明原范围。
 本次在其上增加独立标准 Gateway 读取后端，范围见[配置边界](ideal/Configuration.md)。
 以下步骤与证明需针对新增范围重新执行，不把历史全量命令当作当前通过。
+本次实现与验证结果见 [Gateway 实施证据](Gateway-Evidence.md)；
+全量 `pnpm check` 的既存分类基线失败单列，不声明全量通过。
 
 ## Steps
 
@@ -11,6 +13,8 @@
 复用 pguide 的发现与包级设置机制，定义扩展 binary、字段和服务参数透传；
 为 transport 与 Gateway URL 落实 CLI/指定 YAML 或 JSON/用户 JSONC/默认四层规则、逐层校验及来源路径，
 不引入项目服务配置层、隐藏全局目录或可执行配置。
+已补齐 `ipfsTransport`、`ipfsGatewayUrl` 的参数、包级设置及生成的内置验证器；
+逐层校验提供的字段，合并后校验 Gateway 必需 URL，不凭 URL 自动选择 transport。
 
 ### I-S02: 装配 Engine 与可选 UI 并迁移调用方
 
@@ -18,12 +22,16 @@
 复用逐块 CID 校验与限额，约束流读取、响应类型、超时、取消和重定向，不让 Gateway 模式依赖或回退 RPC；
 明确本次资源所有权，更新直接调用方、help、示例和文档，拒绝旧模块配置，
 不实现 Bundle 作者工具或 Kubo 管理。
+`createIpfsGatewayClient` 提供独立 raw-block 主读取，并复用于已有受策略约束的 Gateway hint；
+两者共用流限额、MIME、重定向、超时与取消约束，后续仍由原内容层校验 CID 和解码 UnixFS。
 
 ### I-S03: 验证发现配置与服务生命周期
 
 覆盖顶层与独立入口、四层配置、全局禁用、项目层排除、非法覆盖值、路径与本地访问边界；
 验证带 UI/不带 UI 的 Gateway 成功执行、错误内容/超限/不可达/取消，以及原 RPC 启动、失败清理和退出；
 执行相关构建测试与 `pnpm check`，区分基线问题。
+已执行定向 16 项、作者 4 项、程序化 Server 8 项及本地 tarball 消费；
+独立与发现入口均能无 RPC 执行，带 UI 的服务组合通过公开 HTTP 执行。
 
 ## Acceptance criteria
 

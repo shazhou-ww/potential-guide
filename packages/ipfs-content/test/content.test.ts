@@ -86,7 +86,9 @@ test("reads obey consumer demand and gateway failures are never successful empty
         allowGateway: () => true,
         fetch: async () => {
           calls++;
-          return new Response(new Uint8Array([0]));
+          return new Response(new Uint8Array([0]), {
+            headers: { "content-type": "application/vnd.ipld.raw" },
+          });
         },
       },
     ),

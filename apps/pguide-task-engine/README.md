@@ -7,11 +7,14 @@ settings registration or user configuration writes occur.
 
 ```powershell
 pguide task-engine --no-global-config --port 0 --database .\new-tasks.sqlite --ipfs-rpc-url http://127.0.0.1:5001
+pguide task-engine --no-global-config --ipfs-transport gateway --ipfs-gateway-url http://127.0.0.1:8080
 pguide-task-engine --config .\server.yaml --ui
 pguide task-engine --help --format json
 ```
 
-Only run these against an independently managed Kubo RPC you intend to use.
+Choose an independently managed Kubo RPC (the default transport), or an explicit
+read-only Trustless Gateway. Gateway needs no Kubo/RPC and never falls back to it;
+its URL alone does not select the transport. Publishing/pinning still uses RPC.
 `--help` prints the actual platform-specific pguide user configuration path,
 defaults, all options and boundary rules without opening a DB, listener or RPC
 connection. See [the configuration guide](../../docs/task-server.md).

@@ -8,12 +8,24 @@ export interface ServiceConfig {
   port: number;
   database: string;
   ipfsRpcUrl: string;
+  ipfsTransport: "rpc" | "gateway";
+  ipfsGatewayUrl?: string;
   scope: string;
   ui: boolean;
   uiOptions: { host: string; port: number; favoritesFile: string };
 }
 export class ConfigurationError extends Error {}
-const fields = new Set(["host", "port", "database", "ipfsRpcUrl", "scope", "ui", "uiOptions"]);
+const fields = new Set([
+  "host",
+  "port",
+  "database",
+  "ipfsRpcUrl",
+  "ipfsTransport",
+  "ipfsGatewayUrl",
+  "scope",
+  "ui",
+  "uiOptions",
+]);
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 function invalid(source: string, field: string): never {
@@ -54,7 +66,12 @@ export function validateLayer(
       case "database":
         result.database = path(entry, base, source);
         break;
-      case "ipfsRpcUrl": {
+      case "ipfsTransport":
+        if (entry !== "rpc" && entry !== "gateway") invalid(source, key);
+        result.ipfsTransport = entry;
+        break;
+      case "ipfsRpcUrl":
+      case "ipfsGatewayUrl": {
         let url: URL;
         try {
           if (typeof entry !== "string") invalid(source, key);
@@ -66,11 +83,11 @@ export function validateLayer(
           !["http:", "https:"].includes(url.protocol) ||
           url.username ||
           url.password ||
-          url.search ||
-          url.hash
+          url.href.includes("?") ||
+          url.href.includes("#")
         )
           invalid(source, key);
-        result.ipfsRpcUrl = url.href;
+        result[key] = url.href;
         break;
       }
       case "scope":
@@ -110,6 +127,8 @@ export function parseArguments(argv: readonly string[]) {
     "--port": "port",
     "--database": "database",
     "--ipfs-rpc-url": "ipfsRpcUrl",
+    "--ipfs-transport": "ipfsTransport",
+    "--ipfs-gateway-url": "ipfsGatewayUrl",
     "--scope": "scope",
     "--ui-options": "uiOptions",
   };
@@ -158,6 +177,7 @@ export async function resolveConfig(
     port: 3000,
     database: resolve(cwd, "tasks.sqlite"),
     ipfsRpcUrl: "http://127.0.0.1:5001/",
+    ipfsTransport: "rpc",
     scope: "local",
     ui: false,
     uiOptions: {
@@ -205,5 +225,11 @@ export async function resolveConfig(
   }
   const cli = validateLayer(parsed.cli, cwd, "CLI");
   const final = { ...defaults, ...user, ...file, ...cli };
+  validateTransport(final);
   return validateLayer(final, cwd, "effective configuration") as ServiceConfig;
+}
+
+export function validateTransport(config: Partial<ServiceConfig>): void {
+  if (config.ipfsTransport === "gateway" && !config.ipfsGatewayUrl)
+    throw new ConfigurationError("Gateway transport requires ipfsGatewayUrl.");
 }

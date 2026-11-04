@@ -24,8 +24,10 @@ The default shutdown budget is 15,000ms and must cover the configured
 must explicitly configure all three budgets; startup rejects inconsistent limits.
 The 30,000ms request timeout is not an SSE response lifetime.
 
-Inject a generic caller-owned `ipfsClient` connected to an independently managed
-local Kubo RPC endpoint. Engine shutdown never stops that node, closes the client,
+Inject a generic caller-owned `ipfsClient`, including either `createIpfsClient`
+(RPC) or `createIpfsGatewayClient` (read-only Trustless Gateway) from
+`@potential-guide/ipfs-content`. Gateway needs no Kubo RPC; publishing/pinning
+remains separate. Engine shutdown never stops the source, closes the client,
 or removes shared pins. Configure optional `bundleLimits`/`bundleConcurrency`,
 explicit gateway host policy `allowGateway`, and
 the existing authorization/HTTP/Engine limits. `types`, `currentVersions`, and

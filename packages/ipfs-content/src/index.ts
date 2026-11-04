@@ -25,6 +25,87 @@ export const unixfsImportOptions = Object.freeze({
   blockWriteConcurrency: 4,
 });
 
+export interface GatewayClientOptions {
+  fetch?: typeof globalThis.fetch;
+  maxBlockBytes?: number;
+  timeoutMs?: number;
+}
+
+/** A read-only Trustless Gateway transport; base paths are appended, not replaced. */
+export function createIpfsGatewayClient(
+  url: string,
+  options: GatewayClientOptions = {},
+): IpfsClient {
+  const endpoint = new URL(url);
+  if (
+    !["http:", "https:"].includes(endpoint.protocol) ||
+    endpoint.username ||
+    endpoint.password ||
+    endpoint.href.includes("?") ||
+    endpoint.href.includes("#")
+  )
+    throw new Error("IPFS endpoint must be an HTTP(S) Gateway base URL.");
+  const limit = options.maxBlockBytes ?? 2 * 1024 * 1024;
+  const timeout = options.timeoutMs ?? 30_000;
+  if (!Number.isSafeInteger(limit) || limit <= 0 || !Number.isSafeInteger(timeout) || timeout <= 0)
+    throw new Error("Invalid IPFS Gateway resource limits.");
+  return {
+    block: {
+      async get(cid, request = {}) {
+        const target = new URL(
+          `${endpoint.href.replace(/\/+$/, "")}/ipfs/${CID.parse(cid)}?format=raw`,
+        );
+        const signal = AbortSignal.any([
+          AbortSignal.timeout(timeout),
+          ...(request.signal ? [request.signal] : []),
+        ]);
+        signal.throwIfAborted();
+        const response = await (options.fetch ?? globalThis.fetch)(target, {
+          signal,
+          redirect: "error",
+          credentials: "omit",
+          headers: { Accept: "application/vnd.ipld.raw", "Accept-Encoding": "identity" },
+        });
+        const reader = response.body?.getReader();
+        try {
+          if (response.status !== 200 || !reader) throw new Error("IPFS gateway read failed.");
+          if (
+            response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !==
+            "application/vnd.ipld.raw"
+          )
+            throw new Error("Unsupported gateway content type.");
+          const encoding = response.headers.get("content-encoding");
+          if (encoding && encoding !== "identity") throw new Error("Unsupported gateway encoding.");
+          const declared = response.headers.get("content-length");
+          if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > limit))
+            throw new Error("IPFS block capacity exceeded.");
+          const chunks: Uint8Array[] = [];
+          let size = 0;
+          while (true) {
+            signal.throwIfAborted();
+            const { done, value } = await reader.read();
+            signal.throwIfAborted();
+            if (done) break;
+            size += value.byteLength;
+            if (size > limit) throw new Error("IPFS block capacity exceeded.");
+            chunks.push(value);
+          }
+          const bytes = new Uint8Array(size);
+          let offset = 0;
+          for (const chunk of chunks) {
+            bytes.set(chunk, offset);
+            offset += chunk.byteLength;
+          }
+          return bytes;
+        } finally {
+          await reader?.cancel().catch(() => {});
+          reader?.releaseLock();
+        }
+      },
+    },
+  };
+}
+
 /** RPC transport only; the independently managed node and client belong to the caller. */
 export async function createIpfsClient(url: string): Promise<
   Omit<KuboRPCClient, "block"> & {
@@ -41,8 +122,8 @@ export async function createIpfsClient(url: string): Promise<
     !["http:", "https:"].includes(endpoint.protocol) ||
     endpoint.username ||
     endpoint.password ||
-    endpoint.search ||
-    endpoint.hash
+    endpoint.href.includes("?") ||
+    endpoint.href.includes("#")
   )
     throw new Error("IPFS endpoint must be an HTTP(S) RPC base URL.");
   const { create } = await import("kubo-rpc-client");
@@ -121,37 +202,16 @@ export async function openContent(
     for (const base of options.gateways ?? []) {
       const url = new URL(`${base.replace(/\/+$/, "")}/ipfs/${cid}?format=raw`);
       if (!options.allowGateway?.(url)) continue;
-      let response: Response | undefined;
       try {
-        response = await (options.fetch ?? globalThis.fetch)(url, {
-          signal: options.signal,
-          redirect: "error",
-          credentials: "omit",
-          headers: { Accept: "application/vnd.ipld.raw", "Accept-Encoding": "identity" },
+        const gateway = createIpfsGatewayClient(base, {
+          ...(options.fetch ? { fetch: options.fetch } : {}),
+          maxBlockBytes: limit,
         });
-        if (!response.ok || !response.body) throw new Error("IPFS gateway read failed.");
-        const encoding = response.headers.get("content-encoding");
-        if (encoding && encoding !== "identity") throw new Error("Unsupported gateway encoding.");
-        const chunks: Uint8Array[] = [];
-        let size = 0;
-        for await (const chunk of response.body) {
-          size += chunk.byteLength;
-          if (size > limit) throw new Error("IPFS block capacity exceeded.");
-          chunks.push(chunk);
-        }
-        const bytes = new Uint8Array(size);
-        let offset = 0;
-        for (const chunk of chunks) {
-          bytes.set(chunk, offset);
-          offset += chunk.byteLength;
-        }
-        yield await verify(bytes);
+        yield await verify(await gateway.block.get(cid.toString(), { signal: options.signal }));
         return;
       } catch (error) {
         failure = error;
         options.signal.throwIfAborted();
-      } finally {
-        await response?.body?.cancel().catch(() => {});
       }
     }
     throw failure;
