@@ -34,7 +34,18 @@ test("generic task production dependency graph is acyclic and business/adapter i
           : name === "task-protocol"
             ? ["multiformats", "ajv"]
             : name === "ipfs-content"
-              ? ["kubo-rpc-client", "ipfs-unixfs-exporter", "ipfs-unixfs-importer", "multiformats"]
+              ? [
+                  "@helia/unixfs",
+                  "@helia/car",
+                  "@ipld/car",
+                  "@ipld/dag-pb",
+                  "@libp2p/logger",
+                  "blockstore-core",
+                  "kubo-rpc-client",
+                  "ipfs-unixfs-exporter",
+                  "ipfs-unixfs-importer",
+                  "multiformats",
+                ]
               : ["@potential-guide/task-protocol"];
     assert.deepEqual(Object.keys(manifest.dependencies ?? {}), dependencies);
     const files = await readdir(join(directory, "src"), { recursive: true });

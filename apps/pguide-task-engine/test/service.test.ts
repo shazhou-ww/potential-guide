@@ -5,7 +5,7 @@ import { createServer, get } from "node:http";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createIpfsClient } from "@potential-guide/ipfs-content";
+import { createIpfsClient } from "@potential-guide/ipfs-content/publish";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
 import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";

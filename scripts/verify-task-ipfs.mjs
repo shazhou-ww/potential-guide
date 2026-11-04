@@ -64,9 +64,9 @@ try {
     outDirectory: join(directory, "two"),
   });
   assert.equal(duplicate.cid, built.cid);
-  root = (await importTaskBundle(built.directory, ipfsClient)).cid;
+  root = (await importTaskBundle(built.car, ipfsClient)).cid;
   assert.equal(root, built.cid);
-  assert.equal((await importTaskBundle(duplicate.directory, ipfsClient)).cid, root);
+  assert.equal((await importTaskBundle(duplicate.car, ipfsClient)).cid, root);
   const chunks = [];
   for await (const chunk of ipfsClient.cat(`${root}/resources/fixture.bin`)) chunks.push(chunk);
   assert.deepEqual(Buffer.concat(chunks), resource);
@@ -153,6 +153,7 @@ try {
       root,
       resourceBytes: resource.length,
       reproducibleImport: true,
+      publicationViaCar: true,
       authorRpcAndGatewayReads: true,
       sourceIndependentWorker: true,
       streamChunks: task.result.chunks,

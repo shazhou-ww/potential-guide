@@ -1,4 +1,4 @@
-import type { IpfsClient } from "@potential-guide/ipfs-content";
+import type { IpfsClient } from "@potential-guide/ipfs-content/read";
 import {
   at,
   bundleCid,

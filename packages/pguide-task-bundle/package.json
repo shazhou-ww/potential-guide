@@ -55,6 +55,7 @@
     "@sinclair/typebox": "catalog:",
     "ajv": "catalog:",
     "esbuild": "catalog:",
+    "multiformats": "catalog:",
     "@potential-guide/artifact-files": "workspace:^",
     "@potential-guide/ipfs-content": "workspace:^",
     "yaml": "catalog:"

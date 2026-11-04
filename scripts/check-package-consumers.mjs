@@ -33,6 +33,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "probe-task",
       [
+        "@potential-guide/pguide-task-bundle",
         "@potential-guide/ipfs-content",
         "@potential-guide/probe-task",
         "@potential-guide/check-task",
@@ -57,6 +58,7 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     [
       "mvp-check",
       [
+        "@potential-guide/pguide-task-bundle",
         "@potential-guide/ipfs-content",
         "@potential-guide/task-sdk",
         "@potential-guide/check-task",

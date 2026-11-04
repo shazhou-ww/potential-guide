@@ -4,12 +4,12 @@ objectives:
     description: Standardize the foreground declarative Task Engine service command.
     objective: "@potential-guide/objective-package-standard"
     inputSchema: {type: object, additionalProperties: false, maxProperties: 0}
-    # task-sdk is a devDependency for authoring standard Bundle fixtures in service tests, not runtime.
+    # Author tooling is a devDependency for standard Bundle fixtures in service tests, not runtime.
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm", "cli"], "runtime": "node",
-        "allows": ["@potential-guide/cli-core", "@potential-guide/ipfs-content", "@potential-guide/task-engine-server", "@potential-guide/task-engine-web-ui", "@potential-guide/task-protocol", "@potential-guide/task-sdk"],
+        "allows": ["@potential-guide/pguide-task-bundle", "@potential-guide/cli-core", "@potential-guide/ipfs-content", "@potential-guide/task-engine-server", "@potential-guide/task-engine-web-ui", "@potential-guide/task-protocol", "@potential-guide/task-sdk"],
         "entries": ["src/main.ts"],
         "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "generic-task-server", "kind": "cli"}]

@@ -41,7 +41,12 @@ Facts/SQLite v5 明确拒绝 v4 等旧格式；操作者必须显式选择新域
 完整 DAG、声明、Schema 闭包、路径和容量校验在 Task 创建前完成。
 内部内存复用使用有界 verified blocks 及租约保护在途准备/运行，不提供公开缓存管理 API；
 Engine 不维护额外的 Bundle 文件缓存目录，持久内容、pin 与 GC 由独立 IPFS 节点管理。
-`bundleLimits.protectedBytes` 默认 256 MiB，是所有受保护块的总量预算；超限明确拒绝。
+`bundleLimits.retainedBytes` 默认 256 MiB，是所有内存保留块的总量预算；超限明确拒绝。
+完整 DAG 遍历/去重由官方 `multiformats/traversal.walk` 承担，
+UnixFS 解码与 SHA-256 校验也使用官方库；本地只保留节点策略和容量边界。
+旧 `protectedBytes` 已改名为 `retainedBytes`，内存保留/租约不是持久 IPFS pin。
+Engine 入口只重导出 `createIpfsGatewayClient`，不再暴露 RPC 工厂；
+独立作者发布使用 `@potential-guide/ipfs-content/publish`。
 Engine 不启动/停止节点、不关闭共享 client，也不删除共享或发布者 pin。
 gateway 默认禁止访问；宿主通过 `allowGateway(url)` 明确授权，所有 gateway 块仍须 CID 校验。
 

@@ -1,7 +1,7 @@
 {
   "name": "@potential-guide/ipfs-content",
   "version": "0.1.0-rc.0",
-  "description": "Verified UnixFS content access through caller-owned IPFS clients.",
+  "description": "Bounded policy adapters for official Helia UnixFS, IPLD CAR and verified Gateway reads.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -10,6 +10,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./read": {
+      "types": "./dist/read.d.ts",
+      "import": "./dist/read.js"
+    },
+    "./codec": {
+      "types": "./dist/codec.d.ts",
+      "import": "./dist/codec.js"
+    },
+    "./publish": {
+      "types": "./dist/publish.d.ts",
+      "import": "./dist/publish.js"
     },
     "./testing": {
       "types": "./dist/testing.d.ts",
@@ -28,6 +40,12 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@helia/unixfs": "catalog:",
+    "@helia/car": "catalog:",
+    "@ipld/car": "catalog:",
+    "@ipld/dag-pb": "catalog:",
+    "@libp2p/logger": "catalog:",
+    "blockstore-core": "catalog:",
     "kubo-rpc-client": "catalog:",
     "ipfs-unixfs-exporter": "catalog:",
     "ipfs-unixfs-importer": "catalog:",

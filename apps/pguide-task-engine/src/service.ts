@@ -1,4 +1,4 @@
-import { createIpfsGatewayClient } from "@potential-guide/ipfs-content";
+import { createIpfsGatewayClient } from "@potential-guide/ipfs-content/read";
 import { startTaskServer } from "@potential-guide/task-engine-server";
 import { startUiServer, validateUiConfig } from "@potential-guide/task-engine-web-ui/server";
 import {

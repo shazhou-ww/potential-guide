@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import test from "node:test";
-import { createIpfsGatewayClient, openContent, protectContent } from "../src/index.js";
+import { createIpfsGatewayClient, openContent, retainContent } from "../src/index.js";
 import { MemoryIpfsClient } from "../src/testing.js";
 
 test("standalone raw Gateway preserves base paths and standard verified UnixFS/DAG limits", async (t) => {
@@ -34,17 +34,17 @@ test("standalone raw Gateway preserves base paths and standard verified UnixFS/D
     const chunks: Uint8Array[] = [];
     for await (const chunk of entry.content()) chunks.push(chunk);
     assert.deepEqual(Buffer.concat(chunks), Buffer.alloc(800_000, 42));
-    await assert.rejects(protectContent(client, root, { ...options, maxDagBlocks: 1 }), /DAG/);
+    await assert.rejects(retainContent(client, root, { ...options, maxDagBlocks: 1 }), /DAG/);
     await assert.rejects(
-      protectContent(client, root, {
+      retainContent(client, root, {
         ...options,
-        protectedBlocks: new Map(),
-        maxProtectedBytes: 1,
+        retainedBlocks: new Map(),
+        maxRetainedBytes: 1,
       }),
-      /protection capacity/,
+      /retention capacity/,
     );
     await assert.rejects(
-      protectContent(client, root, { ...options, maxFileBytes: 1 }),
+      retainContent(client, root, { ...options, maxFileBytes: 1 }),
       /file capacity/,
     );
   }

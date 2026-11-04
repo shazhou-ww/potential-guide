@@ -9,8 +9,8 @@ or started. Node >=22.13 and TypeBox **@sinclair/typebox 0.34.52** are supported
 pguide task-bundle init [directory]
 pguide task-bundle check author task.build.yaml
 pguide task-bundle build task.build.yaml
-pguide task-bundle check artifact dist
-pguide task-bundle publish dist --ipfs-rpc http://127.0.0.1:5001
+pguide task-bundle check artifact dist.car
+pguide task-bundle publish dist.car --ipfs-rpc http://127.0.0.1:5001
 ```
 
 The independent executable takes the same arguments. All commands support the
@@ -21,7 +21,9 @@ There is **no include command**. `check` requires an explicit `author` or
 With `--format json`, successful operations return
 `{schemaVersion: 1, command: "task-bundle <operation>", status: "ok", result}`.
 Check results contain `declaration`, `resolved`, `cid` and exact `files`;
-build returns `directory`, `cid` and `declaration`; publish returns only `cid`.
+build returns `directory`, `car`, `cid` and `declaration`; publish returns only `cid`.
+The final distribution artifact is `<outDirectory>.car`; the directory remains
+available for local Worker execution and backwards-compatible directory inputs.
 Help and discovery use the existing CLI metadata contracts. Errors and exit
 statuses use the shared pguide CLI handling, not a second diagnostics protocol.
 
@@ -39,7 +41,7 @@ pnpm run clean
 `.gitignore`, `task.build.yaml`, `src/contract.ts` and `src/main.ts`: a typed Echo callback with
 object input/result and no messages or resources. It needs only TypeBox, not a
 local installation of the CLI or Task SDK.
-The generated `.gitignore` excludes `node_modules/` and `dist/`. An existing
+The generated `.gitignore` excludes `node_modules/`, `dist/` and `dist.car`. An existing
 regular `.gitignore` is preserved byte for byte; add these rules yourself if
 needed. Directory or linked `.gitignore` paths are rejected.
 
@@ -55,7 +57,7 @@ target directory with that dependency.
 Only when the task directory has its own `package.json` (new or existing),
 `init` fills in missing `scripts.build` and `scripts.clean`.
 Build runs `pguide task-bundle build task.build.yaml`; clean uses a
-cross-platform Node command that removes only this task's `dist` directory.
+cross-platform Node command that removes only this task's `dist` directory and `dist.car`.
 Cleaning missing output succeeds; sources and dependencies are retained.
 Other scripts and existing `build`/`clean` are preserved.
 When reusing an ancestor package, `init` only declares the dependency:
@@ -163,7 +165,7 @@ fixtures demonstrate the declaration-based API.
 The compiler's `declaration` accepts a JSON-compatible definition or a
 declaration-source filename. It always generates an exact manifest;
 `compileTaskBundle` returns validated in-memory bytes, while `buildTaskBundle`
-writes the complete artifact. Existing output must pass exact validation before
+writes the complete directory and sibling CAR. Existing output must pass exact validation before
 replacement. Unknown files, links and invalid artifacts are refused; failed
 compilation preserves prior output. A matching legacy ownership sidecar is
 removed after success, while a conflicting one is refused.
@@ -195,7 +197,7 @@ load the author's contract, TypeBox modules or dependencies.
   compile retains the previous artifact. Output is replaced, not merged,
   so deleted resources disappear. An existing output must be a complete valid
   Task Bundle with no unexpected files; arbitrary directories are never overwritten.
-- Successful builds leave only the artifact directory, without a persistent
+- Successful builds leave the artifact directory and final `<outDirectory>.car`, without a persistent
   `dist.pguide-task-bundle.json` sidecar. A matching ownership marker from an older
   build is removed after success; a conflicting marker fails without deleting it.
 - Replacement is an operation-level rollback, not a crash-durable filesystem
@@ -207,12 +209,23 @@ load the author's contract, TypeBox modules or dependencies.
 - `task.yaml` uses YAML block formatting and contains a required, exact `include` list including itself,
   `worker.cjs`, schemas and selected resources. No globs, absent files or extra
   files are accepted. Old no-manifest bundles fail with rebuild/new-CID guidance.
-- Fixed UnixFS import settings and deterministic Worker output produce the root
-  CID offline. No self-referential CID field, archive, network publishing or pin
+- Fixed Helia UnixFS import settings and deterministic Worker output produce the root
+  CID and CAR offline. No self-referential CID field, network publishing or pin
   operation occurs during build.
 
-Publish reads one validated byte snapshot, imports precisely that set, verifies
-block/root CIDs and pins that root. The node must already exist and belongs to
+The final CAR uses official `@helia/car`/`@ipld/car` framing. Artifact checking
+verifies its single root, every block hash, full DAG completeness, canonical file-tree
+identity and the exact manifest before admission. Missing/extra blocks, special
+nodes, empty directories, unsafe paths and capacity overruns fail closed.
+A previous CAR sibling must match the validated previous directory before replacement;
+unmanaged or corrupt CAR siblings are preserved and refused.
+
+Publish accepts the CAR alone (no author inputs, npm dependencies or extracted
+directory required). Directory input remains supported and is encoded offline first.
+It reads one immutable snapshot, imports the admitted CAR through Kubo `dag/import`
+with `pin-roots=false`, then separately confirms a recursive root pin.
+It never uploads custom `block/put` frames or relies on daemon chunking defaults.
+The node must already exist and belongs to
 the publisher; success does not imply public reachability or durable replicas.
 `--ipfs-rpc` overrides `task-bundle.ipfsRpc` from pguide's normal
 user → nearest project `config.jsonc`. No default endpoint is assumed. The package

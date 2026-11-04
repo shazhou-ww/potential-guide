@@ -9,7 +9,7 @@ import {
   readArtifactFiles,
   safePath,
 } from "@potential-guide/artifact-files";
-import { importContent } from "@potential-guide/ipfs-content";
+import { encodeContentCar, importContent } from "@potential-guide/ipfs-content/codec";
 import {
   type JsonObject,
   resolveBundleSchemas,
@@ -127,6 +127,7 @@ runTask(async (input, context) => {
 export async function buildTaskBundle(options: BuildTaskBundleOptions) {
   const compiled = await compileTaskBundle(options);
   const output = resolve(options.outDirectory);
+  const carOutput = `${output}.car`;
   const owner = resolve(
     options.owner ??
       (typeof options.declaration === "string" ? options.declaration : options.entry),
@@ -139,6 +140,7 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
   ]) {
     const distance = relative(output, resolve(input));
     if (
+      resolve(input) === carOutput ||
       !distance ||
       (!distance.startsWith(`..${sep}`) && distance !== ".." && !distance.includes(":"))
     )
@@ -171,8 +173,12 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
   });
   const staging = `${output}.${randomUUID()}`;
   const backup = `${output}.previous.${randomUUID()}`;
+  const carStaging = `${staging}.car`;
+  const carBackup = `${backup}.car`;
   let previous = false;
   let installed = false;
+  let previousCar = false;
+  let installedCar = false;
   try {
     const markerInfo = await lstat(marker).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return undefined;
@@ -193,6 +199,17 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
         throw new Error("Refusing to replace an unmanaged Task output directory.");
       await checkTaskArtifact(output);
     }
+    const carExists = await lstat(carOutput).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (carExists) {
+      if (!exists || !carExists.isFile() || carExists.isSymbolicLink() || carExists.nlink !== 1)
+        throw new Error("Refusing to replace an unmanaged Task CAR output.");
+      const previousArtifact = await checkTaskArtifact(output);
+      if ((await checkTaskArtifact(carOutput)).cid !== previousArtifact.cid)
+        throw new Error("Task CAR output does not match the previous build.");
+    }
     await mkdir(staging, { mode: 0o700 });
     for (const [path, bytes] of compiled.contents) {
       const target = join(staging, ...path.split("/"));
@@ -201,14 +218,28 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
     }
     if ((await importContent(await readArtifactFiles(staging), async () => {})) !== compiled.cid)
       throw new Error("Task Bundle changed during build.");
+    const archive = await encodeContentCar(compiled.contents);
+    if (archive.cid !== compiled.cid) throw new Error("Task CAR root differs from its file tree.");
+    await writeFile(carStaging, archive.bytes, { flag: "wx", mode: 0o600 });
     if (exists) {
       await rename(output, backup);
       previous = true;
     }
     try {
+      if (carExists) {
+        await rename(carOutput, carBackup);
+        previousCar = true;
+      }
       await rename(staging, output);
       installed = true;
+      await rename(carStaging, carOutput);
+      installedCar = true;
     } catch (error) {
+      if (installedCar) await rm(carOutput);
+      if (previousCar) {
+        await rename(carBackup, carOutput);
+        previousCar = false;
+      }
       if (installed) await rm(output, { recursive: true, force: true });
       if (previous) {
         await rename(backup, output);
@@ -220,10 +251,20 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
       await rm(backup, { recursive: true });
       previous = false;
     }
+    if (previousCar) {
+      await rm(carBackup);
+      previousCar = false;
+    }
     if (owned) await rm(marker);
-    return { directory: output, cid: compiled.cid, declaration: compiled.declaration };
+    return {
+      directory: output,
+      car: carOutput,
+      cid: compiled.cid,
+      declaration: compiled.declaration,
+    };
   } finally {
     await rm(staging, { recursive: true, force: true });
+    await rm(carStaging, { force: true });
     await lock.close();
     await rm(`${marker}.lock`);
   }

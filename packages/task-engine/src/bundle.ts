@@ -5,7 +5,7 @@ import {
   parseArtifactYaml,
   safePath,
 } from "@potential-guide/check-artifacts/files";
-import { type IpfsClient, openContent, protectContent } from "@potential-guide/ipfs-content";
+import { type IpfsClient, openContent, retainContent } from "@potential-guide/ipfs-content/read";
 import {
   type BundleReference,
   bundleCid,
@@ -21,7 +21,7 @@ import {
 
 export type BundleLimits = Pick<ArchiveLimits, "bytes" | "files" | "paths" | "fileBytes"> & {
   hints: number;
-  protectedBytes: number;
+  retainedBytes: number;
   blocks: number;
 };
 export const defaultBundleLimits: Readonly<BundleLimits> = Object.freeze({
@@ -30,7 +30,7 @@ export const defaultBundleLimits: Readonly<BundleLimits> = Object.freeze({
   paths: artifactLimits.paths,
   fileBytes: 64 * 1024 * 1024,
   hints: 16,
-  protectedBytes: 256 * 1024 * 1024,
+  retainedBytes: 256 * 1024 * 1024,
   blocks: 16_384,
 });
 export interface VerifiedBundle {
@@ -40,7 +40,7 @@ export interface VerifiedBundle {
   source: string;
   bytes: number;
   files: number;
-  protectedBytes: number;
+  retainedBytes: number;
   read(path: string, signal: AbortSignal): Promise<AsyncIterator<Uint8Array>>;
 }
 export function inspectTaskBundle(
@@ -130,9 +130,9 @@ export class BundleCache {
   readonly limits: BundleLimits;
   private readonly fetching = new Map<string, Promise<VerifiedBundle>>();
   private readonly prepared = new Map<string, VerifiedBundle>();
-  private readonly pins = new Map<string, number>();
+  private readonly leases = new Map<string, number>();
   private readonly lifetime = new AbortController();
-  private readonly protectionBudget = { bytes: 0, limit: 0 };
+  private readonly retentionBudget = { bytes: 0, limit: 0 };
   private readonly concurrency: number;
   private occupied = 0;
   private readonly waiting: { enter(): void; reject(error: unknown): void }[] = [];
@@ -148,7 +148,7 @@ export class BundleCache {
     if (!Number.isSafeInteger(this.concurrency) || this.concurrency <= 0)
       throw new TaskError("invalid_config", "Invalid Bundle preparation concurrency.");
     this.limits = { ...defaultBundleLimits, ...options.limits };
-    this.protectionBudget.limit = this.limits.protectedBytes;
+    this.retentionBudget.limit = this.limits.retainedBytes;
     for (const [key, value] of Object.entries(this.limits))
       if (!Object.hasOwn(defaultBundleLimits, key) || !Number.isSafeInteger(value) || value <= 0)
         throw new TaskError("invalid_config", "Invalid Bundle capacity.");
@@ -159,13 +159,13 @@ export class BundleCache {
   }
   source(cid: string): string {
     const prepared = this.prepared.get(cid);
-    if (!prepared) throw new TaskError("bundle_fetch_failed", "Bundle is not protected.");
+    if (!prepared) throw new TaskError("bundle_fetch_failed", "Bundle is not retained.");
     return prepared.source;
   }
   read(cid: string, path: string, signal: AbortSignal): Promise<AsyncIterator<Uint8Array>> {
     const prepared = this.prepared.get(cid);
     if (!prepared)
-      return Promise.reject(new TaskError("bundle_fetch_failed", "Bundle is not protected."));
+      return Promise.reject(new TaskError("bundle_fetch_failed", "Bundle is not retained."));
     return prepared.read(path, signal);
   }
   private async inSlot<T>(action: () => Promise<T>): Promise<T> {
@@ -189,14 +189,14 @@ export class BundleCache {
     const ref = validateBundleReference(reference, this.limits.hints);
     const cid = bundleCid(ref);
     this.lifetime.signal.throwIfAborted();
-    this.pins.set(cid, (this.pins.get(cid) ?? 0) + 1);
+    this.leases.set(cid, (this.leases.get(cid) ?? 0) + 1);
     let released = false;
     const release = () => {
       if (released) return;
       released = true;
-      const count = (this.pins.get(cid) ?? 1) - 1;
-      if (count) this.pins.set(cid, count);
-      else this.pins.delete(cid);
+      const count = (this.leases.get(cid) ?? 1) - 1;
+      if (count) this.leases.set(cid, count);
+      else this.leases.delete(cid);
     };
     let operation = this.fetching.get(cid);
     if (!operation) {
@@ -222,7 +222,7 @@ export class BundleCache {
     const cid = bundleCid(reference);
     const cached = this.prepared.get(cid);
     if (cached) return cached;
-    const protectedBlocks = new Map<string, Uint8Array>();
+    const retainedBlocks = new Map<string, Uint8Array>();
     const gateways =
       typeof reference === "string"
         ? []
@@ -235,9 +235,9 @@ export class BundleCache {
       ...(this.options.allowGateway ? { allowGateway: this.options.allowGateway } : {}),
       ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
       maxBlockBytes: Math.min(this.limits.bytes, 2 * 1024 * 1024),
-      protectedBlocks,
-      maxProtectedBytes: this.limits.bytes * 2,
-      protectionBudget: this.protectionBudget,
+      retainedBlocks,
+      maxRetainedBytes: this.limits.bytes * 2,
+      retentionBudget: this.retentionBudget,
       maxDagBlocks: this.limits.blocks,
       maxFileBytes: this.limits.fileBytes,
       inspectNode: (entry: Awaited<ReturnType<typeof openContent>>) => {
@@ -302,7 +302,7 @@ export class BundleCache {
         throw new TaskError("invalid_bundle", "Bundle requires regular UnixFS files/directories.");
     };
     try {
-      await protectContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
+      await retainContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
       const root = await openContent(this.options.ipfsClient, cid, access(this.lifetime.signal));
       if (root.type !== "directory")
         throw new TaskError("invalid_bundle", "Bundle CID must identify a directory.");
@@ -313,7 +313,7 @@ export class BundleCache {
         ...inspected,
         cid,
         source: files.get("worker.cjs")!.toString("utf8"),
-        protectedBytes: [...protectedBlocks.values()].reduce((sum, block) => sum + block.length, 0),
+        retainedBytes: [...retainedBlocks.values()].reduce((sum, block) => sum + block.length, 0),
         read: async (path, signal) => {
           if (!safePath(path) || !allowed.has(path))
             throw new TaskError("invalid_bundle", "Bundle path is absent or outside its root.");
@@ -336,11 +336,11 @@ export class BundleCache {
         },
       };
     } catch (error) {
-      this.protectionBudget.bytes -= [...protectedBlocks.values()].reduce(
+      this.retentionBudget.bytes -= [...retainedBlocks.values()].reduce(
         (sum, block) => sum + block.length,
         0,
       );
-      protectedBlocks.clear();
+      retainedBlocks.clear();
       if (this.lifetime.signal.aborted) throw this.lifetime.signal.reason;
       if (error instanceof TaskError) throw error;
       if (error instanceof Error && /^IPFS .*capacity exceeded\.$/.test(error.message))
@@ -350,8 +350,8 @@ export class BundleCache {
   }
   async evict(cid: string): Promise<boolean> {
     cid = bundleCid(validateBundleReference(cid));
-    if (this.fetching.has(cid) || this.pins.has(cid)) return false;
-    this.protectionBudget.bytes -= this.prepared.get(cid)?.protectedBytes ?? 0;
+    if (this.fetching.has(cid) || this.leases.has(cid)) return false;
+    this.retentionBudget.bytes -= this.prepared.get(cid)?.retainedBytes ?? 0;
     this.prepared.delete(cid);
     return true;
   }
@@ -360,6 +360,6 @@ export class BundleCache {
     for (const waiting of this.waiting.splice(0)) waiting.reject(this.lifetime.signal.reason);
     await Promise.allSettled([...this.fetching.values()]);
     this.prepared.clear();
-    this.protectionBudget.bytes = 0;
+    this.retentionBudget.bytes = 0;
   }
 }

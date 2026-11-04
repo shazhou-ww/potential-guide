@@ -8,6 +8,7 @@ import test from "node:test";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
 import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/artifact-files";
+import { validateContentCar } from "@potential-guide/ipfs-content";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import { checkTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { importTaskBundle } from "@potential-guide/pguide-task-bundle/publish";
@@ -71,40 +72,90 @@ export default {input:Type.Object({text:Type.String({unsupportedConstraint:true}
   });
 });
 
-test("publishing imports one checked snapshot even if disk changes during block upload", async () => {
+test("publishing imports one checked snapshot even if disk changes during CAR upload", async () => {
   await fixture(async (_root, file) => {
     const built = await buildTask(file);
     const client = new MemoryIpfsClient();
-    const put = client.block.put;
+    const importCar = client.dag.import;
     let changed = false;
-    client.block.put = async (bytes, options) => {
+    client.dag.import = async function* (sources, options) {
       if (!changed) {
         changed = true;
         await writeFile(join(built.directory, "resources", "one.json"), '{"changed":true}');
       }
-      return put(bytes, options);
+      yield* importCar(sources, options);
     };
     assert.equal((await importTaskBundle(built.directory, client)).cid, built.cid);
     assert.notEqual((await checkTaskArtifact(built.directory)).cid, built.cid);
     assert.ok(client.pins.has(built.cid));
   });
 });
-test("publishing rejects incorrect block and pin receipts without rewriting the artifact", async () => {
+test("publishing rejects incorrect CAR root and pin receipts without rewriting the artifact", async () => {
   await fixture(async (_root, file) => {
     const built = await buildTask(file);
     const before = await readArtifactFiles(built.directory);
     const client = new MemoryIpfsClient();
-    const put = client.block.put;
-    client.block.put = async (_bytes, options) => put(Buffer.from("wrong block"), options);
-    await assert.rejects(importTaskBundle(built.directory, client), /different CID/);
+    const importCar = client.dag.import;
+    const wrongPin = await client.block.put(Buffer.from("wrong pin"), { format: "raw" });
+    client.dag.import = async function* () {
+      yield { root: { cid: wrongPin } };
+    };
+    await assert.rejects(importTaskBundle(built.directory, client), /different root/);
     assert.equal(client.pins.size, 0);
-    client.block.put = put;
-    const wrongPin = await put(Buffer.from("wrong pin"), {
-      format: "raw",
-    });
+    client.dag.import = importCar;
     client.pin.add = async () => wrongPin;
     await assert.rejects(importTaskBundle(built.directory, client), /requested root pin/);
     assert.deepEqual(await readArtifactFiles(built.directory), before);
+  });
+});
+
+test("the final CAR is deterministic, independently checkable and publishable after all author and directory files are removed", async () => {
+  await fixture(async (root, file) => {
+    const built = await buildTask(file);
+    const original = await readFile(built.car);
+    assert.equal(built.car, `${built.directory}.car`);
+    assert.equal((await checkTaskArtifact(built.car)).cid, built.cid);
+    assert.equal((await buildTask(file)).cid, built.cid);
+    assert.deepEqual(await readFile(built.car), original);
+    await rm(built.directory, { recursive: true });
+    for (const name of ["callback.ts", "contract.ts", "task.build.yaml", "assets"])
+      await rm(join(root, name), { recursive: true });
+    assert.equal((await checkTaskArtifact(built.car)).cid, built.cid);
+    const client = new MemoryIpfsClient();
+    const importCar = client.dag.import;
+    client.dag.import = async function* (sources, options) {
+      await writeFile(built.car, "changed on disk after CAR admission");
+      yield* importCar(sources, options);
+    };
+    assert.equal((await importTaskBundle(built.car, client)).cid, built.cid);
+    assert.ok(client.pins.has(built.cid));
+    let writes = 0;
+    client.dag.import = async function* () {
+      writes++;
+      yield* [];
+    };
+    await assert.rejects(importTaskBundle(built.car, client));
+    assert.equal(writes, 0, "A corrupt CAR must fail before RPC.");
+  });
+});
+
+test("unmanaged or corrupt CAR siblings are never overwritten and failed rebuilds preserve prior output", async () => {
+  await fixture(async (root, file) => {
+    const car = join(root, "dist.car");
+    await writeFile(car, "unmanaged bytes");
+    await assert.rejects(buildTask(file), /unmanaged Task CAR/);
+    assert.equal(await readFile(car, "utf8"), "unmanaged bytes");
+    await rm(car);
+    const built = await buildTask(file);
+    const before = await readArtifactFiles(built.directory);
+    await writeFile(car, "corrupt prior CAR");
+    await assert.rejects(buildTask(file));
+    assert.equal(await readFile(car, "utf8"), "corrupt prior CAR");
+    assert.deepEqual(await readArtifactFiles(built.directory), before);
+    assert.equal(
+      (await readdir(root)).some((name) => /previous|\.lock$/.test(name)),
+      false,
+    );
   });
 });
 
@@ -344,7 +395,7 @@ test("build emits YAML and no persistent sidecar, and rebuilds a copied artifact
   await fixture(async (root, file) => {
     const before = await readdir(root);
     const built = await buildTask(file);
-    assert.deepEqual((await readdir(root)).sort(), [...before, "dist"].sort());
+    assert.deepEqual((await readdir(root)).sort(), [...before, "dist", "dist.car"].sort());
     const bytes = await readFile(join(built.directory, "task.yaml"));
     assert.match(bytes.toString(), /^\$schema: /);
     assert.throws(() => JSON.parse(bytes.toString()));
@@ -404,7 +455,8 @@ test("publish CLI uses artifact bytes only, honors RPC precedence and rejects in
             assert.ok(request.url);
             const url = new URL(request.url, "http://localhost");
             let result: unknown;
-            if (url.pathname === "/api/v0/block/put") {
+            if (url.pathname === "/api/v0/dag/import") {
+              assert.equal(url.searchParams.get("pin-roots"), "false");
               const chunks: Buffer[] = [];
               for await (const chunk of request) chunks.push(Buffer.from(chunk));
               const body = Buffer.concat(chunks);
@@ -416,9 +468,9 @@ test("publish CLI uses artifact bytes only, honors RPC precedence and rejects in
                 body.indexOf("\r\n\r\n") + 4,
                 body.lastIndexOf(`\r\n--${boundary}`),
               );
-              const block = [...client.blocks].find(([, value]) => bytes.equals(value));
-              assert.ok(block, "RPC must upload only a checked artifact block");
-              result = { Key: block[0], Size: bytes.length };
+              assert.equal((await validateContentCar(bytes, built.cid)).cid, built.cid);
+              assert.deepEqual(bytes, await readFile(built.car));
+              result = { Root: { Cid: { "/": built.cid } } };
             } else {
               assert.equal(url.pathname, "/api/v0/pin/add");
               assert.equal(url.searchParams.get("arg"), built.cid);

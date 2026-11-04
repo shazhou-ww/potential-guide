@@ -49,7 +49,10 @@ test("init creates a standalone minimal package that builds deterministically an
     assert.equal(initialized.cleanScriptAdded, true);
     assert.equal(initialized.files.length, 5);
     assert.ok(initialized.files.includes(join(target, ".gitignore")));
-    assert.equal(await readFile(join(target, ".gitignore"), "utf8"), "node_modules/\ndist/\n");
+    assert.equal(
+      await readFile(join(target, ".gitignore"), "utf8"),
+      "node_modules/\ndist/\ndist.car\n",
+    );
     assert.deepEqual((await readdir(target)).sort(), [
       ".gitignore",
       "package.json",
@@ -64,7 +67,7 @@ test("init creates a standalone minimal package that builds deterministically an
       dependencies: { [typebox]: "0.34.52" },
       scripts: {
         build: "pguide task-bundle build task.build.yaml",
-        clean: `node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"`,
+        clean: `node -e "for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })"`,
       },
     });
     await mkdir(join(target, "node_modules", "@sinclair"), { recursive: true });
@@ -250,10 +253,11 @@ test("init adds clean independently of build and removes only the task output", 
     assert.equal(scripts.build, "custom-build");
     assert.equal(
       scripts.clean,
-      `node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"`,
+      `node -e "for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })"`,
     );
     await mkdir(join(target, "dist"));
     await writeFile(join(target, "dist", "worker.cjs"), "generated");
+    await writeFile(join(target, "dist.car"), "generated CAR");
     await mkdir(join(root, "other", "dist"), { recursive: true });
     await writeFile(join(root, "other", "dist", "keep.txt"), "keep");
     await mkdir(join(root, "node_modules"));
@@ -262,6 +266,7 @@ test("init adds clean independently of build and removes only the task output", 
     await execute(process.execPath, ["-e", code], { cwd: root });
     await execute(process.execPath, ["-e", code], { cwd: root });
     assert.ok(!(await readdir(target)).includes("dist"));
+    assert.ok(!(await readdir(target)).includes("dist.car"));
     assert.equal(await readFile(join(root, "other", "dist", "keep.txt"), "utf8"), "keep");
     assert.equal(await readFile(join(root, "node_modules", "keep.txt"), "utf8"), "dependency");
     assert.ok((await readdir(join(target, "src"))).includes("main.ts"));

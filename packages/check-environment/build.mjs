@@ -24,7 +24,6 @@ for (const kind of ["tools", "directories", "network"]) {
     }),
   );
   const directory = join(output, kind);
-  await rm(directory, { recursive: true, force: true });
   const built = await buildTaskBundle({
     declaration,
     entry: join(root, "dist", `${kind}.js`),

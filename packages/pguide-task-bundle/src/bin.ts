@@ -17,16 +17,16 @@ import { createIpfsClient, importTaskBundle } from "./publish.js";
 const help: CommandHelp = {
   description: "Initialize, check, build and publish complete TypeBox Task Bundles.",
   usage:
-    "pguide task-bundle init [directory] | check author <task.build.yaml> | check artifact <directory> | build <task.build.yaml> | publish <directory> [--ipfs-rpc <url>]",
+    "pguide task-bundle init [directory] | check author <task.build.yaml> | check artifact <bundle.car|directory> | build <task.build.yaml> | publish <bundle.car|directory> [--ipfs-rpc <url>]",
   sections: [
     {
       title: "Commands",
       lines: [
         "  init [directory]        Create a minimal Echo task and declare TypeBox in the nearest npm package; offline.",
         "  check author <file>     Compile trusted author input in memory; no output writes or network publishing.",
-        "  check artifact <dir>    Validate exact manifest, Schema and UnixFS CID; never evaluate author code.",
-        "  build <file>            Replace only managed output after complete validation; no network publishing.",
-        "  publish <dir>           Import and pin an already built artifact; never build or execute Tasks.",
+        "  check artifact <path>   Validate a CAR or directory: exact manifest, Schema, block hashes and complete DAG.",
+        "  build <file>            Emit the final <outDirectory>.car and a local Worker directory; offline.",
+        "  publish <path>          Import a checked CAR and explicitly pin its root; never build or execute Tasks.",
       ],
     },
     {
@@ -66,7 +66,9 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
     result = await (await import("./init.js")).initTaskBundle(resolve(globals.cwd, args[0] ?? "."));
   } else if (command === "check") {
     if (args.length !== 2 || !["author", "artifact"].includes(args[0]!))
-      throw new CliError("Use check author <task.build.yaml> or check artifact <directory>.");
+      throw new CliError(
+        "Use check author <task.build.yaml> or check artifact <bundle.car|directory>.",
+      );
     result =
       args[0] === "author"
         ? await (await import("./authoring.js")).checkTaskBuild(resolve(globals.cwd, args[1]!))
@@ -80,7 +82,7 @@ async function run(argv: string[], globals: GlobalOptions): Promise<void> {
       !(args.length === 1 || (args.length === 3 && args[1] === "--ipfs-rpc")) ||
       args[0]!.startsWith("-")
     )
-      throw new CliError("Use publish <directory> [--ipfs-rpc <url>].");
+      throw new CliError("Use publish <bundle.car|directory> [--ipfs-rpc <url>].");
     const directory = resolve(globals.cwd, args[0]!);
     await checkTaskArtifact(directory);
     const config = await loadConfig(globals.cwd, ["task-bundle"]);

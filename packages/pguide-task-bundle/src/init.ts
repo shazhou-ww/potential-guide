@@ -13,7 +13,7 @@ const dependencyFields = [
   "peerDependencies",
 ] as const;
 const templates = {
-  ".gitignore": "node_modules/\ndist/\n",
+  ".gitignore": "node_modules/\ndist/\ndist.car\n",
   "task.build.yaml": `$schema: ${taskBuildSchemaUri}
 name: Echo
 runtime:
@@ -137,7 +137,7 @@ export async function initTaskBundle(target: string) {
       ...(buildScriptAdded ? { build: "pguide task-bundle build task.build.yaml" } : {}),
       ...(cleanScriptAdded
         ? {
-            clean: `node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"`,
+            clean: `node -e "for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })"`,
           }
         : {}),
     };

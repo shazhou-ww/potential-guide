@@ -140,7 +140,7 @@ test("missing/corrupt blocks, non-directory roots, invalid files, incomplete sch
     [files(), { files: 1 }, "capacity_exceeded"],
     [files(), { paths: 1 }, "capacity_exceeded"],
     [files(), { blocks: 1 }, "capacity_exceeded"],
-    [files(), { protectedBytes: 100 }, "capacity_exceeded"],
+    [files(), { retainedBytes: 100 }, "capacity_exceeded"],
   ] as const) {
     const root = await client.import(tree);
     const cache = new BundleCache({ ipfsClient: client, limits });
@@ -192,11 +192,11 @@ test("closing one Engine cache never closes shared client or removes anyone else
   assert.equal(closed, 0);
   assert.equal(unpinned, 0);
 });
-test("the total Engine-owned protection budget is bounded and reclaimed by explicit eviction", async () => {
+test("the total Engine-owned retention budget is bounded and reclaimed by explicit eviction", async () => {
   const client = new MemoryIpfsClient();
   const cid = await client.import(files());
   const other = await client.import(files({ "resources/extra": Buffer.from("another root") }));
-  const cache = new BundleCache({ ipfsClient: client, limits: { protectedBytes: 500_000 } });
+  const cache = new BundleCache({ ipfsClient: client, limits: { retainedBytes: 500_000 } });
   try {
     const first = await cache.acquire(cid);
     await assert.rejects(cache.acquire(other), { code: "capacity_exceeded" });

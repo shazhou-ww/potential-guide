@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
-        "allows": ["@potential-guide/task-protocol", "@potential-guide/check-artifacts", "@potential-guide/task-sdk"],
+        "allows": ["@potential-guide/pguide-task-bundle", "@potential-guide/ipfs-content", "@potential-guide/task-protocol", "@potential-guide/check-artifacts", "@potential-guide/task-sdk"],
         "entries": ["src/index.ts", "src/pool.ts", "src/testing.ts", "src/type-worker.ts", "src/type-supervisor.ts"], "generated": [], "deliveries": [],
         "nodeWorkerImports": [
           {"path": "src/type-worker.ts", "reason": "内部协调器回归保留的本地模块适配边界；不属于公开 Bundle 注册 API。"},
