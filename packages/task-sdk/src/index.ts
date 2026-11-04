@@ -1,8 +1,8 @@
 import { parentPort, workerData } from "node:worker_threads";
 import {
   canonical,
-  compileInputSchema,
-  compileJsonSchema,
+  createInputContract,
+  createJsonContract,
   type Json,
   json,
   type ResolvedTaskBundle,
@@ -17,7 +17,8 @@ import {
   validateBundleReference,
   validateRunLog,
   validateRunProgress,
-} from "@potential-guide/task-protocol";
+} from "@potential-guide/task-protocol/worker";
+import { binding } from "./binding.js";
 
 export interface TaskContext<Message extends Json = never> extends RunContext<Message> {
   readonly bundle: {
@@ -34,8 +35,8 @@ export type {
   RunLogReceipt,
   RunMessage,
   RunProgress,
-} from "@potential-guide/task-protocol";
-export { RunFailure } from "@potential-guide/task-protocol";
+} from "@potential-guide/task-protocol/worker";
+export { RunFailure } from "@potential-guide/task-protocol/worker";
 
 class Inbox implements AsyncIterable<RunMessage<Json>> {
   private queue: RunMessage<Json>[] = [];
@@ -71,11 +72,12 @@ class Inbox implements AsyncIterable<RunMessage<Json>> {
   }
 }
 
-/** Generated entry supplies the build-locked declaration; authors supply only the callback. */
+/** Authors explicitly select this wrapper; the builder binds contracts, not startup. */
 export function runTask<Input = Json, Result = Json, Message extends Json = never>(
   callback: TaskCallback<Input, Result, Message>,
-  declaration: ResolvedTaskBundle,
 ): void {
+  if (!binding) throw new Error("Task SDK requires a build-locked Bundle binding.");
+  const { declaration, validators } = binding;
   const port = parentPort;
   if (!port || declaration.$schema !== taskSchemaUri) throw new Error("Unsupported Task Worker.");
   const config = workerData as {
@@ -102,9 +104,21 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
   )
     throw new Error("Task Worker declaration differs from verified Bundle.");
   const schemaLimits = { maxInputBytes: config.maxPayloadBytes };
-  const input = compileInputSchema<Input>(declaration.inputSchema, schemaLimits);
-  const result = compileJsonSchema(declaration.resultSchema, schemaLimits);
-  const messages = compileJsonSchema(declaration.messageSchema, schemaLimits);
+  const input = createInputContract<Input>(
+    declaration.inputSchema,
+    () => validators.input,
+    schemaLimits,
+  );
+  const result = createJsonContract(
+    declaration.resultSchema,
+    () => validators.result,
+    schemaLimits,
+  );
+  const messages = createJsonContract(
+    declaration.messageSchema,
+    () => validators.message,
+    schemaLimits,
+  );
   const controller = new AbortController();
   const inbox = new Inbox(config.maxInFlight);
   const tasks = new Map<string, AbortController>();

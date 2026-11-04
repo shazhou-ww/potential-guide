@@ -8,12 +8,29 @@ the runtime entry never imports the builder.
 The preferred author workflow is [pguide task-bundle](../pguide-task-bundle/README.md):
 `task.build.yaml` plus a TypeBox contract and typed callback generate the complete
 artifact. No author-maintained runtime YAML or include command is needed.
+New entries explicitly `import { runTask } from "@potential-guide/task-sdk"`
+and call `runTask(callback)`. The builder binds the verified declaration and
+standalone validators into the SDK, not through author configuration or
+`workerData`. A custom wrapper may delegate to `runTask` without builder
+recognition or configuration changes.
 The low-level compiler API remains available for repository tooling and the SDK's
 `examples/echo`/`check-diagnostics` fixtures: its `declaration` accepts a JSON-compatible
 definition or a declaration-source filename; it always generates the exact manifest.
 This is not a fallback for loading legacy artifacts. Old no-manifest artifacts are
 rejected by artifact checking, publishing and Engine admission with rebuild guidance.
 Only Node built-ins may remain external to `worker.cjs`.
+
+Use `entryMode: "explicit"` for self-starting author entries. The default
+`entryMode: "callback"` retains the existing lazy callback/exportName API for
+all existing tooling and built-in tasks; it is an explicit compatibility path,
+not the default init template. `exportName` is invalid in explicit mode.
+Neither build mode executes the business entry during construction.
+Every mode precompiles all three contracts with the same strict Schema checks.
+Workers still validate input, result and business messages, including Never,
+without loading the general Ajv compiler. Necessary `ajv/runtime` helpers stay
+self-contained. Author-imported runtime validators remain bundled normally.
+`compileTaskBundle` additionally returns the exact build's esbuild `metafile`
+for dependency/byte attribution; analysis does not rebuild with different flags.
 
 `compileTaskBundle` returns validated in-memory bytes without writing.
 `buildTaskBundle` writes a complete clean artifact, including a YAML-formatted

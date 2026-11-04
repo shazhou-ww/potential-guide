@@ -6,6 +6,8 @@ import { taskBuildSchemaUri } from "./authoring.js";
 
 const typebox = "@sinclair/typebox";
 const typeboxVersion = "0.34.52";
+const sdk = "@potential-guide/task-sdk";
+const sdkVersion = "0.1.0-rc.0";
 const dependencyFields = [
   "dependencies",
   "devDependencies",
@@ -21,6 +23,7 @@ runtime:
 source:
   entry: src/main.ts
   contract: src/contract.ts
+  mode: explicit
 outDirectory: dist
 `,
   "src/contract.ts": `import { Type } from "@sinclair/typebox";
@@ -32,13 +35,14 @@ export default {
 };
 `,
   "src/main.ts": `import type { Static } from "@sinclair/typebox";
+import { runTask } from "@potential-guide/task-sdk";
 import type contract from "./contract.js";
 
-export default async function echo(
+runTask(async function echo(
   input: Static<typeof contract.input>,
 ): Promise<Static<typeof contract.result>> {
   return { text: input.text };
-}
+});
 `,
 };
 
@@ -102,7 +106,10 @@ export async function initTaskBundle(target: string) {
     type: "module",
     engines: { node: ">=22.13.0" },
   };
-  let dependencyAdded = true;
+  const missing = new Map([
+    [typebox, typeboxVersion],
+    [sdk, sdkVersion],
+  ]);
   for (const field of dependencyFields) {
     const dependencies = manifest[field];
     if (dependencies === undefined) continue;
@@ -113,13 +120,14 @@ export async function initTaskBundle(target: string) {
       throw new CliError(
         `Invalid ${field} in ${packageFile}; expected dependency version strings.`,
       );
-    if (Object.hasOwn(dependencies, typebox)) dependencyAdded = false;
+    for (const name of missing.keys()) if (Object.hasOwn(dependencies, name)) missing.delete(name);
   }
+  const dependencyAdded = missing.size > 0;
   if (dependencyAdded) {
     const dependencies = manifest.dependencies;
     manifest.dependencies = {
       ...(object(dependencies) ? dependencies : {}),
-      [typebox]: typeboxVersion,
+      ...Object.fromEntries(missing),
     };
   }
   const scripts = manifest.scripts;

@@ -26,6 +26,10 @@
 
 围绕以下验收标准补充自动化测试和可复现证据，更新直接相关文档。实施证据只证明仓库内实现；真实包消费和隔离执行环境的验收由 [Deployment.md](../Deployment.md) 单独定义。
 
+实现选择、兼容策略、实际测试与逐依赖体积证据见 [Evidence.md](Evidence.md)、
+[Baseline.json](Baseline.json)、[Current.json](Current.json) 和可复现的
+[Measure.mjs](Measure.mjs)。这些是本契约的主体世界证据，不代表部署验收。
+
 ## Acceptance criteria
 
 ### I-AC01: 显式入口与运行期依赖隔离

@@ -7,8 +7,8 @@ import {
   type JsonSchema,
 } from "./schema.js";
 
-export const taskSchemaUri =
-  "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json";
+import { taskSchemaUri } from "./task-schema-uri.js";
+export { taskSchemaUri } from "./task-schema-uri.js";
 export const taskBundleSchema = {
   $id: taskSchemaUri,
   $comment:

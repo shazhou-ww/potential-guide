@@ -31,7 +31,12 @@ import {
 } from "../src/model.js";
 import { type Endpoint, type Favorite, startUiServer } from "../src/server.js";
 
-async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_400_000) {
+async function setup(
+  t: TestContext,
+  queryLifetimeMs = 60_000,
+  retentionMs = 86_400_000,
+  maxConcurrent = 3,
+) {
   const root = resolve(".cache", `ui-test-${randomUUID()}`);
   await mkdir(root, { recursive: true });
   const token = randomBytes(32).toString("hex");
@@ -54,7 +59,7 @@ async function setup(t: TestContext, queryLifetimeMs = 60_000, retentionMs = 86_
       if (bearer === `Bearer ${token}-other`) return { scope: "two", subject: "full" };
       throw new TaskError("unauthenticated", "Fixture authentication required.");
     },
-    limits: { maxConcurrent: 3, queryLifetimeMs, retentionMs, pageSize: 2 },
+    limits: { maxConcurrent, queryLifetimeMs, retentionMs, pageSize: 2 },
     http: { pollMs: 20 },
     closeResources: resources.close,
   });
@@ -406,11 +411,13 @@ test("directory expiration preserves stale view and requires an explicit new que
 });
 
 test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect independence", async (t) => {
-  const h = await setup(t);
+  // Bundle Workers do not share the fixture factory's local allocation counter.
+  const h = await setup(t, undefined, undefined, 1);
   const eligibleAt = new Date(Date.now() + 200).toISOString();
-  const a = await h.submit("shared", { eligibleAt, durationMs: 600 });
-  const b = await h.submit("shared", { eligibleAt, durationMs: 600 });
-  const waiting = await h.submit("waiting", { eligibleAt, durationMs: 80 });
+  const [a, b] = await Promise.all([
+    h.submit("shared", { eligibleAt, durationMs: 2000 }),
+    h.submit("shared", { eligibleAt, durationMs: 2000 }),
+  ]);
   const snapshot = (entry: Entry) => h.request<TaskSnapshot>(`/tasks/${entry.snapshot!.taskId}`);
   const runningA = await until(
     () => snapshot(a),
@@ -420,6 +427,7 @@ test("shared Run, queued Task, cancellation, timeout, history/SSE and disconnect
     () => snapshot(b),
     (value) => value.stage === "running",
   );
+  const waiting = await h.submit("waiting", { eligibleAt, durationMs: 80 });
   assert.equal(runningA.run!.runId, runningB.run!.runId);
   assert.equal((await snapshot(waiting)).stage, "initial");
   const canceled = await h.request<TaskSnapshot>(`/tasks/${a.snapshot!.taskId}/cancel`, {
