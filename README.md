@@ -97,6 +97,9 @@ outputs and then warm caches for an exact revision, preserving stage timings and
 exit codes. Cold excludes dependency installation; each measurement job starts
 with a fresh checkout. `node scripts/verify-worker-cache.mjs` checks byte-for-byte
 restoration of `.staging` after a successful build.
+Supply the workflow's optional `baseline` revision to run control cold/warm checks
+before candidate cold/warm checks on the **same runner**. This avoids confounding
+results with the rolling image versions behind `ubuntu-latest`.
 The test command runs at most two workspace suites at once because each suite
 can also start parallel test files, child processes and Workers.
 Generated `.test-*` fixture directories are ignored by Git and Biome; keep

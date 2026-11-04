@@ -6,7 +6,7 @@ Objective 的 `.staging/<package>` 纳入各自 Turbo build outputs；测试入�
 
 Linux Node 22 的逐阶段诊断证明异常等待发生在 `/slow` acquisition 内部，而不是 backend 关闭后；仅调整服务端清理或子进程退出不足以修复。preparation 改为显式拥有 deadline controller/timer，并在完整操作结束时清理；对独立/组合 caller signal 的慢响应体各验证 150ms 预算在 5 秒内失败，保留空缓存断言及所有原有 digest、重定向、大小、篡改、离线复用覆盖。测试上下文取消同时终止其子进程，避免失败测试再等待 HTTP 默认超时。
 
-性能测量使用独立 workflow，对精确提交在同类 Ubuntu runner、同版本 Node/pnpm 下运行完整成功的冷、热 `pnpm check`。冷缓存仅指无构建/Turbo 产物，不含依赖安装；热缓存在同一 checkout 紧接冷运行。历史运行和本地权限失败仅作诊断，不作为收益证据。完整结果、覆盖映射和复现命令在本阶段辅助证据中记录。
+性能测量使用独立 workflow，对精确提交在同一个 Ubuntu job、同版本 Node/pnpm 下顺序执行控制冷/热与候选冷/热完整 `pnpm check`。冷缓存仅指无构建/Turbo 产物，不含依赖安装；热缓存在同一 checkout 紧接冷运行。初次成功的独立 runner 对照发现 `ubuntu-latest` 镜像滚动差异，因此最终采用同机配对证明，且在配对运行前固定保守目标：Node 22/24 的冷轮各至少缩短 10%，热轮各至少缩短 25%。历史运行、本地权限失败和不同镜像的初步对照不作为最终收益证据。完整结果、覆盖映射和复现命令见 [Performance.md](./Performance.md)。
 
 ## Steps
 
@@ -26,7 +26,7 @@ Linux Node 22 的逐阶段诊断证明异常等待发生在 `/slow` acquisition 
 
 ### I-AC01: 性能对照可复现
 
-记录提交、环境、缓存条件、执行命令、各阶段耗时和退出码；用完整成功的对照运行证明达到细化后的改善目标，不混用本地与 CI 数据。
+记录提交、环境、缓存条件、执行命令、各阶段耗时和退出码；同机配对的 Node 22/24 冷轮各至少缩短 10%，热轮各至少缩短 25%，全部八轮完整成功。不混用本地、不同镜像或失败运行。
 
 ### I-AC02: 检查覆盖不退化
 
