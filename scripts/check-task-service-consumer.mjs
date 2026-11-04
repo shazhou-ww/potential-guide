@@ -90,7 +90,10 @@ for(const combined of [false,true])for(const layer of ["user","file","cli","isol
   assert.equal((await fetch(ready.url+"/tasks")).status,200);
   assert.equal((await fetch(ready.url+"/tasks",{headers:{origin:"https://evil.test"}})).status,403);
   await readFile(database);
-  const requestId="01M6GRRES5EBHYDP1G9DZEGE8E";
+  const requestTimestamp=Date.now();
+  const requestId=Array.from({length:10},(_,index)=>
+   "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[Math.floor(requestTimestamp/32**(9-index))%32]
+  ).join("")+"0000000000000000";
   const submitted=await fetch(ready.url+"/tasks",{method:"POST",
    headers:{"content-type":"application/json","Idempotency-Key":requestId},
    body:JSON.stringify({bundle:built.cid,text:"packed",timeoutMs:10000})});
