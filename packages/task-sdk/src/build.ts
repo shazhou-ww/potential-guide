@@ -16,6 +16,7 @@ import {
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
 import { build } from "esbuild";
+import { stringify } from "yaml";
 import { checkTaskArtifact, inspectTaskArtifact } from "./artifact.js";
 
 export interface BuildTaskBundleOptions {
@@ -71,7 +72,11 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
     files.set(path, await readFile(await regularFile(source)));
   }
   declaration.include = ["task.yaml", "worker.cjs", ...files.keys()].sort();
-  const resolved = resolveBundleSchemas(declaration, schemas);
+  const resolved = resolveBundleSchemas(
+    declaration,
+    schemas,
+    [...files.keys()].filter((path) => path.startsWith("schemas/")),
+  );
   const exportName = options.exportName ?? "default";
   if (!/^(?:default|[A-Za-z_$][A-Za-z0-9_$]*)$/.test(exportName))
     throw new Error("Invalid callback export name.");
@@ -114,7 +119,7 @@ runTask(async (input, context) => {
   )
     throw new Error("Task Worker must contain all non-builtin code dependencies.");
   files.set("worker.cjs", Buffer.from(bundle.outputFiles[0]!.contents));
-  files.set("task.yaml", Buffer.from(`${JSON.stringify(declaration, null, 2)}\n`));
+  files.set("task.yaml", Buffer.from(stringify(declaration)));
   const checked = await inspectTaskArtifact(files);
   return { ...checked, contents: files };
 }
@@ -184,7 +189,7 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
       throw error;
     });
     if (exists) {
-      if (!exists.isDirectory() || exists.isSymbolicLink() || !owned)
+      if (!exists.isDirectory() || exists.isSymbolicLink())
         throw new Error("Refusing to replace an unmanaged Task output directory.");
       await checkTaskArtifact(output);
     }
@@ -203,7 +208,6 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
     try {
       await rename(staging, output);
       installed = true;
-      if (!owned) await writeFile(marker, ownership, { flag: "wx", mode: 0o600 });
     } catch (error) {
       if (installed) await rm(output, { recursive: true, force: true });
       if (previous) {
@@ -216,6 +220,7 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
       await rm(backup, { recursive: true });
       previous = false;
     }
+    if (owned) await rm(marker);
     return { directory: output, cid: compiled.cid, declaration: compiled.declaration };
   } finally {
     await rm(staging, { recursive: true, force: true });

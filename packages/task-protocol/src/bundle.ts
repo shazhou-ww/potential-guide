@@ -172,7 +172,17 @@ const schemaArrays = new Set(["allOf", "anyOf", "oneOf", "prefixItems"]);
 export function resolveBundleSchemas(
   declaration: TaskBundleDeclaration,
   resources: readonly JsonObject[],
+  resourcePaths?: readonly string[],
 ): ResolvedTaskBundle {
+  if (
+    resourcePaths &&
+    (resourcePaths.length !== resources.length ||
+      new Set(resourcePaths).size !== resourcePaths.length ||
+      resourcePaths.some(
+        (path) => !path.startsWith("schemas/") || !declaration.include.includes(path),
+      ))
+  )
+    fail("invalid_schema", "Schema resource paths must match the exact Bundle manifest.");
   const registry = new Map<string, { node: JsonSchema; base: string }>();
   const locations = new WeakMap<JsonObject, string>();
   const rootBase = "https://task.invalid/declaration";
@@ -239,6 +249,10 @@ export function resolveBundleSchemas(
     }
     collect(resource, id);
   }
+  resourcePaths?.forEach((path, index) => {
+    const resource = resources[index]!;
+    add(absolute(path, `${rootBase}/`), resource, locations.get(resource)!);
+  });
   const roots = [declaration.inputSchema, declaration.resultSchema, declaration.messageSchema];
   roots.forEach((root, index) => {
     const base = `${rootBase}/${index}`;
@@ -286,18 +300,25 @@ export function resolveBundleSchemas(
       url.hash = "";
       const resource = registry.get(url.href);
       if (!resource) fail("invalid_schema", "Missing offline Schema resource.");
-      let selected: Json = resource.node;
-      if (fragment && !fragment.startsWith("/")) fail("invalid_schema", "Missing Schema anchor.");
-      for (const part of fragment.split("/").slice(1)) {
-        if (/~(?:[^01]|$)/.test(part)) fail("invalid_schema", "Invalid Schema JSON Pointer.");
-        const key = part.replaceAll("~1", "/").replaceAll("~0", "~");
-        if ((!objectSchema(selected) && !Array.isArray(selected)) || !Object.hasOwn(selected, key))
-          fail("invalid_schema", "Missing Schema JSON Pointer.");
-        selected = (selected as JsonObject)[key]!;
+      if (fragment && !fragment.startsWith("/")) {
+        target = registry.get(`${resource.base}#${fragment}`);
+        if (!target) fail("invalid_schema", "Missing Schema anchor.");
+      } else {
+        let selected: Json = resource.node;
+        for (const part of fragment.split("/").slice(1)) {
+          if (/~(?:[^01]|$)/.test(part)) fail("invalid_schema", "Invalid Schema JSON Pointer.");
+          const key = part.replaceAll("~1", "/").replaceAll("~0", "~");
+          if (
+            (!objectSchema(selected) && !Array.isArray(selected)) ||
+            !Object.hasOwn(selected, key)
+          )
+            fail("invalid_schema", "Missing Schema JSON Pointer.");
+          selected = (selected as JsonObject)[key]!;
+        }
+        if (typeof selected !== "boolean" && !objectSchema(selected))
+          fail("invalid_schema", "Reference does not select a Schema.");
+        target = { node: selected, base: resource.base };
       }
-      if (typeof selected !== "boolean" && !objectSchema(selected))
-        fail("invalid_schema", "Reference does not select a Schema.");
-      target = { node: selected, base: resource.base };
     }
     const resolved = expand(target.node, target.base, path);
     return Object.keys(result).length

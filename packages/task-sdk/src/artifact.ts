@@ -26,14 +26,14 @@ export async function inspectTaskArtifact(files: ReadonlyMap<string, Buffer>) {
     throw new Error("Task Bundle requires a nonempty worker.cjs.");
   new TextDecoder("utf-8", { fatal: true }).decode(files.get("worker.cjs"));
   assertRuntime(declaration);
+  const schemas = [...files].filter(([path]) => path.startsWith("schemas/"));
   const resolved = resolveBundleSchemas(
     declaration,
-    [...files]
-      .filter(([path]) => path.startsWith("schemas/"))
-      .map(
-        ([, bytes]) =>
-          JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as JsonObject,
-      ),
+    schemas.map(
+      ([, bytes]) =>
+        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as JsonObject,
+    ),
+    schemas.map(([path]) => path),
   );
   const cid = await importContent(files, async () => {});
   return { declaration, resolved, cid, files: [...files.keys()].sort() };

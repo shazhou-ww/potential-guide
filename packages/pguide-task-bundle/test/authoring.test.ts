@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
-import { readArtifactFiles } from "@potential-guide/check-artifacts/files";
+import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/check-artifacts/files";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import {
   compileInputSchema,
@@ -340,12 +340,38 @@ test("identical authors in independent roots produce the same CID and Worker byt
     });
   });
 });
+test("build emits YAML and no persistent sidecar, and rebuilds a copied artifact", async () => {
+  await fixture(async (root, file) => {
+    const before = await readdir(root);
+    const built = await buildTask(file);
+    assert.deepEqual((await readdir(root)).sort(), [...before, "dist"].sort());
+    const bytes = await readFile(join(built.directory, "task.yaml"));
+    assert.match(bytes.toString(), /^\$schema: /);
+    assert.throws(() => JSON.parse(bytes.toString()));
+    assert.deepEqual(parseArtifactYaml(bytes), built.declaration);
+    for (const [index, name] of (
+      ["inputSchema", "resultSchema", "messageSchema"] as const
+    ).entries()) {
+      assert.deepEqual(built.declaration[name], { $ref: `schemas/${index}.json` });
+      assert.ok(built.declaration.include.includes(`schemas/${index}.json`));
+    }
+    assert.equal((await buildTask(file)).cid, built.cid);
+    await fixture(async (other, otherFile) => {
+      const copied = join(other, "dist");
+      await cp(built.directory, copied, { recursive: true });
+      assert.equal((await buildTask(otherFile)).cid, built.cid);
+    });
+    await writeFile(join(built.directory, "unknown.txt"), "preserve");
+    await assert.rejects(buildTask(file), /extra|undeclared|unexpected/i);
+    assert.equal(await readFile(join(built.directory, "unknown.txt"), "utf8"), "preserve");
+  });
+});
 test("existing locks and changed ownership preserve the complete prior output and recovery files", async () => {
   await fixture(async (root, file) => {
     const built = await buildTask(file);
     const marker = `${built.directory}.pguide-task-bundle.json`;
     const lock = `${marker}.lock`;
-    const ownership = await readFile(marker);
+    const ownership = `${JSON.stringify({ version: 1, output: built.directory, owner: file })}\n`;
     await writeFile(lock, "another build or interrupted process");
     await assert.rejects(buildTask(file), /locked.*crashed/);
     assert.equal(await readFile(lock, "utf8"), "another build or interrupted process");
@@ -358,6 +384,7 @@ test("existing locks and changed ownership preserve the complete prior output an
     assert.equal((await readdir(root)).includes("dist.pguide-task-bundle.json.lock"), false);
     await writeFile(marker, ownership);
     assert.equal((await buildTask(file)).cid, built.cid);
+    await assert.rejects(readFile(marker), { code: "ENOENT" });
   });
 });
 test("publish CLI uses artifact bytes only, honors RPC precedence and rejects invalid artifacts before RPC", async () => {
@@ -491,7 +518,7 @@ test("unsafe output, unmanaged output, empty and overlapping globs fail without 
   await fixture(async (root, file) => {
     await mkdir(join(root, "dist"));
     await writeFile(join(root, "dist", "user.txt"), "keep");
-    await assert.rejects(buildTask(file), /unmanaged/);
+    await assert.rejects(buildTask(file));
     assert.equal(await readFile(join(root, "dist", "user.txt"), "utf8"), "keep");
     await rm(join(root, "dist"), { recursive: true });
     const definition = JSON.parse(await readFile(file, "utf8"));

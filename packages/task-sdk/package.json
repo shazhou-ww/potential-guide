@@ -43,7 +43,8 @@
     "@potential-guide/ipfs-content": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",
     "@potential-guide/check-artifacts": "workspace:^",
-    "esbuild": "catalog:"
+    "esbuild": "catalog:",
+    "yaml": "catalog:"
   },
   "publishConfig": {
     "access": "public"
