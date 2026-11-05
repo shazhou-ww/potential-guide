@@ -45,6 +45,10 @@ pinboard import packages\check-environment\dist\bundles\network.car --name check
 
 恢复需要为当前执行环境提供该 endpoint 的有效授权，或恢复已授权的 Pinboard 工具连接。届时重新观察准确当前修订，重试上述公开制品导入，核对返回 CID；从 Pinboard 独立导出并验证 CAR，再以导出的制品重跑 CID 执行和 Reference 获取。完成并同步证据后，才可勾选剩余 D-*、submitOuter 并由监督者按授权决定最终门禁。认证缺失不能推断为用户拒绝，也不能当作验收通过。
 
+## 远端 CI 观察
+
+primary 批准提交的 [CI run](https://github.com/shazhou-ww/potential-guide/actions/runs/42063816165) 中，Ubuntu packed CLI 和 isolated package consumers 已成功；Windows packed CLI 的既有 MVP Check 消费验证在等待窗口结束时仍观察到 running，断言预期 completed 而失败。该路径涉及的旧 Check、Task SDK、Engine、MVP consumer 和部署脚本本次均未修改；未通过修改超时或跳过旧测试来掩盖此结果。其余 job 在观察时仍运行，因此这里只声称本地完整 `pnpm check` 与上述独立验证通过，不声称远端 CI 全绿。
+
 ## 清理
 
 验证完成后已关闭 Task Server、受控 HTTP 服务和专属 Kubo；没有留下长期后台服务。临时 Kubo、消费依赖和过程数据库仅为本次操作所有，清理不触及共享节点、仓库或其他会话。
