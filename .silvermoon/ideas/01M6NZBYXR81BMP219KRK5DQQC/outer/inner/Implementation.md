@@ -4,11 +4,11 @@
 
 ### I-S01: 核对标准脚手架与迁移边界
 
-实际调用 `task-bundle init` 检查最新模板，对照环境检查的构建、契约、库消费者与回归测试，确定三个独立 Bundle 的作者文件布局，以及独立共享包的命名、公共 API 和依赖方向。参考 [作者流程](../../../../../packages/pguide-task-bundle/README.md) 和 [环境检查](../../../../../packages/check-environment/README.md)。
+实际调用 `task-bundle init` 检查最新模板，对照环境检查的构建、契约、库消费者与回归测试，核对 [分包结构草案](./Package-structure.md) 中的三个独立 Bundle 作者布局、共享包公共 API 和依赖方向。参考 [作者流程](../../../../../packages/pguide-task-bundle/README.md) 和 [环境检查](../../../../../packages/check-environment/README.md)。
 
 ### I-S02: 提取共享 Check 包并迁移环境检查
 
-提取独立可复用包（暂定 `@potential-guide/check-sdk`），统一结果类型与 Schema、结果组装及传给 `runTask` 的回调工厂。环境检查消费共享包，使用标准构建配置、TypeBox 契约和显式入口取代手动声明生成；保留现有库导出与交付引用需求，同步直接相关文档、包分层和测试。
+提取独立可复用包 `@potential-guide/check-sdk`，统一结果类型与 Schema、结果组装及传给 `runTask` 的回调工厂。环境检查消费共享包，使用标准构建配置、TypeBox 契约和显式入口取代手动声明生成；保留现有库导出与交付引用需求，同步直接相关文档、包分层和测试。
 
 ### I-S03: 验证兼容性与新检查复用
 
