@@ -29,9 +29,9 @@ node packages\pguide-task-bundle\dist\bin.js build packages\check-sdk\.cache\ini
 
 | 检查 | CAR（相对包目录） | CID |
 | --- | --- | --- |
-| tools | `dist/bundles/tools.car` | `bafybeigwlidicu46j3wcrqkaylyphnyee5tn5d2ts6zaixpvzz5aeoerne` |
-| directories | `dist/bundles/directories.car` | `bafybeigqgtxskxxxslo5fckgca4bh6w7bxwv6j6lu7kxcrokww3pc5errm` |
-| network | `dist/bundles/network.car` | `bafybeib3zof4di35cposnfdpisfblhrmahd6sun2zn56psboql5jemqju4` |
+| tools | `dist/bundles/tools.car` | `bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota` |
+| directories | `dist/bundles/directories.car` | `bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi` |
+| network | `dist/bundles/network.car` | `bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca` |
 
 对应目录为 `dist/bundles/<kind>/`；其中含标准 task.yaml、worker.cjs、schemas、resources/check.json 和仅属于该检查的 `resources/references/en/check.md` 与问题页。资源以原文精确字节进入 CAR，可通过实际 CID 下的固定相对路径定位，不复制其他检查或共享 SDK 的文档。
 
@@ -63,4 +63,6 @@ SDK 自身构建只预备独立示例的作者输入和生成类型，不编译�
 
 监督者依据用户明确授予的阶段门禁审批权限，直接审阅共享 SDK、两阶段构建与接受路径、环境检查的行为差异、声明/打包/依赖分层接线和测试，不由实施者自批。独立重跑上述四个测试文件，17/17 通过，无跳过或取消；复核最终完整 `pnpm check` 的打包结束输出以及成功结果。
 
-另将 SDK、环境库、标准作者工具和 Engine 的依赖闭包实际打包，在仓库之外建立独立 pnpm 消费工程，内部依赖全部指向本次 tarball。只从安装后的 SDK 复制 text 作者示例并构建，得到 CID `bafybeidygli63yx3jxzzwv5longzobsdp4uwekxitbuka4hrew3a62i2ru`；直接调用安装后的环境库检查当前 Node，结果严格为 `{pass:true}`。这些复验退出 0，不使用仓库内部源码路径作为消费者运行入口；尚不代替现实世界的 Pinboard 获取与独立 Engine 执行证据。审阅未发现阻塞性实施缺陷，允许在准确修订同步并提交后批准主体世界门禁。
+另将 SDK、环境库、标准作者工具和 Engine 的依赖闭包实际打包，在仓库之外建立独立 pnpm 消费工程，内部依赖全部指向本次 tarball。只从安装后的 SDK 复制 text 作者示例并构建，得到 CID `bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu`；直接调用安装后的环境库检查当前 Node，结果严格为 `{pass:true}`。这些复验退出 0，不使用仓库内部源码路径作为消费者运行入口；尚不代替现实世界的 Pinboard 获取与独立 Engine 执行证据。审阅未发现阻塞性实施缺陷，允许在准确修订同步并提交后批准主体世界门禁。
+
+首次提交时发现新 Reference 工作树仍为 CRLF，而仓库既有 `.gitattributes` 规定 LF，导致初次 CAR 不能代表提交后的准确文档字节。监督者将本次 Reference 工作树统一为已提交的 LF 字节，重建全部制品、重打包并重装两个业务包，再构建独立作者示例；上述 CID 均为修正后的最终值。四个定向测试文件再次 17/17 通过。该修正不改变 Git 中的文档内容或通用构建规则，避免把换行差异作为新协议或自动文档转换逻辑。
