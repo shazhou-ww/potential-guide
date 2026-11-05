@@ -5,25 +5,15 @@ import { createServer, get } from "node:http";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
-import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
 import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
+import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
+import { newId } from "@potential-guide/task-engine";
+import { MemoryIpfsClient } from "@potential-guide/task-engine/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
 import { parseArguments, resolveConfig } from "../src/config.js";
 import { localPolicy, startService } from "../src/service.js";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
-
-function currentRequestId() {
-  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-  let timestamp = Date.now();
-  let prefix = "";
-  for (let index = 0; index < 10; index++) {
-    prefix = alphabet[timestamp % 32] + prefix;
-    timestamp = Math.floor(timestamp / 32);
-  }
-  return `${prefix}0000000000000000`;
-}
 
 test("Gateway-only Engine and UI execute a Bundle without any RPC and retain source ownership", async (t) => {
   await mkdir(join(root, ".cache"), { recursive: true });
@@ -105,7 +95,7 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
           origin: service.uiUrl!,
         };
       }
-      const requestId = currentRequestId();
+      const requestId = newId();
       const submitted = await fetch(`${endpoint}/tasks`, {
         method: "POST",
         headers: { ...headers, "Idempotency-Key": requestId },
@@ -155,12 +145,13 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
     ipfsGatewayUrl: url,
   });
   try {
-    const requestId = currentRequestId();
-    await fetch(`${failed.url}/tasks`, {
+    const requestId = newId();
+    const submitted = await fetch(`${failed.url}/tasks`, {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": requestId },
       body: JSON.stringify({ bundle: built.cid, text: "fail", timeoutMs: 1000 }),
     });
+    assert.equal(submitted.status, 202, await submitted.text());
     const status = (await (
       await fetch(`${failed.url}/requests/${requestId}/status?waitMs=10000`)
     ).json()) as { status: string };

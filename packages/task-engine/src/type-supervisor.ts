@@ -115,6 +115,7 @@ class RunWorker {
   private exitObserved = false;
   private exitPublished = false;
   private exiting = false;
+  private termination: Promise<number> | undefined;
   private stopTimer: NodeJS.Timeout | undefined;
   private exitFact: RunWorkerExit | undefined;
   private exitWaiters = new Set<(fact: RunWorkerExit) => void>();
@@ -874,7 +875,8 @@ class RunWorker {
     this.exiting = true;
     this.routes.clear();
     for (const context of this.contexts.values()) context.controller.abort();
-    void this.worker.terminate().catch((error) => {
+    this.termination = this.worker.terminate();
+    void this.termination.catch((error) => {
       this.loss ??= {
         code: "stop_unconfirmed",
         message: error instanceof Error ? error.message : "Worker 退出未确认。",
@@ -997,7 +999,7 @@ class RunWorker {
     if (!worker) return;
     clearInterval(this.heartbeat);
     this.endWorker();
-    await worker.terminate();
+    await this.termination;
   }
   canRoute(runId: string): boolean {
     return !!this.worker && this.routes.has(runId);
@@ -1010,7 +1012,7 @@ class RunWorker {
       return;
     }
     this.lose(worker, generation, reason);
-    await worker.terminate();
+    await this.termination;
   }
   get hasPendingWork(): boolean {
     return this.pendingOperations > 0 || this.pendingProofs > 0 || this.worker !== undefined;

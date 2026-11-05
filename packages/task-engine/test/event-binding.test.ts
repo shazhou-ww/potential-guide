@@ -66,6 +66,13 @@ test("start qualifies equivalent same-time receipts inclusively; later eligibili
   const h = await harness({
     prepare: () => (++prepares === 1 ? firstPrepare.promise : secondPrepare.promise),
   });
+  const waitForWork = async (count: number) => {
+    const end = performance.now() + 5000;
+    while (h.work.length < count) {
+      if (performance.now() > end) assert.fail("Worker did not reach fixture execution in time.");
+      await new Promise<void>((resolve) => setTimeout(resolve, 5));
+    }
+  };
   try {
     const first = h.submit(),
       second = h.submit();
@@ -74,7 +81,7 @@ test("start qualifies equivalent same-time receipts inclusively; later eligibili
     firstPrepare.resolve({ text: "prepared-a" });
     await flush();
     h.engine.tick();
-    await flush();
+    await waitForWork(1);
     assert.equal(h.work.length, 1);
     const a = h.engine.getTask(first.taskId, caller);
     assert.equal(a.run?.startedAt, a.eligibleAt);
@@ -87,6 +94,7 @@ test("start qualifies equivalent same-time receipts inclusively; later eligibili
     assert.equal(later.run, undefined);
     secondPrepare.resolve({ text: "prepared-b" });
     await h.turn(0);
+    await waitForWork(2);
     assert.notEqual(h.engine.getTask(later.taskId, caller).run?.runId, a.run?.runId);
     assert.equal(h.work.length, 2);
   } finally {

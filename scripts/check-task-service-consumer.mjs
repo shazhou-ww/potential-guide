@@ -17,7 +17,7 @@ import {createServer} from "node:http";
 import {delimiter,resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
-import {createIpfsGatewayClient} from "@potential-guide/task-engine";
+import {createIpfsGatewayClient,newId} from "@potential-guide/task-engine";
 import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
 import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
 import {configureTaskServer} from "./echo-config.mjs";
@@ -90,10 +90,7 @@ for(const combined of [false,true])for(const layer of ["user","file","cli","isol
   assert.equal((await fetch(ready.url+"/tasks")).status,200);
   assert.equal((await fetch(ready.url+"/tasks",{headers:{origin:"https://evil.test"}})).status,403);
   await readFile(database);
-  const requestTimestamp=Date.now();
-  const requestId=Array.from({length:10},(_,index)=>
-   "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[Math.floor(requestTimestamp/32**(9-index))%32]
-  ).join("")+"0000000000000000";
+  const requestId=newId();
   const submitted=await fetch(ready.url+"/tasks",{method:"POST",
    headers:{"content-type":"application/json","Idempotency-Key":requestId},
    body:JSON.stringify({bundle:built.cid,text:"packed",timeoutMs:10000})});

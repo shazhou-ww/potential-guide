@@ -97,6 +97,36 @@ async function until(predicate: () => boolean) {
   }
 }
 
+test("concurrent close and retirement await one Worker termination", async () => {
+  const f = fixture();
+  await f.supervisor.start();
+  const worker = (f.supervisor as unknown as { verifier: { worker: Worker } }).verifier.worker;
+  const terminate = worker.terminate.bind(worker);
+  const barrier = deferred<void>();
+  let calls = 0;
+  worker.terminate = () => {
+    calls++;
+    return barrier.promise.then(terminate);
+  };
+  let closed = false;
+  const closing = f.supervisor.close().then(() => {
+    closed = true;
+  });
+  const retiring = f.supervisor.retire();
+  try {
+    assert.equal(calls, 1);
+    assert.equal(closed, false);
+    assert.ok(worker.threadId > 0);
+  } finally {
+    barrier.resolve();
+    await Promise.all([closing, retiring]);
+    await f.supervisor.close();
+  }
+  assert.equal(calls, 1);
+  assert.equal(closed, true);
+  assert.equal(worker.threadId, -1);
+});
+
 test("Bundle host rejects a different handshake CID or Schema before dispatch", async () => {
   const f = fixture();
   const declaration: ResolvedTaskBundle = {

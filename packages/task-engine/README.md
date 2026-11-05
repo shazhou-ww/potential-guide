@@ -61,6 +61,7 @@ Gateway URL 必须是根 origin，拒绝旧路径前缀；详见[缓存与迁移
 `testing` 提供非持久 MemoryStore / VirtualClock；旧协调器资源 fixtures
 只是内部回归测试，不是生产注册 API。`pool` 保留业务资源协调工具。
 Worker 不是 OS 安全沙箱。
+关闭和退休共享同一个 Worker 终止 Promise，等待实际退出，不重复请求终止。
 
 完整接口与边界见 [Task Engine](../../docs/task-engine.md)、
 [Worker 协议](../../docs/task-bundle-worker.md)。
