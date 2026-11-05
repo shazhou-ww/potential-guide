@@ -33,6 +33,16 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
       parseArguments(["--cwd", directory, "--ipfs-gateway-url", "https://default.test", ...args]),
     );
   const missing = () => resolveConfig(parseArguments(["--cwd", directory]));
+  const warnings = t.mock.method(console, "error", () => {});
+  const ignoredUser = async (args: string[] = []) => {
+    const before = warnings.mock.callCount();
+    const result = await load(args);
+    assert.equal(warnings.mock.callCount(), before + 1);
+    const message = String(warnings.mock.calls.at(-1)?.arguments[0]);
+    assert.match(message, /Warning:.*ignoring the entire global configuration/);
+    assert.doesNotMatch(message, /password@example|SECRET_CONFIG/);
+    return result;
+  };
   await assert.rejects(missing(), /requires an explicit ipfsGatewayUrl/);
   const initial = await load();
   assert.equal(initial.port, 3000);
@@ -76,6 +86,7 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
     { ipfsGatewayUrl: "https://example.test/#" },
   ]) {
     const override = ["--config", config];
+    await writeFile(config, "{}");
     await writeFile(
       userPath,
       JSON.stringify(
@@ -84,12 +95,13 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
         ),
       ),
     );
-    await assert.rejects(load(override));
+    assert.equal((await ignoredUser(override)).port, 3000);
     await writeFile(userPath, "{}");
     await writeFile(config, JSON.stringify(bad));
     await assert.rejects(load(override));
   }
   for (const key of ["ipfsTransport", "ipfsRpcUrl"]) {
+    await writeFile(config, "{}");
     for (const value of [
       "rpc",
       "gateway",
@@ -102,7 +114,7 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
       {},
     ]) {
       await writeFile(userPath, JSON.stringify({ [`task-engine.${key}`]: value }));
-      await assert.rejects(load(["--config", config]), /retired.*pguide user config/);
+      assert.equal((await ignoredUser()).port, 3000);
       assert.equal((await load(["--no-global-config"])).ipfsGatewayUrl, "https://default.test/");
       await writeFile(userPath, "{}");
       await writeFile(config, JSON.stringify({ [key]: value }));
@@ -143,10 +155,10 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
     }),
   );
   await writeFile(userPath, '{"task-engine.ipfsRpcUrl":false}');
-  await assert.rejects(load(), /retired.*pguide user config/);
+  assert.equal((await ignoredUser()).port, 3000);
   assert.equal((await load(["--no-global-config"])).port, 3000);
   await writeFile(userPath, "{}");
-  await assert.rejects(load(), /settings registry/);
+  assert.equal((await ignoredUser()).port, 3000);
   await rm(settingsPackagesPath());
   await writeFile(
     userPath,
@@ -209,13 +221,19 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
   }
   await writeFile(config, "{}");
   await writeFile(userPath, '{"task-engine.port":"invalid"}');
-  await assert.rejects(load(["--config", config, "--port", "0"]));
+  assert.equal((await ignoredUser(["--config", config, "--port", "0"])).port, 0);
   assert.equal((await load(["--no-global-config", "--port", "0"])).port, 0);
   await writeFile(userPath, "{ malformed");
-  await assert.rejects(load());
+  assert.equal((await ignoredUser()).port, 3000);
   assert.equal((await load(["--no-global-config"])).port, 3000);
   await writeFile(userPath, '{"task-engine.unknown":true}');
-  await assert.rejects(load());
+  assert.equal((await ignoredUser()).port, 3000);
+  await writeFile(userPath, '{"task-engine.port":1234,"task-engine.unknown":"SECRET_CONFIG"}');
+  assert.equal((await ignoredUser()).port, 3000);
+  await writeFile(userPath, '{"task-engine.port":1234}');
+  await writeFile(settingsPackagesPath(), "{malformed SECRET_CONFIG");
+  assert.equal((await ignoredUser()).port, 3000);
+  await rm(settingsPackagesPath());
   await writeFile(userPath, "{}");
   await assert.rejects(load(["--config", "missing.json"]));
   await writeFile(config, "port: 2\nport: 3");

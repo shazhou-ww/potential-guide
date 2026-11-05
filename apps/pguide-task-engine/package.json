@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/pguide-task-engine",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0-rc.2",
   "description": "Declarative local Task Engine service command with optional Web UI.",
   "type": "module",
   "bin": {

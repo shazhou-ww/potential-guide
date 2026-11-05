@@ -5,7 +5,7 @@ import { ConfigurationError, parseArguments, resolveConfig } from "./config.js";
 const metadata = {
   protocol: "pguide-command-v1",
   command: "task-engine",
-  version: "0.1.0-rc.0",
+  version: "0.1.0-rc.2",
   description: "Start a foreground loopback Task Engine, optionally with its HTTP Web UI.",
 };
 async function main() {
@@ -40,7 +40,7 @@ async function main() {
       paths:
         "Effective CWD is --cwd or process CWD for both entrypoints and --config. Each file's paths are relative to that file; CLI paths are relative to effective CWD.",
       validation:
-        "Every provided layer is validated even when overridden. Complete settings (including uiOptions) replace, never deep merge. No executable config or environment service overrides.",
+        "Invalid or unreadable global configuration/settings registry emits a warning and the entire global layer is ignored. Explicit file and CLI layers must validate even when overridden. Complete settings (including uiOptions) replace, never deep merge. No executable config or environment service overrides.",
       isolation:
         "--no-global-config skips the user main file, including top-level discovery and user commandDirectories. PATH and project discovery remain available.",
       defaults: {

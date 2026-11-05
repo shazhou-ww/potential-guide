@@ -102,14 +102,16 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
               cwd,
               "--config",
               matrix,
-              "--ipfs-gateway-url",
-              "https://valid.test",
+              ...(source === "file" ? ["--ipfs-gateway-url", "https://valid.test"] : []),
             ],
             directory,
             env,
           );
           assert.notEqual(result.code, 0);
-          assert.match(result.stderr + result.stdout, /retired.*--ipfs-gateway-url/);
+          if (source === "user") {
+            assert.match(result.stderr, /Warning:.*ignoring the entire global configuration/);
+            assert.match(result.stderr, /requires an explicit ipfsGatewayUrl/);
+          } else assert.match(result.stderr + result.stdout, /retired.*--ipfs-gateway-url/);
           assert.doesNotMatch(result.stdout, /"event":"ready"/);
           await assert.rejects(readFile(join(cwd, "tasks.sqlite")));
         }
@@ -117,25 +119,7 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
     }
     for (const [userValues, fileValues, flags, expected] of [
       [{}, {}, [], /requires an explicit ipfsGatewayUrl/],
-      [
-        { "task-engine.ipfsTransport": "invalid" },
-        {},
-        ["--ipfs-gateway-url", "https://valid.test"],
-        /retired.*--ipfs-gateway-url/,
-      ],
-      [
-        { "task-engine.ipfsGatewayUrl": "file:///bad" },
-        {},
-        ["--ipfs-gateway-url", "https://valid.test"],
-        /configuration|config/,
-      ],
       [{}, { ipfsTransport: "invalid" }, ["--ipfs-gateway-url", "https://valid.test"], /retired/],
-      [
-        { "task-engine.ipfsRpcUrl": "http://127.0.0.1:5001" },
-        {},
-        ["--ipfs-gateway-url", "https://valid.test"],
-        /retired/,
-      ],
       [{}, { ipfsRpcUrl: null }, ["--ipfs-gateway-url", "https://valid.test"], /retired/],
       [{}, {}, ["--ipfs-transport", "gateway"], /retired/],
       [{}, {}, ["--ipfs-rpc-url", "http://127.0.0.1:5001"], /retired/],
@@ -169,13 +153,18 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
     );
     assert.notEqual(invalid.code, 0);
     assert.doesNotMatch(invalid.stdout, /"event":"ready"/);
+    await writeFile(matrix, "{}");
     const blocked = await capture(
       entry,
-      [...prefix, "--cwd", cwd, "--config", "server.yaml"],
+      [...prefix, "--cwd", cwd, "--config", matrix],
       directory,
       env,
     );
     assert.notEqual(blocked.code, 0);
+    if (entry === cli) {
+      assert.match(blocked.stderr, /Warning:.*ignoring the entire global configuration/);
+      assert.match(blocked.stderr, /requires an explicit ipfsGatewayUrl/);
+    }
   }
   const retired = await capture(pguide, ["config", "--config", "server.yaml"], directory, env);
   assert.notEqual(retired.code, 0);
@@ -217,7 +206,6 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
       [
         entry,
         ...(entry === pguide ? ["task-engine"] : []),
-        ...(entry === wrapper ? ["--no-global-config"] : []),
         "--cwd",
         cwd,
         "--config",
@@ -261,6 +249,8 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
         });
       });
       servicePid = ready.pid;
+      if (entry === wrapper)
+        assert.match(stderr, /Warning:.*ignoring the entire global configuration/);
       assert.equal((await fetch(`${ready.url}/tasks`)).status, 200);
       assert.ok(
         await readFile(

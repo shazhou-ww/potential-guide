@@ -15,8 +15,9 @@ Provide an explicit read-only Trustless Gateway URL through CLI, the specified
 YAML/JSON file or `task-engine.ipfsGatewayUrl` in user settings. There is no default
 node or public Gateway, RPC selection or fallback. Author publishing/pinning is unchanged.
 **Breaking change:** remove `ipfsRpcUrl` / `ipfsTransport`, their `task-engine.`
-setting IDs and old flags; use `--ipfs-gateway-url` instead. Old fields fail even
-when overridden. User files are never automatically rewritten.
+setting IDs and old flags; use `--ipfs-gateway-url` instead. Old fields in explicit
+files or CLI options fail even when overridden; incompatible global configuration
+is warned about and ignored. User files are never automatically rewritten.
 `--help` prints the actual platform-specific pguide user configuration path,
 defaults, all options and boundary rules without opening a DB, listener or Gateway
 connection. See [the configuration guide](../../docs/task-server.md).
@@ -25,6 +26,11 @@ The package depends on the public Web UI application package, including its
 server runtime and browser assets; no source-checkout/private-app dependency is
 required. Without `--ui` no UI listener is started. Engine/UI communicate through
 public HTTP, not an Engine object or SQLite access.
+
+Incompatible or unreadable global configuration/settings registrations emit a
+warning to stderr and the entire global layer is ignored without changing files.
+Explicit `--config` files and CLI options still fail on invalid input.
+Use `--no-global-config` to skip the global layer without a warning.
 
 The package-owned `objectives.yaml` permits `@potential-guide/task-sdk` only for
 the existing development dependency that authors standard Bundle fixtures in

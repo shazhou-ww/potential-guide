@@ -188,7 +188,7 @@ export async function resolveConfig(
       });
       // Validate explicit service fields before catalog validation: old registrations
       // may omit retired IDs or conflict with the bundled settings description.
-      user = validateLayer(
+      const candidate = validateLayer(
         Object.fromEntries(
           Object.entries(parseConfig(text))
             .filter(([id]) => id.startsWith("task-engine."))
@@ -198,10 +198,10 @@ export async function resolveConfig(
         "pguide user config",
       );
       await loadConfig(cwd, [], { project: false });
-    } catch (error) {
-      if (error instanceof ConfigurationError) throw error;
-      throw new ConfigurationError(
-        "Cannot read or validate pguide user configuration/settings registry.",
+      user = candidate;
+    } catch {
+      console.error(
+        "Warning: pguide user configuration or settings registry is incompatible or unreadable; ignoring the entire global configuration. Use an explicit --config file or CLI options. Existing files were not changed.",
       );
     }
   }

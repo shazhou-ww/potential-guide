@@ -38,9 +38,11 @@ uiOptions:
 ```
 
 Precedence is **explicit CLI > explicit YAML/JSON file > pguide user
-config.jsonc > defaults**. Every supplied layer is validated before replacement;
-even an overridden invalid value fails. Unknown service fields, duplicate keys,
-malformed files and missing explicit files fail. No JavaScript config is imported.
+config.jsonc > defaults**. An invalid, incompatible or unreadable global
+configuration or settings registry emits a warning to stderr; the entire global
+layer is ignored without modifying its files. Explicit file and CLI layers are
+validated even when overridden: unknown fields, duplicate keys, malformed files
+and missing explicit files fail. No JavaScript config is imported.
 No project service values or environment service overrides are added.
 
 The user file uses complete setting IDs, for example
@@ -82,7 +84,8 @@ The existing user path is `%APPDATA%\pguide\config.jsonc` on Windows
 (fallback `~\AppData\Roaming\pguide\config.jsonc`) and
 `$XDG_CONFIG_HOME/pguide/config.jsonc` elsewhere (fallback
 `~/.config/pguide/config.jsonc`). Help prints the actual path. Missing user files
-are optional; present malformed/unreadable files fail. `--no-global-config`
+are optional; malformed/unreadable global files or incompatible registered
+settings emit a warning and the entire global layer is ignored. `--no-global-config`
 skips the user main file, including its commandDirectories during top-level
 discovery. PATH and project command discovery still work; project service values
 never participate. Other commands continue rejecting the retired global `--config`.
@@ -114,8 +117,9 @@ not graceful cleanup. No system daemon or autostart is installed.
 `task-engine.ipfsRpcUrl` / `task-engine.ipfsTransport`, and CLI flags
 `--ipfs-rpc-url` / `--ipfs-transport` are retired. Remove them and supply a
 read-only Gateway using `ipfsGatewayUrl`, `task-engine.ipfsGatewayUrl` or
-`--ipfs-gateway-url`. Even previously valid or overridden old fields fail with
-migration guidance. No user files are automatically changed. Disabled user
+`--ipfs-gateway-url`. Old fields in explicit files or CLI options fail with migration guidance;
+old global service fields cause a warning and the entire global layer is ignored.
+No user files are automatically changed. Disabled user
 configuration is not read or validated; project service values remain excluded.
 Author Kubo write/import/pin APIs and programmatic `IpfsClient` injection remain
 available; this removal applies only to service configuration and assembly.
