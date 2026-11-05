@@ -20,13 +20,26 @@
 1. **统一结果契约**：导出 `CheckProblem`、`CheckResult` 和对应 TypeBox Schema，类型从 Schema 推导；提供 `createCheckContract(inputSchema)`，组合业务输入、公共结果和不接受业务消息的契约。
 2. **统一结果组装**：提供问题列表到结果的转换。空列表返回 `{pass:true}`；非空列表返回 `{pass:false,problems}`，不输出通过项。
 3. **回调适配**：提供 `createCheckTask(check)`，将返回问题列表的业务函数转换为可传给 `runTask` 的回调，保留输入类型推导与 Task Context，执行前后检查取消。
-4. **作者侧文档校验**：由独立作者入口提供共享校验器，按 Check 声明检查语言、定义页与问题页完整性。环境检查和后续检查的构建必须使用此门禁；它不实现第二套 Bundle 编译器。
+4. **作者侧文档校验**：由 `@potential-guide/check-sdk/authoring` 提供共享校验器，按 Check 声明检查语言、定义页与问题页完整性。环境检查和后续检查的构建必须使用此门禁；它不实现第二套 Bundle 编译器。
+
+工具归属已确认：保留在 Check SDK 内，使用独立子路径，不另拆校验工具包。
+
+| 导出入口 | 职责与使用位置 |
+| --- | --- |
+| `@potential-guide/check-sdk` | 结果组装、`createCheckTask`，供库和 Worker 回调使用 |
+| `@potential-guide/check-sdk/contracts` | 公共 Schema、类型和 Check 声明，供作者契约使用 |
+| `@potential-guide/check-sdk/authoring` | 声明、源码文档和成品覆盖校验，仅供作者构建使用 |
+
+根入口不重导出作者校验器或 Schema 构建实现。源码与构建产物均验证运行时导入隔离，避免文件扫描、Markdown 解析等作者侧代码进入 Worker；通用 `task-sdk`、Task Engine 和 `task-bundle` 不承担 Check 专属规则。
 
 公共 Reference 随共享包维护，供新检查作者引用；README 只做入口，不代替完整契约说明：
 
 ```text
 packages/check-sdk/
-  src/                     公共契约、结果组装和回调适配
+  src/
+    index.ts               结果组装和回调适配
+    contracts.ts           公共 Schema、类型和 Check 声明
+    authoring.ts           作者侧文档校验入口
   references/
     check-result.md        字段语义、通过/不通过示例和兼容规则
     check-callback.md      回调约定、执行故障、取消、日志与清理边界
