@@ -8,7 +8,7 @@
 
 ### I-S02: 提取共享 Check 包并迁移环境检查
 
-提取独立可复用包 `@potential-guide/check-sdk`，统一结果类型与 Schema、结果组装及传给 `runTask` 的回调工厂，并维护公共 Reference。第一阶段由 `check-sdk/authoring` 从 Check Build YAML 检查声明语言下的定义文件和全部问题文件的名称、路径、存在性与 Reference frontmatter，保留必填 title、description 和可选 references 的元数据约束，不解析章节、正文或正文链接，生成标准 Task Build YAML、契约与已验证资源；第二阶段调用标准 Task 构建器产出 CAR。所有生成文件与最终产物均在包内 `dist/`，最终索引只记录已接受的制品。环境检查复用最新脚手架的显式入口和类型化契约；保留现有库导出与交付引用需求，同步直接相关文档、包分层和测试。
+提取独立可复用包 `@potential-guide/check-sdk`，统一结果类型与 Schema、结果组装及传给 `runTask` 的回调工厂，并维护公共 Reference。第一阶段由 `check-sdk/authoring` 从 Check Build YAML 检查声明语言下的定义文件和全部问题文件的名称、路径、存在性与 Reference frontmatter，元数据只接受必填 title、description，不保留 references 字段；文章间引用写在 Markdown 正文，不解析章节、正文或正文链接。生成标准 Task Build YAML、契约与已验证资源；第二阶段调用标准 Task 构建器产出 CAR。所有生成文件与最终产物均在包内 `dist/`，最终索引只记录已接受的制品。环境检查复用最新脚手架的显式入口和类型化契约；保留现有库导出与交付引用需求，同步直接相关文档、包分层和测试。
 
 ### I-S03: 验证兼容性与新检查复用
 

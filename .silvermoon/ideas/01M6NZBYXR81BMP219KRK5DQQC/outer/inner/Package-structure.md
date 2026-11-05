@@ -226,9 +226,9 @@ description: 解释 tool-version 问题的含义与处理建议。
 正文按作者需要组织，不强制章节结构。
 ```
 
-仓库现有 [Reference 解析](../../../../../packages/pilot-protocol/src/resources.ts) 要求非空的 `title` 和 `description`，后者最多 200 个 Unicode code points，并允许可选的 `references` 元数据。第一阶段保留这些元数据的语法、字段和约束校验，缺失 frontmatter、缺必填字段、字段类型错误等应明确失败；SDK 公共 Reference 与具体 Check Reference 使用一致规则。
+仓库现有 [Reference 解析](../../../../../packages/pilot-protocol/src/resources.ts) 要求非空的 `title` 和 `description`，后者最多 200 个 Unicode code points。新 Check 保留这两个字段及其约束，但不沿用旧解析器的可选 `references` 字段；frontmatter 只接受 `title`、`description`。第一阶段检查 YAML 语法、字段和约束，缺失 frontmatter、缺必填字段、字段类型错误或未知字段等应明确失败；SDK 公共 Reference 与具体 Check Reference 使用一致规则。
 
-现有解析器的 `references` 使用 Objective 层级页面 ID，新 Check 不直接继承这些层级或引入 Pilot 运行时依赖。实施时明确 Check 的可选引用 ID 与生成资源索引之间的映射；如使用 `references`，校验元数据中的 ID 唯一且可由该索引解析。这不是扫描 Markdown 正文中的链接，也不新增语言、问题码等 frontmatter 必填字段：语言与问题码仍由 Check Build YAML 和路径唯一确定。
+文章之间的引用统一写在 Markdown 正文中，可使用普通链接或 reference-style links，Bundle 内文档优先使用相对路径。不再另维护 frontmatter 引用清单、页面引用 ID 或引用关系图，构建也不解析正文链接。语言与问题码仍由 Check Build YAML 和路径唯一确定；资源索引仍用于定位实际交付文件，不承担文章引用关系。这仅调整新 Check 的设计，不修改旧 Objective Reference 协议或其解析器，也不引入 Pilot 运行时依赖。
 
 ## 构建硬门禁：声明与文档完整性
 
@@ -241,7 +241,7 @@ description: 解释 tool-version 问题的含义与处理建议。
 | 语言声明 | 语言列表非空，使用规范化 BCP 47 标记，拒绝重复或规范化后冲突；只声明实际完整交付的语言，不预设必须中英双语 |
 | Check 自身定义 | 每个声明语言都存在命名为 `check.md` 的文档文件，不检查章节或正文 |
 | 问题覆盖 | 对每个声明语言，所有已声明问题码都有对应的 `problems/<code>.md` 文件；零问题码的 Check 仍必须有定义页 |
-| Reference 元数据 | 每篇 Reference 有合法 YAML frontmatter，必填 title、description 满足既有约束；可选 references 若声明则检查类型、唯一性和索引目标，不检查正文 |
+| Reference 元数据 | 每篇 Reference 有合法 YAML frontmatter，只接受必填 title、description 并满足既有约束；不保留 references 字段，不检查正文 |
 | 全部文档一致性 | 检查声明与实际文件名、路径和存在性是否一致，拒绝未知语言、未知问题码、重复映射和越界路径；不自动使用其他语言补缺，不解析正文、正文链接或锚点 |
 | 最终制品 | CAR 的实际文件清单包含上述全部文档；源码齐全但 include 漏选也必须失败，文档与声明索引一起受根 CID 覆盖 |
 
@@ -253,4 +253,4 @@ description: 解释 tool-version 问题的含义与处理建议。
 
 通用 `task-bundle build` 继续只负责通用 Bundle，不识别 Check 规则。实施时在共享包作者入口落实第一阶段，由包构建薄编排调用第二阶段；不增加通用构建器的 Check 插件，不引入 Check 专属 JavaScript 编译器，也不把文档检查塞进 `runTask` 或 Engine。
 
-至少加入以下负例：声明语言缺定义文件、某语言缺一个问题文件、文件名与问题码不符、未知语言或问题码、缺失或非法 frontmatter、元数据缺必填字段或 references 目标不存在、源码有文档但 CAR 漏选。每种情况都必须使完整构建失败；完整的单语言、多语言及零问题码声明应通过。合法 frontmatter 配合空正文、任意章节或损坏的正文链接，不得仅因正文内容被构建拒绝。
+至少加入以下负例：声明语言缺定义文件、某语言缺一个问题文件、文件名与问题码不符、未知语言或问题码、缺失或非法 frontmatter、元数据缺必填字段或包含 references 等未知字段、源码有文档但 CAR 漏选。每种情况都必须使完整构建失败；完整的单语言、多语言及零问题码声明应通过。合法 frontmatter 配合空正文、任意章节或损坏的正文链接，不得仅因正文内容被构建拒绝。
