@@ -20,7 +20,7 @@
 1. **统一结果契约**：导出 `CheckProblem`、`CheckResult` 和对应 TypeBox Schema，类型从 Schema 推导；提供 `createCheckContract(inputSchema)`，组合业务输入、公共结果和不接受业务消息的契约。
 2. **统一结果组装**：提供问题列表到结果的转换。空列表返回 `{pass:true}`；非空列表返回 `{pass:false,problems}`，不输出通过项。
 3. **回调适配**：提供 `createCheckTask(check)`，将返回问题列表的业务函数转换为可传给 `runTask` 的回调，保留输入类型推导与 Task Context，执行前后检查取消。
-4. **作者侧文档校验**：由 `@potential-guide/check-sdk/authoring` 提供共享校验器，按 Check 声明检查语言、定义页与问题页完整性。环境检查和后续检查的构建必须使用此门禁；它不实现第二套 Bundle 编译器。
+4. **作者侧转换与文档校验**：由 `@potential-guide/check-sdk/authoring` 从 Check Build YAML 出发校验语言、定义页与问题页，生成标准 Task Build YAML 及其完整输入。环境检查和后续检查的构建必须使用此门禁；它不实现第二套 Bundle 编译器。
 
 工具归属已确认：保留在 Check SDK 内，使用独立子路径，不另拆校验工具包。
 
@@ -28,7 +28,7 @@
 | --- | --- |
 | `@potential-guide/check-sdk` | 结果组装、`createCheckTask`，供库和 Worker 回调使用 |
 | `@potential-guide/check-sdk/contracts` | 公共 Schema、类型和 Check 声明，供作者契约使用 |
-| `@potential-guide/check-sdk/authoring` | 声明、源码文档和成品覆盖校验，仅供作者构建使用 |
+| `@potential-guide/check-sdk/authoring` | Check YAML 校验、资源准备和标准 Task 作者输入生成，仅供作者构建使用 |
 
 根入口不重导出作者校验器或 Schema 构建实现。源码与构建产物均验证运行时导入隔离，避免文件扫描、Markdown 解析等作者侧代码进入 Worker；通用 `task-sdk`、Task Engine 和 `task-bundle` 不承担 Check 专属规则。
 
@@ -39,7 +39,7 @@ packages/check-sdk/
   src/
     index.ts               结果组装和回调适配
     contracts.ts           公共 Schema、类型和 Check 声明
-    authoring.ts           作者侧文档校验入口
+    authoring.ts           Check 到 Task 的作者侧转换与校验入口
   references/
     check-result.md        字段语义、通过/不通过示例和兼容规则
     check-callback.md      回调约定、执行故障、取消、日志与清理边界
@@ -71,7 +71,7 @@ runTask(createCheckTask(inspectTools));
 
 **不包含**工具执行、目录探测、DNS/HTTP 算法，也不负责超时策略、子进程清理、调度、Bundle 编译或 Pinboard 发布。执行异常继续抛出，取消继续传播，不能转为 `pass:false`；日志使用 `context.log`，具体资源由业务实现清理。`runTask` 仍由作者入口显式调用，不由共享包暗中启动。
 
-依赖方向是环境检查 → Check SDK → 通用 Task SDK；Check SDK 的契约使用 TypeBox，不依赖环境检查、旧 Check 制品/Host 包或 Task Bundle 构建工具。纯契约与回调入口应分离，避免运行时代码因导入结果工具而携带作者侧 Schema 构建依赖。通用 Task SDK 不反向依赖 Check SDK。
+依赖方向是环境检查 → Check SDK → 通用 Task SDK；Check SDK 的契约使用 TypeBox，不依赖环境检查或旧 Check 制品/Host 包。第一阶段输出标准 Task 作者文件，由外层薄编排调用 Task Bundle 工具，Check SDK 不内嵌其编译器。纯契约与回调入口应分离，避免运行时代码因导入结果工具而携带作者侧 Schema 构建依赖。通用 Task SDK 不反向依赖 Check SDK。
 
 ## 环境检查包：当前结构
 
@@ -97,13 +97,13 @@ packages/check-environment/
 
 ## 环境检查包：迁移后结构
 
-建议使用包根内的三份标准构建配置；每份配置的源文件和输出都在其目录范围内，不让作者路径越过构建根：
+作者维护三份 Check Build YAML，生成的 Task Build YAML 不作为源码维护。所有中间与最终产物都在包内 `dist/`，作者源码与 Reference 原文留在源目录：
 
 ```text
 packages/check-environment/
-  tools.task.build.yaml
-  directories.task.build.yaml
-  network.task.build.yaml
+  tools.check.build.yaml
+  directories.check.build.yaml
+  network.check.build.yaml
   references/
     tools/<language>/
       check.md              工具检查用途、输入、结果与环境前提
@@ -132,15 +132,44 @@ packages/check-environment/
 
 每份 `contract.ts` 定义各自输入并使用公共 Check 契约；`main.ts` 显式调用 `runTask(createCheckTask(...))`。原 `contracts.ts` 的公共结果定义移到 Check SDK，业务输入迁到各 Task 契约，测试跟随更新，避免维护两份 Schema。
 
-先实际运行 `task-bundle init` 获取标准模板，再按上述多入口布局调整文件名和路径。三份配置均使用标准作者构建流程，例如：
+先实际运行 `task-bundle init` 核对标准入口模板与契约，再让第一阶段生成等价的 Task 作者输入。完整构建链为：
 
 ```text
-pguide task-bundle build tools.task.build.yaml
-pguide task-bundle build directories.task.build.yaml
-pguide task-bundle build network.task.build.yaml
+Check Build YAML + 源码 + Reference
+  -> check-sdk/authoring 校验与转换
+  -> dist/staging/<kind>/task.build.yaml + src + resources
+  -> 标准 task-bundle build
+  -> dist/staging/<kind>/bundle/ 与 bundle.car
+  -> 接受有效候选
+  -> dist/bundles/<kind>/ 与 <kind>.car
 ```
 
-配置分别输出到 `dist/bundles/tools`、`dist/bundles/directories`、`dist/bundles/network`，保留对应 CAR。现有 `build.mjs` 不再承担声明生成或低层编译；若仍需聚合构建与生成 `references.json`，仅保留薄编排，不复制构建规则。库的 TypeScript 编译仍保留。
+对应的产物布局为：
+
+```text
+dist/
+  staging/
+    tools/
+      task.build.yaml
+      src/                 生成入口、契约与所需源码闭包
+      resources/           已校验的索引与 Reference
+      bundle/              第二阶段候选目录
+      bundle.car
+    directories/           同样的阶段布局
+    network/
+  bundles/
+    tools/
+    tools.car
+    directories/
+    directories.car
+    network/
+    network.car
+  references.json          只记录已接受的最终 CID
+```
+
+生成配置使用 `outDirectory: bundle`，使源与输出都在该配置的构建根内，不用 `../../bundles` 逃出构建根。验收后的目录与 CAR 由薄编排搬移到最终位置，内容不变，CID 不变。临时文件、生成类型、索引、构建配置和 CAR 均不得写到源码目录或仓库根的 `dist.car`；作者不手改 staging，clean 可重新生成全部产物。
+
+第二阶段只消费第一阶段准备并验证过的业务源码与资源，不重新选择原始 Reference 或读取未固定的业务输入；准备所需源码闭包并保留可解析的锁定依赖，不能只复制入口而遗漏相对导入。资源选择在第一阶段展开成确定集合，第二阶段选中的文件集合必须一致。现有 `build.mjs` 如保留，只编排两阶段、候选接受和最终索引，不复制业务校验器或通用 Bundle 编译规则。库的 TypeScript 编译仍保留。
 
 共享包代码在作者构建时打入各 Worker，Engine 不安装这两个 npm 包。部署阶段用 `pinboard import` 发布三个 CAR，核对原 CID，并在独立消费环境验证执行；不是把源码目录作为执行制品上传。
 
@@ -152,15 +181,15 @@ Reference 是检查内容的一部分，不是某次执行的日志或结果，�
 - **检查知识**由环境检查包各自的 `references/<kind>/<language>/` 维护。`check.md` 解释用途、输入与结果、适用前提和限制；`problems/<code>.md` 解释问题含义、`target`/`actual` 的语义、排查及建议处理方式，不执行修复。
 - 工具检查覆盖 `tool-missing`、`tool-unusable`、`version-unparseable`、`tool-version`；目录检查覆盖 `not-directory`、`directory-unusable`；网络检查覆盖 `dns-unavailable`、`http-status`、`http-unavailable`。超时、启动或清理故障等仍按执行故障说明，不伪造新的业务问题码。
 
-作者配置使用现有 `include` 机制交付文档，不恢复旧 Check manifest 的 `references` 字段。例如工具检查：
+第一阶段从 Check YAML 的语义映射准备资源，生成 Task Build YAML 的标准 `include`；不恢复旧 Check manifest 格式。原文路径例如 `references/tools/<language>/check.md`，准备后位于 staging 的 `resources/references/<language>/check.md`。生成配置使用明确文件选择，例如：
 
 ```yaml
 include:
-  - from: references/tools/**/*.md
-    to: resources/references/
+  - from: resources/references/zh-CN/check.md
+    to: resources/references/zh-CN/
 ```
 
-另外两份构建配置只选择自己的文档。按照标准构建器的静态前缀规则，工具 Bundle 的成品为：
+这是单页示意，完整配置逐一列出全部已校验页面；例如问题页使用 `to: resources/references/<language>/problems/`，确保成品保留语言层级。不使用二次扩大文件集合的宽泛 glob。每个 Check 只选择自己的文档，工具 Bundle 的成品为：
 
 ```text
 dist/bundles/tools/
@@ -182,28 +211,28 @@ dist/bundles/tools/
 
 文档和代码共同进入 CAR 的完整文件清单与根 CID，因此 Reference 内容修改也会产生新 CID。检查文档之间使用能在制品内解析的相对链接，不依赖作者 checkout 或浮动远程页面。
 
-迁移测试除执行检查外，还应核对三个 CAR 各自包含说明页、所有可返回问题码均有对应页、相对链接可解析，且没有误打入其他检查的文档。Pinboard 独立消费验证应读取实际 CID 下的文档，不能仅证明源码目录里存在文件。
+迁移测试除执行检查外，还应核对三个 CAR 各自包含说明页、所有可返回问题码均有对应文件，且没有误打入其他检查的文档。Pinboard 独立消费验证应读取实际 CID 下的文档，不能仅证明源码目录里存在文件。构建仅检查文件名、路径和存在性，不解析文档章节、正文或链接。
 
 ## 构建硬门禁：声明与文档完整性
 
-每个 Check 必须有一份类型化的作者声明，显式列出支持的语言、稳定问题码，以及按语言组织的定义页和问题页。具体 API 在实施时确定；它是 Check 层元数据，不给通用 Task 声明添加未经支持的字段。
+每个 Check 的 Build YAML 是唯一作者声明，显式列出 Check 身份、业务入口、输入契约来源、支持语言、稳定问题码，以及定义页、问题页和其他资源的语义映射。它有独立的 Check 构建 Schema；TypeBox 输入契约仍由所指向的源码定义，不在 YAML 重复维护。生成的机器索引使用 Bundle 内相对路径，随资源进入 CAR，消费者无需原始工程即可导航。不给通用 Task 声明添加未经支持的字段。
 
 这份声明是唯一事实源：结果 Schema 的 `code` 枚举、业务返回问题码的类型约束和文档覆盖矩阵从同一份问题码定义派生。不能另维护一份仅用于文档的代码清单，也不能声称扫描源码字符串就能证明所有运行路径已覆盖。运行时对未声明问题码明确报错，不把它当作正常检查结果。
 
 | 门禁 | 必须满足 |
 | --- | --- |
 | 语言声明 | 语言列表非空，使用规范化 BCP 47 标记，拒绝重复或规范化后冲突；只声明实际完整交付的语言，不预设必须中英双语 |
-| Check 自身定义 | 每个声明语言都有非空的 `check.md`，包含用途、输入、结果、前提与限制等必需章节 |
-| 问题覆盖 | 对每个声明语言，所有已声明问题码都有非空的问题页，包含含义、字段解释和排查建议；零问题码的 Check 仍必须有定义页 |
-| 全部文档一致性 | 检查 Reference 树内全部文档及其本地链接、锚点和资源目标，拒绝未知语言、未知问题码、重复映射、越界路径及无法解析的制品内链接；不自动使用其他语言补缺 |
+| Check 自身定义 | 每个声明语言都存在命名为 `check.md` 的文档文件，不检查章节或正文 |
+| 问题覆盖 | 对每个声明语言，所有已声明问题码都有对应的 `problems/<code>.md` 文件；零问题码的 Check 仍必须有定义页 |
+| 全部文档一致性 | 只检查声明与实际文件名、路径和存在性是否一致，拒绝未知语言、未知问题码、重复映射和越界路径；不自动使用其他语言补缺，不解析正文、链接或锚点 |
 | 最终制品 | CAR 的实际文件清单包含上述全部文档；源码齐全但 include 漏选也必须失败，文档与声明索引一起受根 CID 覆盖 |
 
 共享包自身的公共 Reference 也按它声明的语言和必需页面检查。具体 Check 的完备条件是“支持语言 ×（Check 定义页 + 全部问题页）”；不要求复制共享包全部作者文档到每个业务 Bundle。
 
-语言标签与目录一致不等于翻译正确。构建检查可证明结构和覆盖完整，不能证明自然语言确实使用了该语言、解释准确或建议有效；这部分仍需内容审阅，不宣称已自动验证。
+语言标签与目录一致不等于翻译正确。构建仅证明文件命名和覆盖完整；空文件、缺章节、坏链接、翻译与解释质量均不作为本次自动检查项，交由内容审阅。
 
-构建链应为“校验作者声明和源码文档 → 标准 Task Bundle 构建 → 校验候选 CAR 中的声明索引和文档 → 接受为可发布制品”。任一失败必须以非零状态退出，报告 Check、语言、问题码和具体路径；不得静默跳过、补默认页或发布未校验的 CAR。失败候选不作为成功构建引用或发布，已有有效制品不因文档校验失败被覆盖；实施时验证临时输出与接受步骤的这一边界。
+构建链应为“第一阶段校验 Check YAML 与全部资源并准备 dist 输入 → 第二阶段标准 Task Bundle 构建 → 接受为可发布制品”。语言目录、问题页和定义页的命名与覆盖检查在第一阶段完成；第二阶段只负责通用契约、文件清单、内容身份和 CAR 完整性，不重复解释 Check 文档规则。测试额外核对最终 CAR 与第一阶段已验证的资源集合和字节一致。任一失败必须以非零状态退出，业务校验报告 Check、语言、问题码和具体路径；不得静默跳过、补默认页或发布未校验的 CAR。失败候选不更新成功引用，已有有效制品不因失败被覆盖；实施时验证临时输出与接受步骤的这一边界。
 
-通用 `task-bundle build` 当前只负责通用 Bundle，不会自动识别这些 Check 规则。实施时在共享包作者入口落实门禁，由包构建薄编排调用标准构建流程；如确需扩展通用作者接口，先明确最小集成点，不引入 Check 专属编译器，也不把文档检查塞进 `runTask` 或 Engine。
+通用 `task-bundle build` 继续只负责通用 Bundle，不识别 Check 规则。实施时在共享包作者入口落实第一阶段，由包构建薄编排调用第二阶段；不增加通用构建器的 Check 插件，不引入 Check 专属 JavaScript 编译器，也不把文档检查塞进 `runTask` 或 Engine。
 
-至少加入以下负例：声明语言缺定义页、某语言缺一个问题页、空文档、未知问题码、损坏的本地链接、源码有文档但 CAR 漏选。每种情况都必须使完整构建失败；完整的单语言、多语言及零问题码声明应通过。
+至少加入以下负例：声明语言缺定义文件、某语言缺一个问题文件、文件名与问题码不符、未知语言或问题码、源码有文档但 CAR 漏选。每种情况都必须使完整构建失败；完整的单语言、多语言及零问题码声明应通过。没有必需章节或含损坏链接的文件不得仅因此被构建拒绝。
