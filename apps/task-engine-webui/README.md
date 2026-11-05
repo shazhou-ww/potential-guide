@@ -4,11 +4,11 @@ Private Chinese debugging workbench, served by an independently started,
 loopback-only Node HTTP process. The production UI uses only public Task Server
 HTTP; the explicitly started `fixture/` composition is for isolated verification.
 
-See [运行、边界及浏览器验证](../../docs/task-engine-web-ui.md).
+See [运行、边界及浏览器验证](../../docs/task-engine-webui.md).
 
 ```powershell
-pnpm exec turbo run build --filter=@potential-guide/task-engine-web-ui...
-pnpm --filter @potential-guide/task-engine-web-ui start D:\Private\task-ui\ui-config.json
+pnpm exec turbo run build --filter=@potential-guide/task-engine-webui...
+pnpm --filter @potential-guide/task-engine-webui start D:\Private\task-ui\ui-config.json
 ```
 
 No npm release, remote-user access control, asset management or backend
@@ -24,6 +24,8 @@ changes do not move the headers.
 
 The workbench has Task and Run pages only. IPFS content is managed by the independent
 node; Engine's internal memory reuse is not exposed as a cache page or public API.
+Opening the task form focuses its first editable field (or the dialog title when no
+fields are available); closing it preserves the draft and returns focus to its opener.
 See [content storage and reuse](../../docs/task-bundle-cache.md).
 Run detail includes an independent Logs interface with follow/pause, sequence
 resume, history paging, explicit missing/expired/unsupported states, and a

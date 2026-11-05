@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./identity": {
+      "types": "./dist/identity.d.ts",
+      "import": "./dist/identity.js"
+    },
     "./pool": {
       "types": "./dist/pool.d.ts",
       "import": "./dist/pool.js"
@@ -41,9 +45,10 @@
     "ipfs-unixfs-exporter": "catalog:",
     "ipfs-unixfs-importer": "catalog:",
     "@potential-guide/task-protocol": "workspace:^",
-    "@potential-guide/check-artifacts": "workspace:^"
+    "semver": "catalog:"
   },
   "devDependencies": {
+    "@types/semver": "catalog:",
     "@potential-guide/ipfs-content": "workspace:^",
     "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/pguide-task-bundle": "workspace:^"

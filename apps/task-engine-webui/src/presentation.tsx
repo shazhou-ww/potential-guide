@@ -476,7 +476,7 @@ function DirectoryPanel({ view, kind }: { view: WorkbenchView; kind: "tasks" | "
             <Field
               id={task ? "history-type" : "execution-type"}
               label="Bundle CID（服务端查询）"
-              placeholder="完整 sha256:…（可选）"
+              placeholder="完整根 CID（可选）"
             />
             <p>修改后点击表格底部“{task ? "重新查询" : "刷新执行目录"}”。</p>
             {task && <Port view={view} id="association-filter" />}
@@ -681,9 +681,13 @@ function OverlayPanel({ view }: { view: WorkbenchView }) {
   };
   const autofocus = (event: Event) => {
     event.preventDefault();
-    document
-      .getElementById(id === "create-dialog" ? "type" : `${id}-title`)
-      ?.focus({ preventScroll: true });
+    const target =
+      id === "create-dialog"
+        ? (view.form.querySelector<HTMLElement>(
+            'input:not([type="hidden"]):not(:disabled), textarea:not(:disabled), select:not(:disabled)',
+          ) ?? document.getElementById("create-title"))
+        : document.getElementById(`${id}-title`);
+    target?.focus({ preventScroll: true });
   };
   const port = (name: string, className?: string) => (
     <Port view={view} id={name} className={className} />

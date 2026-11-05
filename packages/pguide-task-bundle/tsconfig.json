@@ -16,9 +16,6 @@
     },
     {
       "path": "../task-sdk"
-    },
-    {
-      "path": "../artifact-files"
     }
   ]
 }

@@ -27,6 +27,19 @@ available for local Worker execution and backwards-compatible directory inputs.
 Help and discovery use the existing CLI metadata contracts. Errors and exit
 statuses use the shared pguide CLI handling, not a second diagnostics protocol.
 
+Bundle file budgets, portable paths, bounded declaration YAML and exact
+file/Schema inspection come from `task-protocol`, shared with Engine.
+Local directory reading uses Node's recursive `opendir` and bounded file streams;
+Node version comparison uses `semver`. No `artifact-files` or Check
+artifact/runtime package is installed. Local trees reject symbolic links and
+retain Bundle path, empty-directory and capacity rules, but accept ordinary
+read-only hard links and relative directory arguments. Directory reading does
+not claim an atomic snapshot under concurrent source changes.
+
+For repository development, `pnpm --filter @potential-guide/pguide-task-bundle run clean`
+removes this workspace's output and TypeScript build-info file together.
+Rebuild before packing to avoid retaining removed modules.
+
 ## Start a minimal task
 
 ```text
@@ -263,3 +276,11 @@ node scripts/check-packages.mjs --bundle-authoring
 SDK/Engine consumption by CID on a business-free host. Both commands own and
 clean their `.cache` fixtures; `PGUIDE_KEEP_PACK_CONSUMERS=1` retains them for
 inspection. They do not use an existing Kubo or publish any package to npm.
+
+To verify actual local publication and execution instead, use the
+[real Kubo CLI integration test](../../apps/pguide-task-engine/README.md#real-local-kubo-end-to-end-verification).
+It exercises `pguide task-bundle init`, `build` and `check artifact`, imports the
+generated CAR through caller-authorized Kubo RPC, then starts `pguide task-engine`
+against the read-only Gateway and verifies execution, artifacts and persistence.
+Publication is the external CAR import/pin step, not a removed `task-bundle publish`
+command; no npm publication is involved.

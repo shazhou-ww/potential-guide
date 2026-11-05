@@ -10,9 +10,6 @@
   "references": [
     {
       "path": "../check-runtime-files"
-    },
-    {
-      "path": "../artifact-files"
     }
   ]
 }

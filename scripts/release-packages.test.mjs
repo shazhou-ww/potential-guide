@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import {
   parseReleaseTag,
+  releasePackageDirectory,
   releasePackages,
   releaseVersion,
+  taskEngineReleaseIds,
   verificationPackages,
 } from "./release-packages.mjs";
 
@@ -19,7 +23,11 @@ test("local verification covers the internal runtime dependency closure without 
         "utf8",
       ),
     );
-    for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {
+    for (const [name, range] of Object.entries({
+      ...manifest.dependencies,
+      ...manifest.optionalDependencies,
+      ...manifest.peerDependencies,
+    })) {
       if (range.startsWith("workspace:"))
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
@@ -29,9 +37,7 @@ test("local verification covers the internal runtime dependency closure without 
     "check-artifacts",
     "check-task",
     "probe-task",
-    "task-engine-server",
-    "pguide-task-engine",
-    "task-engine-web-ui",
+    "check-environment",
   ]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
@@ -39,9 +45,9 @@ test("local verification covers the internal runtime dependency closure without 
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 26);
+  assert.equal(releasePackages.length, 30);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 26);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 30);
   }
   for (const name of [
     "@potential-guide/pguide-task-bundle",
@@ -49,6 +55,10 @@ test("release inventory contains the new packages and excludes retired Guide and
     "@potential-guide/task-engine",
     "@potential-guide/task-engine-http",
     "@potential-guide/task-engine-storage",
+    "@potential-guide/task-sdk",
+    "@potential-guide/task-engine-server",
+    "@potential-guide/task-engine-webui",
+    "@potential-guide/pguide-task-engine",
     "@potential-guide/effects",
     "@potential-guide/git-source",
     "@potential-guide/objective-pilot",
@@ -62,10 +72,114 @@ test("release inventory contains the new packages and excludes retired Guide and
     "objective-host",
     "objective-portfolio-supervisor",
     "pguide-supervise",
+    "artifact-files",
   ]) {
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
   }
+});
+
+test("generic Task Engine products have an exact public ten-package runtime release closure", async () => {
+  const expected = [
+    "cli-core",
+    "task-protocol",
+    "task-sdk",
+    "task-engine-http",
+    "task-engine-storage",
+    "task-engine-webui",
+    "pguide-task-bundle",
+    "task-engine",
+    "task-engine-server",
+    "pguide-task-engine",
+  ];
+  assert.deepEqual(taskEngineReleaseIds, expected);
+  const entries = new Map(verificationPackages.map((entry) => [entry.name, entry]));
+  const manifests = new Map(
+    await Promise.all(
+      verificationPackages.map(async (entry) => [
+        entry.name,
+        JSON.parse(
+          await readFile(
+            new URL(
+              `../${releasePackageDirectory(entry).replaceAll("\\", "/")}/package.json`,
+              import.meta.url,
+            ),
+            "utf8",
+          ),
+        ),
+      ]),
+    ),
+  );
+  const visited = new Set();
+  function visit(name) {
+    if (visited.has(name)) return;
+    visited.add(name);
+    const entry = entries.get(name);
+    assert.ok(entry, `Missing runtime verification entry: ${name}`);
+    assert.ok(
+      taskEngineReleaseIds.includes(entry.id),
+      `Generic Task Engine runtime closure must not install ${name}; migrate production dependencies before release.`,
+    );
+    assert.ok(releasePackages.includes(entry), `Missing product release route for ${name}`);
+    const manifest = manifests.get(name);
+    assert.notEqual(manifest.private, true, `${name} must be public`);
+    for (const [dependency, range] of Object.entries({
+      ...manifest.dependencies,
+      ...manifest.optionalDependencies,
+      ...manifest.peerDependencies,
+    })) {
+      if (range.startsWith("workspace:")) {
+        assert.ok(entries.has(dependency), `Missing workspace runtime dependency ${dependency}`);
+      }
+      if (entries.has(dependency)) visit(dependency);
+    }
+  }
+  visit("@potential-guide/pguide-task-bundle");
+  visit("@potential-guide/pguide-task-engine");
+  assert.deepEqual([...visited].sort(), expected.map((id) => `@potential-guide/${id}`).sort());
+});
+
+test("Artifact Files has no workspace, verification pack, release route or active registration", async () => {
+  await assert.rejects(access(new URL("../packages/artifact-files", import.meta.url)), {
+    code: "ENOENT",
+  });
+  assert.ok(!verificationPackages.some(({ id }) => id === "artifact-files"));
+  assert.throws(() => parseReleaseTag("artifact-files-v0.1.0-rc.0"), /Unsupported package/);
+  for (const file of [
+    "../tsconfig.json",
+    "../package-layers.yaml",
+    "../objectives.yaml",
+    "../.github/workflows/publish-npm.yaml",
+  ])
+    assert.ok(!(await readFile(new URL(file, import.meta.url), "utf8")).includes("artifact-files"));
+});
+
+test("release and bootstrap paths resolve both apps and default package workspaces", async () => {
+  for (const entry of releasePackages) {
+    const relative = releasePackageDirectory(entry);
+    assert.equal(relative, join(entry.workspace ?? "packages", entry.directory));
+    const manifest = JSON.parse(
+      await readFile(
+        new URL(`../${relative.replaceAll("\\", "/")}/package.json`, import.meta.url),
+        "utf8",
+      ),
+    );
+    assert.equal(manifest.name, entry.name);
+  }
+  assert.deepEqual(
+    releasePackages
+      .filter(({ workspace }) => workspace === "apps")
+      .map(({ id }) => id)
+      .sort(),
+    ["pguide-task-engine", "task-engine-webui"],
+  );
+  const bootstrap = await readFile(
+    new URL("./create-npm-bootstrap-packages.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.ok(bootstrap.includes("releasePackageDirectory(entry)"));
+  assert.ok(bootstrap.includes("join(temporaryRoot, entry.id)"));
+  assert.ok(!bootstrap.includes('join(root, "packages",'));
 });
 
 test("Task SDK is runtime-only and author tools do not install legacy Check packages", async () => {
@@ -107,10 +221,18 @@ test("package-specific RC tags preserve package identity and never select latest
     const parsed = parseReleaseTag(`${entry.id}-v0.3.0-rc.12`);
     assert.equal(parsed.name, entry.name);
     assert.equal(parsed.directory, entry.directory);
+    assert.equal(parsed.workspace, entry.workspace);
     assert.equal(parsed.version, "0.3.0-rc.12");
     assert.equal(parsed.distTag, "rc");
   }
   assert.equal(parseReleaseTag("pguide-v0.3.0").distTag, "latest");
+  for (const entry of releasePackages) {
+    if (taskEngineReleaseIds.includes(entry.id)) {
+      assert.throws(() => parseReleaseTag(`${entry.id}-v0.3.0`), /require an RC version/);
+    } else {
+      assert.equal(parseReleaseTag(`${entry.id}-v0.3.0`).distTag, "latest");
+    }
+  }
 });
 
 test("command wrappers use pguide-prefixed names including config", () => {
@@ -157,6 +279,15 @@ test("publication workflow covers the inventory and its embedded scripts compile
   assert.ok(workflow.includes("./scripts/release-packages.mjs"));
   const dispatchPackages =
     workflow.match(/ {6}package:\r?\n([\s\S]*?)^ {6}mode:/m)?.[1].split(/\r?\n/) ?? [];
+  const expectedIds = releasePackages.map(({ id }) => id).sort();
+  assert.deepEqual(
+    [...workflow.matchAll(/^ {6}- "(.+)-v\*"$/gm)].map(([, id]) => id).sort(),
+    expectedIds,
+  );
+  assert.deepEqual(
+    dispatchPackages.flatMap((line) => line.match(/^ {10}- (.+)$/)?.slice(1) ?? []).sort(),
+    expectedIds,
+  );
   for (const { id } of releasePackages) {
     assert.ok(workflow.includes(`"${id}-v*"`), `Missing release trigger: ${id}`);
     assert.ok(dispatchPackages.includes(`          - ${id}`), `Missing dispatch choice: ${id}`);
@@ -172,5 +303,50 @@ test("publication workflow covers the inventory and its embedded scripts compile
       encoding: "utf8",
     });
     assert.equal(result.status, 0, result.stderr);
+  }
+  const outputDirectory = await mkdtemp(join(tmpdir(), "pguide-release-metadata-"));
+  try {
+    for (const id of [
+      "task-protocol",
+      "task-sdk",
+      "pguide-task-engine",
+      "task-engine-webui",
+      "effects",
+    ]) {
+      const entry = releasePackages.find((candidate) => candidate.id === id);
+      const manifest = JSON.parse(
+        await readFile(
+          new URL(
+            `../${releasePackageDirectory(entry).replaceAll("\\", "/")}/package.json`,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      );
+      const output = join(outputDirectory, id);
+      const result = spawnSync(process.execPath, ["--input-type=module"], {
+        input: scripts[0][2],
+        cwd: new URL("..", import.meta.url),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PACKAGE_INPUT: id,
+          RELEASE_EVENT: "workflow_dispatch",
+          GITHUB_OUTPUT: output,
+        },
+      });
+      if (taskEngineReleaseIds.includes(id) && !manifest.version.includes("-rc.")) {
+        assert.equal(result.status, 1, result.stderr);
+        assert.match(result.stderr, /Task Engine releases require an RC version/);
+      } else {
+        assert.equal(result.status, 0, result.stderr);
+        const metadata = await readFile(output, "utf8");
+        assert.ok(metadata.includes(`directory=${releasePackageDirectory(entry)}\n`));
+        assert.ok(metadata.includes(`name=${entry.name}\n`));
+        assert.ok(metadata.includes(`version=${manifest.version}\n`));
+      }
+    }
+  } finally {
+    await rm(outputDirectory, { recursive: true, force: true });
   }
 });

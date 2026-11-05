@@ -5,9 +5,10 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { Worker } from "node:worker_threads";
-import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/artifact-files";
+import { readTaskArtifactFiles as readArtifactFiles } from "../src/local-files.js";
 import {
   compileInputSchema,
+  parseTaskBundleYaml,
   resolveBundleSchemas,
   taskSchemaUri,
   validateTaskBundle,
@@ -86,7 +87,7 @@ export default async (input, context) => {
     const files = await readArtifactFiles(built.directory);
     assert.equal([...files.keys()].filter((name) => name.startsWith("schemas/")).length, 3);
     const resolved = resolveBundleSchemas(
-      validateTaskBundle(parseArtifactYaml(files.get("task.yaml")!)),
+      validateTaskBundle(parseTaskBundleYaml(files.get("task.yaml")!)),
       shared,
     );
     const contract = compileInputSchema(resolved.inputSchema);

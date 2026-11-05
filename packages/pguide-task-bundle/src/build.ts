@@ -3,21 +3,19 @@ import { lstat, mkdir, open, readFile, realpath, rename, rm, writeFile } from "n
 import { isBuiltin } from "node:module";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  assertRuntime,
-  parseArtifactYaml,
-  readArtifactFiles,
-  safePath,
-} from "@potential-guide/artifact-files";
 import { computeContentCid, encodeContentCar } from "./car.js";
 import {
   type JsonObject,
+  isTaskBundlePath as safePath,
+  parseTaskBundleYaml,
   resolveBundleSchemas,
   validateTaskBundle,
 } from "@potential-guide/task-protocol";
 import { build } from "esbuild";
 import { stringify } from "yaml";
 import { checkTaskArtifact, inspectTaskArtifact } from "./artifact.js";
+import { readTaskArtifactFiles } from "./local-files.js";
+import { assertTaskRuntime } from "./runtime.js";
 
 export interface BuildTaskBundleOptions {
   declaration: string | Record<string, unknown>;
@@ -45,12 +43,12 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
   await regularFile(options.entry);
   const source =
     typeof options.declaration === "string"
-      ? parseArtifactYaml(await readFile(await regularFile(options.declaration)))
+      ? parseTaskBundleYaml(await readFile(await regularFile(options.declaration)))
       : options.declaration;
   if (!source || typeof source !== "object" || Array.isArray(source))
     throw new Error("Task build declaration must be an object.");
   const declaration = validateTaskBundle({ ...source, include: ["task.yaml", "worker.cjs"] });
-  assertRuntime(declaration);
+  assertTaskRuntime(declaration);
   const files = new Map<string, Buffer>();
   const schemas: JsonObject[] = [];
   for (const [index, locked] of (options.schemas ?? []).entries()) {
@@ -264,7 +262,7 @@ export async function buildTaskBundle(options: BuildTaskBundleOptions) {
       await mkdir(dirname(target), { recursive: true, mode: 0o700 });
       await writeFile(target, bytes, { flag: "wx", mode: 0o600 });
     }
-    if ((await computeContentCid(await readArtifactFiles(staging))) !== compiled.cid)
+    if ((await computeContentCid(await readTaskArtifactFiles(staging))) !== compiled.cid)
       throw new Error("Task Bundle changed during build.");
     const archive = await encodeContentCar(compiled.contents);
     if (archive.cid !== compiled.cid) throw new Error("Task CAR root differs from its file tree.");

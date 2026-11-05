@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import test from "node:test";
 import { createServer } from "node:http";
+import test from "node:test";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
 import { taskSchemaUri } from "@potential-guide/task-protocol";
-import { BundleCache, inspectTaskBundle } from "../src/bundle.js";
+import { BundleCache, defaultBundleLimits, inspectTaskBundle } from "../src/bundle.js";
 
 function files(extra: Record<string, Buffer> = {}) {
   return new Map(
@@ -33,6 +33,35 @@ function files(extra: Record<string, Buffer> = {}) {
     }),
   );
 }
+test("neutral artifact primitives preserve strict declarations, portable paths and runtime admission", () => {
+  assert.equal(defaultBundleLimits.bytes, 64 * 1024 * 1024);
+  assert.equal(defaultBundleLimits.fileBytes, 64 * 1024 * 1024);
+  assert.equal(defaultBundleLimits.files, 256);
+  assert.equal(defaultBundleLimits.paths, 512);
+  const yaml = files().get("task.yaml");
+  assert.ok(yaml);
+  const declaration = yaml.toString("utf8");
+  for (const tree of [
+    files({
+      "task.yaml": Buffer.from(
+        declaration.replace('"name":"same name"', '"name":"same name","name":"duplicate"'),
+      ),
+    }),
+    files({ "task.yaml": Buffer.from("name: &name Echo\ncopy: *name\n") }),
+    files({ "worker.cjs": Buffer.from([0xff]) }),
+    files({ "resources/CON": Buffer.from("reserved") }),
+    files({ "resources/e\u0301.txt": Buffer.from("noncanonical") }),
+  ]) {
+    assert.throws(() => inspectTaskBundle(tree), { code: "invalid_bundle" });
+  }
+  assert.throws(
+    () =>
+      inspectTaskBundle(
+        files({ "task.yaml": Buffer.from(declaration.replace("22.13.0", "999.0.0")) }),
+      ),
+    { code: "unsupported_runtime" },
+  );
+});
 test("standard UnixFS imports are reproducible; full admission and verified chunked reads do not need directories", async () => {
   const client = new MemoryIpfsClient();
   const tree = files();

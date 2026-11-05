@@ -106,11 +106,17 @@ test("backward business clock preserves completion with an eligible independent 
 
 test("clock rollback during child run keeps engine-applicable completion evidence", async () => {
   let offset = 0;
+  type Source = Awaited<ReturnType<typeof harness>>["source"];
+  let authorizeArtifact!: Source["authorize"];
+  let resolveArtifact!: Source["resolve"];
   const h = await harness(
-    entries(
-      "exports.execute=async()=>{await new Promise(r=>setTimeout(r,300));return {status:200,message:'',payload:{ok:true,problems:[]}}}",
-    ),
-    {},
+    entries(),
+    {
+      source: {
+        authorize: (reference, scope) => authorizeArtifact(reference, scope),
+        resolve: (reference, scope, signal) => resolveArtifact(reference, scope, signal),
+      },
+    },
     {},
     {
       now: () => Date.now() + offset,
@@ -120,25 +126,136 @@ test("clock rollback during child run keeps engine-applicable completion evidenc
       },
     },
   );
-  try {
-    const parent = h.submit();
-    let childId = "";
-    for (let attempt = 0; attempt < 1000; attempt++) {
-      const child = Object.values(h.store.read().facts.tasks).find(
-        (task) => task.binding.type === "check" && h.engine.getTask(task.taskId, caller).run,
+  authorizeArtifact = h.source.authorize.bind(h.source);
+  resolveArtifact = h.source.resolve.bind(h.source);
+  let parent: ReturnType<typeof h.submit> | undefined;
+  let enteredChild: ReturnType<typeof h.engine.getTask> | undefined;
+  let confirmEntered!: (child: ReturnType<typeof h.engine.getTask>) => void;
+  let rejectEntered!: (error: Error) => void;
+  const entered = new Promise<ReturnType<typeof h.engine.getTask>>((resolve, reject) => {
+    confirmEntered = resolve;
+    rejectEntered = reject;
+  });
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let waiting = true;
+  let observation: Promise<void> = Promise.resolve();
+  let subscription: ReturnType<typeof h.engine.subscribeTasks> | undefined;
+  const deadlines = new Map<string, ReturnType<typeof setTimeout>>();
+  let failure: Error | undefined;
+  let cleanupFailure: { error: unknown } | undefined;
+  const diagnostic = (message: string, cause?: unknown) =>
+    new Error(
+      `${message}\n${JSON.stringify({
+        parentTaskId: parent?.taskId,
+        enteredChild,
+        store: h.store.read(),
+      })}`,
+      { cause },
+    );
+  const rejectWaiting = (message: string, cause?: unknown) => {
+    failure ??= diagnostic(message, cause);
+    rejectEntered(failure);
+  };
+  const inspectWaiting = () => {
+    const view = h.store.read();
+    for (const task of Object.values(view.facts.tasks)) {
+      if (task.taskId !== parent?.taskId && task.binding.type !== "check") continue;
+      const snapshot = h.engine.getTask(task.taskId, caller);
+      const run = snapshot.run ? view.facts.runs[snapshot.run.runId] : undefined;
+      assert.ok(
+        !snapshot.termination &&
+          !snapshot.canceled &&
+          !isTimedOut(snapshot) &&
+          !run?.stopRequested &&
+          run?.outcome?.kind !== "failed" &&
+          !run?.exit,
+        `Task ${task.taskId} terminated before the child stage gate was released.`,
       );
-      if (child) {
-        assert.equal(h.engine.getTask(child.taskId, caller).run!.completedAt, undefined);
-        childId = child.taskId;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      const remaining = Date.parse(snapshot.deadlineAt) - (Date.now() + offset);
+      assert.ok(remaining > 0, `Task ${task.taskId} exhausted its existing deadline.`);
+      if (!deadlines.has(task.taskId))
+        deadlines.set(
+          task.taskId,
+          setTimeout(
+            () => rejectWaiting(`Task ${task.taskId} exhausted its existing deadline.`),
+            remaining,
+          ),
+        );
     }
-    assert.ok(childId, "A child must start before the business clock rolls back.");
+  };
+  const stopObserving = () => {
+    waiting = false;
+    subscription?.close();
+    for (const timer of deadlines.values()) clearTimeout(timer);
+  };
+  h.source.resolve = async (reference, scope, signal) => {
+    if (enteredChild) return resolveArtifact(reference, scope, signal);
+    try {
+      inspectWaiting();
+      const view = h.store.read();
+      const children = Object.values(view.facts.tasks)
+        .filter((task) => task.binding.type === "check" && task.binding.scope === caller.scope)
+        .map((task) => h.engine.getTask(task.taskId, caller));
+      assert.equal(children.length, 1);
+      const child = children[0];
+      assert.ok(child?.run);
+      const run = view.facts.runs[child.run.runId];
+      assert.ok(run);
+      const started = view.events.find(
+        (event) => event.type === "run.started" && event.runId === run.runId,
+      );
+      assert.ok(started?.type === "run.started");
+      assert.equal(started.data.run.runId, run.runId);
+      assert.equal(started.sequence, run.startedSequence);
+      assert.equal(started.occurredAt, run.startedAt);
+      assert.equal(child.run.startedAt, run.startedAt);
+      assert.equal(run.binding.type, "check");
+      assert.equal(child.stage, "running");
+      enteredChild = child;
+      confirmEntered(child);
+      signal.throwIfAborted();
+      let abort!: () => void;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          abort = () => reject(signal.reason);
+          signal.addEventListener("abort", abort, { once: true });
+          if (signal.aborted) abort();
+          else void released.then(resolve);
+        });
+      } finally {
+        signal.removeEventListener("abort", abort);
+      }
+      signal.throwIfAborted();
+      return await resolveArtifact(reference, scope, signal);
+    } catch (error) {
+      rejectWaiting("Checker source stage gate failed.", error);
+      throw error;
+    }
+  };
+  try {
+    const parentTask = h.submit();
+    parent = parentTask;
+    subscription = h.engine.subscribeTasks({ scope: caller.scope }, parentTask.revision, caller);
+    const events = subscription.events;
+    observation = (async () => {
+      inspectWaiting();
+      for await (const _event of events) {
+        if (!waiting) return;
+        inspectWaiting();
+      }
+    })().catch((error: unknown) => rejectWaiting("Parent/child fact observation failed.", error));
+    const startedChild = await entered;
+    inspectWaiting();
+    if (failure) throw failure;
+    assert.ok(startedChild.run);
+    assert.equal(startedChild.run.completedAt, undefined);
     offset = -20_000;
-    for (const id of [parent.taskId, childId]) {
+    for (const id of [parentTask.taskId, startedChild.taskId]) {
       const request = h.engine.getRequest(h.engine.getTask(id, caller).requestId, caller);
-      h.engine.submit(
+      const owner = h.engine.submit(
         {
           ...request,
           requestId: newId(Date.now() + offset),
@@ -146,12 +263,24 @@ test("clock rollback during child run keeps engine-applicable completion evidenc
         },
         caller,
       );
+      assert.equal(h.store.read().facts.requests[owner.requestId]?.taskId, owner.taskId);
+      assert.equal(
+        owner.run?.runId,
+        h.engine.getTask(id, caller).run?.runId,
+        "Each independent owner must be accepted against the existing Run before release.",
+      );
     }
+    inspectWaiting();
+    if (failure) throw failure;
+    release();
+    stopObserving();
+    await observation;
+    if (failure) throw failure;
     const final = await wait(
-      () => h.read(parent),
+      () => h.read(parentTask),
       (snapshot) => !!snapshot.run?.completedAt || !!snapshot.run?.failedAt,
     );
-    const child = h.engine.getTask(childId, caller);
+    const child = h.engine.getTask(startedChild.taskId, caller);
     assert.equal(child.stage, "completed");
     assert.ok(child.run!.completedAt! < child.run!.startedAt);
     const run = h.store.read().facts.runs[final.run!.runId]!;
@@ -161,9 +290,25 @@ test("clock rollback during child run keeps engine-applicable completion evidenc
       run.result,
       (run.result as unknown as ProbeResult).evidence.prepared,
     );
+  } catch (error) {
+    failure ??= diagnostic("Clock rollback scenario failed.", error);
   } finally {
-    await h.close();
+    try {
+      release();
+      stopObserving();
+      await observation;
+      await h.close();
+    } catch (error) {
+      cleanupFailure = { error };
+    }
   }
+  if (failure !== undefined && cleanupFailure !== undefined)
+    throw new AggregateError(
+      [failure, cleanupFailure.error],
+      "Clock rollback scenario and cleanup failed.",
+    );
+  if (failure !== undefined) throw failure;
+  if (cleanupFailure !== undefined) throw cleanupFailure.error;
 });
 
 test("cumulative levels, multiple Checks, immutable content, exact evidence and References", async () => {

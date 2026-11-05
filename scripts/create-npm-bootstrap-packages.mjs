@@ -2,11 +2,10 @@ import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { releasePackages } from "./release-packages.mjs";
+import { releasePackageDirectory, releasePackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const destination = resolve(process.argv[2] ?? join(root, ".cache", "npm-bootstrap"));
-const packages = releasePackages.map(({ directory }) => directory);
 const packageManagerCli = process.env.npm_execpath;
 if (packageManagerCli === undefined) {
   throw new Error("Run this script through pnpm bootstrap:pack.");
@@ -19,11 +18,11 @@ await mkdir(destination);
 await mkdir(join(root, ".cache"), { recursive: true });
 const temporaryRoot = await mkdtemp(join(root, ".cache", "potential-guide-npm-bootstrap-"));
 try {
-  for (const directory of packages) {
+  for (const entry of releasePackages) {
     const sourceManifest = JSON.parse(
-      await readFile(join(root, "packages", directory, "package.json"), "utf8"),
+      await readFile(join(root, releasePackageDirectory(entry), "package.json"), "utf8"),
     );
-    const packageRoot = join(temporaryRoot, directory);
+    const packageRoot = join(temporaryRoot, entry.id);
     await mkdir(packageRoot);
     const manifest = {
       name: sourceManifest.name,

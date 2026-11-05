@@ -30,6 +30,6 @@ for (const kind of ["tools", "directories", "network"]) {
     outDirectory: directory,
   });
   await rm(declaration);
-  references[kind] = { directory: kind, cid: built.cid };
+  references[kind] = { directory: kind, car: `${kind}.car`, cid: built.cid };
 }
 await writeFile(join(output, "references.json"), `${JSON.stringify(references, null, 2)}\n`);

@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "clean": "node -e \"for (const path of ['dist', '../../.cache/tsbuildinfo/pguide-task-bundle.tsbuildinfo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
     "typecheck": "tsc -b --pretty false"
@@ -52,7 +52,7 @@
     "ajv": "catalog:",
     "esbuild": "catalog:",
     "multiformats": "catalog:",
-    "@potential-guide/artifact-files": "workspace:^",
+    "semver": "catalog:",
     "@helia/unixfs": "catalog:",
     "@helia/car": "catalog:",
     "@ipld/car": "catalog:",
@@ -62,6 +62,9 @@
     "ipfs-unixfs-exporter": "catalog:",
     "ipfs-unixfs-importer": "catalog:",
     "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@types/semver": "catalog:"
   },
   "publishConfig": {
     "access": "public"

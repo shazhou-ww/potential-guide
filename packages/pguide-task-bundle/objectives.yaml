@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm", "cli"], "runtime": "node",
-        "allows": ["@potential-guide/cli-core", "@potential-guide/artifact-files", "@potential-guide/task-protocol", "@potential-guide/task-sdk"],
+        "allows": ["@potential-guide/cli-core", "@potential-guide/task-protocol", "@potential-guide/task-sdk"],
         "entries": ["src/bin.ts", "src/authoring.ts", "src/build.ts", "src/artifact.ts", "src/car.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

@@ -9,9 +9,24 @@ pnpm --filter @potential-guide/check-environment... build
 ```
 
 The package contains `dist/bundles/<kind>/task.yaml`, the self-contained
-`worker.cjs`. `dist/bundles/references.json` records each relative directory and its
-standard UnixFS root CID. No archive or parallel Bundle digest is produced.
-Build output is ignored by Git.
+`worker.cjs`, and the distributable `dist/bundles/<kind>.car`.
+`dist/bundles/references.json` records each relative `directory`, `car` and
+standard UnixFS root `cid`. The CAR and directory describe the same file tree
+and root CID; there is no parallel Bundle digest. Build output is ignored by Git.
+
+## Migration and entry points
+
+The three Task Bundles are the execution entry points. The retired Check Host
+is not restored, and no old Host command, registration or compatibility forwarding
+is provided. Import/pin the emitted CAR and submit its root CID to the Engine;
+do not submit an npm package name or an old Checker digest as a Bundle.
+
+The library exports (`checkTools`, `checkDirectories`, `checkNetwork`, version
+helpers and the directory write probe) remain shared implementations, not legacy
+task entry points. Existing Objective Workers still consume them without child
+Task scheduling. Removing them would break those consumers rather than migrate
+an old runner. This scope does not migrate `pnpm check`, repository/package
+standardization, devbox-health or setup/self-check Objectives.
 
 ## Inputs
 
@@ -99,18 +114,26 @@ Passing items are omitted. Each problem includes `target`, `code`, and nullable
 have no `problems` field. Neither variant includes `checks` or `ok`. Invocation
 faults still fail the Run, not return a check result.
 
-Per-item verbose diagnostics do not belong in Result. The current Task SDK has
-structured `progress` messages, but no dedicated Run-scoped stderr/log stream.
-These bundles do not repurpose progress or checkpoint as verbose output.
-Console stderr is not a task-history logging channel. A dedicated channel needs
-its own bounded delivery, retention and consumer contract.
+Per-item verbose diagnostics do not belong in Result. The Task SDK supports
+separate bounded Run diagnostics through `context.log`; see
+[Run logs](../../docs/task-run-logs.md). These checks currently emit no diagnostic
+logs and do not repurpose progress or checkpoint as verbose output.
+Console stderr is not a task-history logging channel. Log availability never
+replaces the declared result, failure or physical release evidence.
 
 Changing the business result contract changes the Bundle CID. Rebuild and
 use the new reference from `references.json`; existing CID-addressed content
 retain their original contracts.
 
-After building, import the emitted CAR using an external tool of your choice and submit its root CID. The Engine
-is assumed to be started and authorized; normal task observation is unchanged:
+After building, import and pin the emitted CAR using an external tool of your
+choice and submit its root CID. For example, with a caller-managed local Kubo:
+
+```powershell
+ipfs dag import --pin-roots=true packages\check-environment\dist\bundles\tools.car
+```
+
+The Engine must be started, authorized and able to fetch the pinned CID through
+its configured IPFS client. Normal task observation is unchanged:
 
 ```js
 import {readFile} from "node:fs/promises";
@@ -126,11 +149,26 @@ await engine.submit({
 }, caller);
 ```
 
-Production delivery imports/pins the directory on the caller-managed node and
+Production delivery imports/pins the CAR on the caller-managed node and
 publishes root CID references, optionally with gateway hints. Do not use
 `latest` as executable identity. npm delivers the author/library package;
 the generic Engine does not install it. This change adds local delivery
 verification only, not publication workflows or release authorization.
+
+## Regression verification
+
+```powershell
+pnpm --filter @potential-guide/check-environment... build
+pnpm --filter @potential-guide/check-environment test
+```
+
+The Engine regression imports the emitted CARs, verifies equality with their
+directory trees and root CIDs, runs passing and unmet-requirement inputs for all
+three bundles, and waits for physical release. Tool timeout/output overflow,
+invalid directory paths and HTTP timeout must fail the Run without a fabricated
+check result. Cancellation of an active HTTP request must stop and release the
+Run without a result. Library tests additionally verify process cancellation,
+write-probe cleanup, DNS, HTTP redirects and numeric version handling.
 
 ## Objective integration
 

@@ -9,6 +9,10 @@ Potential Guide defines independent CLI, library, and Objective releases:
 | `@potential-guide/task-engine` | `task-engine-vX.Y.Z` |
 | `@potential-guide/task-engine-http` | `task-engine-http-vX.Y.Z` |
 | `@potential-guide/task-engine-storage` | `task-engine-storage-vX.Y.Z` |
+| `@potential-guide/task-sdk` | `task-sdk-vX.Y.Z` |
+| `@potential-guide/task-engine-server` | `task-engine-server-vX.Y.Z` |
+| `@potential-guide/task-engine-webui` | `task-engine-webui-vX.Y.Z` |
+| `@potential-guide/pguide-task-engine` | `pguide-task-engine-vX.Y.Z` |
 | `@potential-guide/effects` | `effects-vX.Y.Z` |
 | `@potential-guide/git-source` | `git-source-vX.Y.Z` |
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
@@ -41,43 +45,11 @@ Release packages in manifest dependency order. `effects` and `pilot-protocol`
 are protocol; `objective-pilot` consumes both protocols, then
 `objective-regulator` builds regulation capabilities. Checker/Objective Host
 packages and their release tags are retired.
-The generic task packages are independent of those business hosts: release
-`task-protocol` before `task-engine`, `task-engine-http`, and `task-engine-storage`.
-Adding their packaging checks does not publish or deploy them.
-`check-environment`, `task-sdk`, `check-task`, `probe-task`, and `task-engine-server` currently belong only to the local
-verification inventory, alongside the artifact support packages. Their MVP
-checks pack/install real consumers, but do not add release tags, bootstrap
-publication, or workflow authorization. A later release requires an explicit
-publication scope and package-specific tag configuration.
-`@potential-guide/pguide-task-bundle` now has a placeholder and a GitHub Trusted
-Publisher configured by the package owner. It participates in the existing
-`publish-npm.yaml` workflow under environment `npm`, using its own
-`pguide-task-bundle-v*` tags or the `pguide-task-bundle` manual dry-run choice.
-The current first candidate is `0.1.0-rc.0` and must use the `rc` dist-tag.
-Adding this release route does not publish a version or authorize its support
-packages. Before tagging, confirm its exact packed runtime dependency closure
-is already published at the required versions. `task-sdk` is the Worker runtime,
-not the old build/publish API: author tooling belongs to `pguide-task-bundle`.
-The author CLI must not install `check-artifacts` or `check-runtime-files`.
-Release-inventory tests enforce that separation and require every internal
-runtime dependency to have a local verification pack. A verification entry alone
-does not authorize publishing a new support package.
-The neutral `@potential-guide/artifact-files` package now supplies portable file
-and YAML primitives without pulling in legacy Check runtime/build code.
-For this CLI's release, the support packages to prepare are `artifact-files`
-and the runtime-only `task-sdk`, in dependency order; the two
-Check packages are no longer in its runtime dependency closure.
-These support packages still require their own release authorization and
-workflow/tag entries before publishing their actual product versions.
-Local tarball overrides are not proof that npm can install the released CLI.
-`ipfs-content` is now private regression support only and is neither packed for production
-consumers nor part of the production release closure.
-Repository validation must also pass; do not bypass the workflow's `pnpm check`.
-`@potential-guide/pguide-task-engine` and `@potential-guide/task-engine-web-ui`
-are also local-verification-only packages under `apps/`. The command's packed
-production dependencies include the public UI server and browser assets; no
-private workspace dependency is allowed. No new release tags or npm publication
-authorization are introduced by this service-command change.
+The generic Task Engine release scope is documented below. Its release routes
+prepare configuration only: they do not prove external publishing authorization
+or a successful npm release. `check-environment`, `check-task`, `probe-task`,
+`check-artifacts`, and `check-runtime-files` remain local-verification-only.
+Their pack/install checks do not authorize bootstrap or product publication.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
@@ -121,6 +93,116 @@ The general workflow still distinguishes stable and RC tags: stable versions
 publish to the npm `latest` dist-tag, while release candidates use
 the `X.Y.Z-rc.N` version form and publish to the `rc` dist-tag, so testing an RC
 never changes the default version installed by consumers.
+The generic Task Engine scope entries, including `cli-core`, are
+RC-only in both tag parsing and workflow metadata validation. The other twenty
+existing routes retain their stable/RC behavior. A future stable Task Engine
+release requires separate approval and an explicit change to that restriction.
+
+## Generic Task Engine release preparation
+
+The approved configuration scope is the exact internal runtime closure of
+`pguide-task-bundle` and `pguide-task-engine`, not the entire release inventory.
+Publish only after each upstream version is available, in these groups:
+
+| Group | Packages | Candidate guidance |
+| --- | --- | --- |
+| 1 | `task-protocol`, `cli-core` | Protocol: `0.1.0-rc.0`; CLI Core: current `0.3.0-rc.0` candidate |
+| 2 | `task-sdk`, `task-engine-http`, `task-engine-storage`, `task-engine-webui` | `0.1.0-rc.0` |
+| 3 | `pguide-task-bundle`, `task-engine` | `0.1.0-rc.0` |
+| 4 | `task-engine-server` | `0.1.0-rc.0` |
+| 5 | `pguide-task-engine` | `0.1.0-rc.0` |
+
+After removing the unused Artifact Files dependency, version preparation preserves eight existing `0.1.0-rc.0` candidates and
+CLI Core's `0.3.0-rc.0`; only the UI moves from `0.1.0` to `0.1.0-rc.0`.
+The resulting ten-package scope contains nine `0.1.0-rc.0` candidates and
+one `0.3.0-rc.0` candidate. Neither Check support package needs a version change.
+Unified verification must confirm each source manifest version, its matching
+release tag, and every packed internal dependency range against the dependency's
+actual manifest version before publishing.
+
+These are recommendations, not permission to publish or overwrite a version.
+If a candidate already exists, review its changes and advance its RC instead
+of reusing the immutable version. The UI manifest must be an RC before release;
+a stable `0.1.0` manifest is rejected rather than published to `latest`.
+
+**Blocking prerequisite:** Bundle budgets, paths, declaration parsing and
+file-set inspection must use the independent `task-protocol` implementation,
+not Check utilities or `artifact-files` equivalents. Author directory reads
+now use native Node APIs, and author/Engine runtime comparison uses `semver`;
+neither root requires `artifact-files`. That repository package and its
+release/verification inventory, bootstrap selection and workflow route are
+retired; its old tags are rejected. This is not npm deprecation or unpublish.
+The production manifest must no longer depend on either Check package.
+Release-inventory tests walk actual dependencies,
+optional dependencies and peers from both roots and require exactly these
+ten public packages. A remaining Check dependency fails the test and blocks
+release; it must not be hidden with local overrides or an extra release route.
+Validate the actual packed consumers after the source migration; a passing
+manifest-closure test alone does not prove runtime correctness.
+
+`task-sdk` is the Worker runtime, not the old build/publish API; author tooling
+belongs to `pguide-task-bundle`. The CLI under `apps/pguide-task-engine` installs
+the public UI server and browser assets under `apps/task-engine-webui` as a
+normal production dependency, even if the user does not enable `--ui`.
+Workflow and bootstrap paths use each inventory entry's `workspace` field,
+defaulting to `packages`. Local tarball overrides prove neither registry
+resolution nor provenance. Do not bypass `pnpm check` or `pnpm consumers:check`.
+Check/Probe adapter product publication requires a separately reviewed scope.
+
+### Public evidence and external authorization
+
+Read-only research on 2026-11-05 used [npmx](https://npmx.dev/):
+
+- [task-engine](https://npmx.dev/package/@potential-guide/task-engine),
+  [pguide-task-bundle](https://npmx.dev/package/@potential-guide/pguide-task-bundle)
+  and [pguide-task-engine](https://npmx.dev/package/@potential-guide/pguide-task-engine)
+  showed only `0.0.0` placeholders.
+- [cli-core](https://npmx.dev/package/@potential-guide/cli-core) showed
+  `latest=0.0.0` and `rc=0.2.0-rc.0`, not the source's `0.3.0-rc.0`.
+- Pages for the other seven scope entries returned 404. This means npmx did
+  not find them, not an authoritative registry check that permits bootstrap.
+
+The GitHub `npm` environment existed with no protection rules or deployment
+branch policy at inspection time. This does **not** establish any package's
+current Trusted Publisher configuration. An earlier owner report about the
+Bundle publisher and CLI Core's historical OIDC success are not current
+authorization evidence. Before any external action, obtain owner confirmation
+for every selected package's exact repository, workflow, environment and
+publish/dist-tag permissions. Missing packages need explicit bootstrap approval;
+adding these routes grants neither that approval nor Trusted Publisher access.
+
+### Cleanup boundaries
+
+The unused `artifact-files` package is retired from the repository. No other
+package removal, npm deprecation or unpublish is part of this preparation.
+
+- `ipfs-content` is private and outside the product runtime closure, but Engine
+  regression tests still use it. Migrate those tests with equivalent coverage
+  before considering repository removal.
+- `test-tree` is private with no workspace manifest reverse dependencies at
+  inspection time. Confirm its manual-generation workflow is no longer needed
+  before removing it and its root TypeScript/layer/lockfile references.
+- `check-environment` remains a build dependency of concrete Objective packages
+  and generated workers. `check-artifacts` and `check-runtime-files` still have
+  Check/Probe and CLI Runtime consumers. Removing them from the generic closure
+  does not authorize deleting their packages or compatible entrypoints.
+- Historical `config` and Supervisor names are already retired in this source
+  tree. Preserve published versions. Consider a separate npm deprecation only
+  after replacement products and caller migration are verified; configuration
+  binaries conflict, and Supervisor has no automatic one-to-one replacement.
+  Unpublish is not a cleanup mechanism for this migration.
+
+The self-check Docker harness also resolves release entries by workspace.
+Its tarballs are installed into `/opt/consumer`, which is copied into the runtime
+image; it must retain the UI's server and browser assets. Source/path assertions
+or local consumer checks are not a successful Docker build or image run.
+The source workspace still uses a production-only frozen install. The isolated
+image toolchain also supplies the UI's existing catalog-selected build and
+TypeScript fixture dependencies, then invokes its normal build script to
+generate complete esbuild/Tailwind assets before the required-file checks and
+packing. See the [Docker harness](../scripts/self-check-docker/README.md).
+This prepared build path still needs unified build/consumer validation and an
+actual Docker build when a daemon is available; it is not image-success evidence.
 
 ## Before configuring npm
 
@@ -138,6 +220,10 @@ rules must allow these release tags:
 - `task-engine-v*`
 - `task-engine-http-v*`
 - `task-engine-storage-v*`
+- `task-sdk-v*`
+- `task-engine-server-v*`
+- `task-engine-webui-v*`
+- `pguide-task-engine-v*`
 - `objective-monorepo-standard-v*`
 - `objective-package-standard-v*`
 - `objective-devbox-health-v*`

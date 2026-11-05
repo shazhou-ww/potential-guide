@@ -6,6 +6,6 @@
     "outDir": "dist",
     "tsBuildInfoFile": "../../.cache/tsbuildinfo/task-engine.tsbuildinfo"
   },
-  "references": [{ "path": "../task-protocol" }, { "path": "../check-artifacts" }],
+  "references": [{ "path": "../task-protocol" }],
   "include": ["src/**/*.ts"]
 }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { basename, join, resolve } from "node:path";
+import { basename, delimiter, join, resolve } from "node:path";
 import { consumerManifest, verifyConsumerGraph } from "/source/scripts/deployment-consumer.mjs";
 import { releasePackages } from "/source/scripts/release-packages.mjs";
 
@@ -14,6 +14,7 @@ function run(command, args, cwd) {
     maxBuffer: 16 * 1024 * 1024,
     env: {
       ...process.env,
+      PATH: ["/toolchain/node_modules/.bin", process.env.PATH].filter(Boolean).join(delimiter),
       GIT_CONFIG_NOSYSTEM: "1",
       GIT_CONFIG_GLOBAL: "/dev/null",
       GIT_COMMITTER_DATE: "2000-01-01T00:00:00Z",
@@ -26,18 +27,50 @@ assert.equal(registry.protocol, "https:");
 assert.equal(registry.username + registry.password + registry.search + registry.hash, "");
 const { parse } = createRequire("/source/packages/pilot-protocol/package.json")("yaml");
 const workspace = parse(await readFile("/source/pnpm-workspace.yaml", "utf8"));
+const uiRoot = "/source/apps/task-engine-webui";
+const uiManifest = JSON.parse(await readFile(join(uiRoot, "package.json"), "utf8"));
+const uiBuildDependencies = [
+  "@tailwindcss/cli",
+  "@types/jsdom",
+  "@types/react",
+  "@types/react-dom",
+  "esbuild",
+  "jsdom",
+  "linkedom",
+  "tailwindcss",
+  "tw-animate-css",
+];
 const toolchainVersions = {
   typescript: "5.9.3",
   "@types/node": "22.20.5",
   "@types/cross-spawn": "6.0.6",
+  "@types/semver": workspace.catalog["@types/semver"],
   "undici-types": "6.21.0",
 };
+assert.match(
+  toolchainVersions["@types/semver"],
+  /^\d+\.\d+\.\d+$/u,
+  "@types/semver: use the exact source catalog version",
+);
 for (const name of ["typescript", "@types/node", "@types/cross-spawn"]) {
   assert.equal(
     workspace.catalog[name],
     toolchainVersions[name],
     `${name}: isolated toolchain must match the selected source catalog`,
   );
+}
+for (const name of uiBuildDependencies) {
+  assert.equal(
+    uiManifest.devDependencies[name],
+    "catalog:",
+    `${name}: expected UI catalog dependency`,
+  );
+  assert.match(
+    workspace.catalog[name],
+    /^\d+\.\d+\.\d+$/u,
+    `${name}: use the exact source catalog version`,
+  );
+  toolchainVersions[name] = workspace.catalog[name];
 }
 await mkdir("/toolchain");
 run(
@@ -64,8 +97,13 @@ for (const [name, version] of Object.entries(toolchainVersions)) {
   assert.equal(manifest.version, version);
 }
 await mkdir("/source/node_modules/@types", { recursive: true });
-for (const name of ["node", "cross-spawn"]) {
+for (const name of ["node", "cross-spawn", "semver"]) {
   await symlink(`/toolchain/node_modules/@types/${name}`, `/source/node_modules/@types/${name}`);
+}
+for (const name of uiBuildDependencies) {
+  const destination = join(uiRoot, "node_modules", name);
+  await mkdir(join(destination, ".."), { recursive: true });
+  await symlink(join("/toolchain/node_modules", name), destination);
 }
 run(
   process.execPath,
@@ -78,14 +116,16 @@ run(
   ],
   "/source",
 );
+run("npm", ["--prefix", uiRoot, "run", "build"], "/source");
 
 await mkdir("/packs");
 await mkdir("/opt/consumer", { recursive: true });
 const versions = new Map();
 const tarballs = new Map();
-for (const { name, directory } of releasePackages) {
-  const packageRoot = join("/source/packages", directory);
+for (const { name, directory, workspace, requiredFiles } of releasePackages) {
+  const packageRoot = join("/source", workspace ?? "packages", directory);
   const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
+  for (const file of requiredFiles ?? []) await access(join(packageRoot, file));
   const packed = JSON.parse(
     run(
       "pnpm",
@@ -154,7 +194,7 @@ run(
   "/opt/objective",
 );
 const provenance = JSON.parse(await readFile("/harness/provenance.json", "utf8"));
-provenance.buildMethod = "frozen-prod-plus-tsc-project-references";
+provenance.buildMethod = "frozen-prod-plus-tsc-and-ui-build";
 provenance.toolchainVersions = toolchainVersions;
 provenance.toolchainLockSha256 = createHash("sha256")
   .update(await readFile("/toolchain/package-lock.json"))

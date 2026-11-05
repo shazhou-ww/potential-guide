@@ -6,6 +6,16 @@ composition is documented in [task-server.md](../../docs/task-server.md).
 Checker/Objective manifests, complete supplied files/digests/References,
 mapping, subjects and results. It does not import network, filesystem, worker or
 build modules. Existing root and `/build` APIs below remain compatible.
+The standard `yaml` library parses declarations. The existing `parseArtifactYaml`
+and `finiteJson` APIs now live directly in this Check contract layer, together
+with its own format and input constraints; they are not generic filesystem
+utilities and no longer come from `artifact-files`.
+Node version comparison uses `semver`, and Check portable filenames use
+`sanitize-filename` only as a validity check; artifact paths are never rewritten.
+Local tree acquisition uses the existing runtime file reader's native Node
+directory iterator and bounded streams. Hard links and relative directory
+arguments are allowed; symbolic links, undeclared content, nonportable names,
+empty directories and Check capacity violations remain rejected.
 The installed package still includes production `esbuild` and archive
 dependencies; subpath import isolation does **not** remove installation costs.
 

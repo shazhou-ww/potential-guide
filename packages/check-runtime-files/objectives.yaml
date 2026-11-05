@@ -7,8 +7,8 @@ objectives:
     subject: |
       {
         "root": context.repo.rootPath, "directory": context.path,
-        "roles": ["npm"], "runtime": "node", "allows": ["@potential-guide/artifact-files"],
+        "roles": ["npm"], "runtime": "node", "allows": [],
         "entries": ["src/index.ts", "src/worker.ts", "src/worker-json.ts"],
         "generated": [{"path":"src/worker-source.ts","reason":"Deterministic closed Worker program generated and checked by embed-task-workers."},{"path":"src/runtime-identity.ts","reason":"Generated exact business source and embedded Worker identity."}], "deliveries": [],
-        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}, {"id": "generic-task-server", "kind": "cli"}]
+        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
       }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { join, posix } from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import {
@@ -31,6 +32,185 @@ test("deployment fixture uses the worker contract and observes marker changes", 
   } finally {
     await workspace.cleanup();
   }
+});
+
+test("Docker release packing retains app workspace paths, tarballs and required assets", async () => {
+  const source = await readFile(
+    new URL("./self-check-docker/prepare-image.mjs", import.meta.url),
+    "utf8",
+  );
+  const loop = source.match(
+    /for \(const \{ name, directory, workspace, requiredFiles \} of releasePackages\) \{[\s\S]*?\n\}/,
+  )?.[0];
+  assert.ok(loop, "Missing workspace-aware Docker release packing loop");
+  const products = releasePackages.filter(
+    ({ workspace, id }) => workspace === "apps" || id === "pguide",
+  );
+  assert.equal(products.length, 3);
+  const versions = new Map();
+  const manifestVersions = new Map();
+  const tarballs = new Map();
+  const checkedFiles = [];
+  const packedRoots = [];
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+  await new AsyncFunction(
+    "releasePackages",
+    "join",
+    "resolve",
+    "readFile",
+    "access",
+    "run",
+    "assert",
+    "versions",
+    "tarballs",
+    loop,
+  )(
+    products,
+    posix.join,
+    posix.resolve,
+    async (path) => {
+      assert.match(path, /^\/source\/(?:apps|packages)\//);
+      const contents = await readFile(
+        new URL(`../${path.slice("/source/".length)}`, import.meta.url),
+        "utf8",
+      );
+      const manifest = JSON.parse(contents);
+      manifestVersions.set(manifest.name, manifest.version);
+      return contents;
+    },
+    async (path) => checkedFiles.push(path),
+    (_command, args, cwd) => {
+      assert.equal(cwd, "/source");
+      assert.equal(args[0], "--dir");
+      assert.equal(args[2], "pack");
+      assert.equal(args[4], "/packs");
+      const entry = products.find(
+        ({ directory, workspace }) => args[1] === `/source/${workspace ?? "packages"}/${directory}`,
+      );
+      assert.ok(entry, `Unexpected Docker package root ${args[1]}`);
+      packedRoots.push(args[1]);
+      return JSON.stringify({
+        name: entry.name,
+        version: manifestVersions.get(entry.name),
+        filename: `/packs/${entry.id}.tgz`,
+      });
+    },
+    assert,
+    versions,
+    tarballs,
+  );
+  assert.equal(packedRoots.length, 3);
+  for (const entry of products) {
+    assert.equal(tarballs.get(entry.name), `/packs/${entry.id}.tgz`);
+    for (const file of entry.requiredFiles ?? [])
+      assert.ok(
+        checkedFiles.includes(
+          `/source/${entry.workspace ?? "packages"}/${entry.directory}/${file}`,
+        ),
+      );
+  }
+  const manifest = consumerManifest(
+    "packed",
+    versions,
+    tarballs,
+    products.map(({ name }) => name),
+  );
+  for (const entry of products) {
+    assert.equal(manifest.dependencies[entry.name], pathToFileURL(`/packs/${entry.id}.tgz`).href);
+  }
+  const dockerfile = await readFile(
+    new URL("./self-check-docker/Dockerfile", import.meta.url),
+    "utf8",
+  );
+  assert.ok(dockerfile.includes("COPY --from=build /opt/consumer /opt/consumer"));
+});
+
+test("Docker UI preparation uses existing catalog tools and builds assets before packing", async () => {
+  const source = await readFile(
+    new URL("./self-check-docker/prepare-image.mjs", import.meta.url),
+    "utf8",
+  );
+  const { parse } = createRequire(
+    new URL("../packages/pilot-protocol/package.json", import.meta.url),
+  )("yaml");
+  const workspace = parse(
+    await readFile(new URL("../pnpm-workspace.yaml", import.meta.url), "utf8"),
+  );
+  const setup = source.match(/const uiRoot = [\s\S]*?(?=await mkdir\("\/toolchain"\);)/)?.[0];
+  assert.ok(setup, "Missing catalog-selected UI toolchain setup");
+  const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+  const { uiRoot, uiBuildDependencies, toolchainVersions } = await new AsyncFunction(
+    "workspace",
+    "readFile",
+    "join",
+    "assert",
+    `${setup}\nreturn {uiRoot, uiBuildDependencies, toolchainVersions};`,
+  )(
+    workspace,
+    async (path) => {
+      assert.equal(path, "/source/apps/task-engine-webui/package.json");
+      return readFile(new URL("../apps/task-engine-webui/package.json", import.meta.url), "utf8");
+    },
+    posix.join,
+    assert,
+  );
+  assert.deepEqual(uiBuildDependencies, [
+    "@tailwindcss/cli",
+    "@types/jsdom",
+    "@types/react",
+    "@types/react-dom",
+    "esbuild",
+    "jsdom",
+    "linkedom",
+    "tailwindcss",
+    "tw-animate-css",
+  ]);
+  for (const name of uiBuildDependencies)
+    assert.equal(toolchainVersions[name], workspace.catalog[name]);
+  assert.equal(toolchainVersions["@types/semver"], workspace.catalog["@types/semver"]);
+  const typeLinkSource = source.match(
+    /for \(const name of \["node"[^\]]*\]\) \{\s*await symlink[\s\S]*?\n\}/,
+  )?.[0];
+  assert.ok(typeLinkSource, "Missing compiler declaration links");
+  const typeLinks = [];
+  await new AsyncFunction("symlink", typeLinkSource)(async (sourcePath, destination) =>
+    typeLinks.push([sourcePath, destination]),
+  );
+  assert.deepEqual(
+    typeLinks,
+    ["node", "cross-spawn", "semver"].map((name) => [
+      `/toolchain/node_modules/@types/${name}`,
+      `/source/node_modules/@types/${name}`,
+    ]),
+  );
+  const linkSource = source.match(
+    /for \(const name of uiBuildDependencies\) \{\s*const destination[\s\S]*?\n\}/,
+  )?.[0];
+  assert.ok(linkSource, "Missing UI build-stage dependency links");
+  const links = [];
+  await new AsyncFunction("uiBuildDependencies", "uiRoot", "join", "mkdir", "symlink", linkSource)(
+    uiBuildDependencies,
+    uiRoot,
+    posix.join,
+    async () => {},
+    async (sourcePath, destination) => links.push([sourcePath, destination]),
+  );
+  assert.deepEqual(
+    links,
+    uiBuildDependencies.map((name) => [
+      `/toolchain/node_modules/${name}`,
+      `/source/apps/task-engine-webui/node_modules/${name}`,
+    ]),
+  );
+  const build = 'run("npm", ["--prefix", uiRoot, "run", "build"], "/source");';
+  assert.ok(source.includes(build), "Invoke the existing UI build script");
+  assert.ok(source.indexOf(build) < source.indexOf('await mkdir("/packs");'));
+  assert.ok(source.includes('PATH: ["/toolchain/node_modules/.bin", process.env.PATH]'));
+  const manifest = JSON.parse(
+    await readFile(new URL("../apps/task-engine-webui/package.json", import.meta.url), "utf8"),
+  );
+  assert.match(manifest.scripts.build, /node build\.mjs/);
+  assert.match(manifest.scripts.build, /tailwindcss/);
 });
 
 test("consumer versions follow only the selected entry closure and reject missing workspace packs", () => {
@@ -184,7 +364,10 @@ test("current CLI command versions match their package candidate", async () => {
   }
   for (const definition of releasePackages) {
     const manifest = JSON.parse(
-      await readFile(new URL(`packages/${definition.directory}/package.json`, root), "utf8"),
+      await readFile(
+        new URL(`${definition.workspace ?? "packages"}/${definition.directory}/package.json`, root),
+        "utf8",
+      ),
     );
     consumerManifest("published", new Map([["pguide", manifest.version]]));
     for (const [name, range] of Object.entries(manifest.dependencies ?? {})) {

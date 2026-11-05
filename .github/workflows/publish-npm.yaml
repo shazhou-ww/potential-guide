@@ -8,6 +8,10 @@ on:
       - "task-engine-v*"
       - "task-engine-http-v*"
       - "task-engine-storage-v*"
+      - "task-sdk-v*"
+      - "task-engine-server-v*"
+      - "task-engine-webui-v*"
+      - "pguide-task-engine-v*"
       - "effects-v*"
       - "git-source-v*"
       - "objective-pilot-v*"
@@ -41,6 +45,10 @@ on:
           - task-engine
           - task-engine-http
           - task-engine-storage
+          - task-sdk
+          - task-engine-server
+          - task-engine-webui
+          - pguide-task-engine
           - effects
           - git-source
           - objective-pilot
@@ -121,11 +129,11 @@ jobs:
           node --input-type=module <<'NODE'
           import { appendFileSync, readFileSync } from "node:fs";
           import { join } from "node:path";
-          import { parseReleaseTag, releasePackages, releaseVersion } from "./scripts/release-packages.mjs";
+          import { parseReleaseTag, releasePackageDirectory, releasePackages, releaseVersion, taskEngineReleaseIds } from "./scripts/release-packages.mjs";
 
           const packages = Object.fromEntries(releasePackages.map((entry) => [
             entry.id,
-            { ...entry, directory: join("packages", entry.directory) },
+            { ...entry, directory: releasePackageDirectory(entry) },
           ]));
 
           let packageId;
@@ -161,6 +169,10 @@ jobs:
             console.error(
               `::error::Publishing accepts 0.x stable or rc SemVer versions only; received ${packageJson.version}.`,
             );
+            process.exit(1);
+          }
+          if (taskEngineReleaseIds.includes(packageId) && !packageJson.version.includes("-rc.")) {
+            console.error(`::error::Task Engine releases require an RC version; received ${packageJson.version}.`);
             process.exit(1);
           }
           if (packageJson.publishConfig?.access !== "public") {

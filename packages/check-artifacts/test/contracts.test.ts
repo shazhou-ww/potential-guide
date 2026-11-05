@@ -173,6 +173,10 @@ test("safe YAML and exact Checker shape reject ambiguous or executable inputs", 
     a: true,
     b: [1, null, "value"],
   });
+  assert.equal(parseArtifactYaml(Buffer.from("null".padEnd(65_536))), null);
+  assert.throws(() => parseArtifactYaml(Buffer.alloc(65_537, 32)), /bounds/);
+  assert.throws(() => parseArtifactYaml(Buffer.from([0xff])));
+  assert.throws(() => parseArtifactYaml(Buffer.from("---\na: 1\n---\na: 2")));
   for (const extra of [
     { id: "local" },
     { version: 1 },
@@ -188,6 +192,15 @@ test("safe YAML and exact Checker shape reject ambiguous or executable inputs", 
   const parsed = parseCheckerManifest(Buffer.from(JSON.stringify(manifest)));
   assertRuntime(parsed, { type: "node", version: "22.13.0" });
   assertRuntime(parsed, { type: "node", version: "23.0.0" });
+  assertRuntime(parsed, { type: "node", version: "v22.13.0+build" });
+  assert.throws(
+    () => assertRuntime(parsed, { type: "node", version: "22.13.0-rc.0" }),
+    /Host support policy/,
+  );
+  assert.throws(
+    () => assertRuntime(parsed, { type: "node", version: "not-a-version" }),
+    /Invalid runtime version/,
+  );
   assert.throws(() => assertRuntime(parsed, { type: "node", version: "22.12.99" }));
   assert.throws(
     () =>

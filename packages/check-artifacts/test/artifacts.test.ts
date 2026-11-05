@@ -211,10 +211,17 @@ test("wrong digest, missing and undeclared files never publish a cache capsule",
   await truncate(join(oversized, "resources/expected.txt"), artifactLimits.bytes + 1);
   await assert.rejects(inspectCheckArtifact(oversized), /size|bounds/);
 });
-test("local links, hardlinks, ambiguous names, empty directories and excess paths are rejected", async () => {
+test("local symbol links, ambiguous names, empty directories and excess paths are rejected; hard links are ordinary files", async () => {
   const hard = await copied("hardlink");
   await link(join(hard, "worker.cjs"), join(hard, "extra.cjs"));
-  await assert.rejects(inspectCheckArtifact(hard), /hard-link/);
+  await assert.rejects(inspectCheckArtifact(hard), /missing or undeclared content/);
+  await rm(join(hard, "extra.cjs"));
+  await rm(join(hard, "resources", "expected.txt"));
+  await link(
+    join(built.directory, "resources", "expected.txt"),
+    join(hard, "resources", "expected.txt"),
+  );
+  assert.equal((await inspectCheckArtifact(hard)).digest, built.digest);
   const symbolic = await copied("symlink");
   await symlink(
     join(symbolic, "resources"),

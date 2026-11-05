@@ -1,5 +1,7 @@
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { canonical, fail, type Json, type JsonObject, json } from "./json.js";
+import { isAlias, isMap, isScalar, isSeq, parseDocument } from "yaml";
+import { isTaskBundlePath, taskBundleLimits } from "./bundle-paths.js";
+import { canonical, fail, type Json, type JsonObject, json, TaskError } from "./json.js";
 import {
   compileInputSchema,
   compileJsonSchema,
@@ -49,7 +51,7 @@ export const taskBundleSchema = {
     include: {
       type: "array",
       minItems: 2,
-      maxItems: 256,
+      maxItems: taskBundleLimits.files,
       uniqueItems: true,
       items: {
         type: "string",
@@ -77,6 +79,39 @@ export interface ResolvedTaskBundle extends Omit<TaskBundleDeclaration, "inputSc
   inputSchema: InputSchema;
 }
 const validator = new Ajv2020({ strict: true, allowUnionTypes: true }).compile(taskBundleSchema);
+export function parseTaskBundleYaml(bytes: Uint8Array): Json {
+  if (bytes.byteLength > 64 * 1024) fail("invalid_bundle", "YAML exceeds bounds.");
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const document = parseDocument(text, { schema: "core", uniqueKeys: true, strict: true });
+    if (
+      document.errors.length ||
+      document.warnings.length ||
+      document.directives?.yaml.explicit ||
+      (document.directives?.tags &&
+        Object.keys(document.directives.tags).some((key) => key !== "!!"))
+    )
+      fail("invalid_bundle", "Invalid JSON-subset YAML.");
+    function inspect(node: unknown, depth: number): void {
+      if (depth > 32 || isAlias(node)) fail("invalid_bundle", "YAML aliases or excessive depth.");
+      if (isMap(node) || isSeq(node) || isScalar(node)) {
+        if (node.tag) fail("invalid_bundle", "YAML tags are forbidden.");
+        if (isMap(node))
+          for (const pair of node.items) {
+            if (!isScalar(pair.key) || typeof pair.key.value !== "string")
+              fail("invalid_bundle", "YAML keys must be strings.");
+            inspect(pair.value, depth + 1);
+          }
+        if (isSeq(node)) for (const child of node.items) inspect(child, depth + 1);
+      }
+    }
+    inspect(document.contents, 0);
+    return json(document.toJS({ maxAliasCount: 0 }), 1_048_576);
+  } catch (error) {
+    if (error instanceof TaskError && error.code === "invalid_bundle") throw error;
+    fail("invalid_bundle", "YAML must contain valid UTF-8 finite JSON.");
+  }
+}
 export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
   const parsed = json(value, 1_048_576);
   if (
@@ -94,24 +129,7 @@ export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
   const folded = new Set<string>();
   const spellings = new Map<string, string>();
   for (const path of declaration.include) {
-    if (
-      path !== path.normalize("NFC") ||
-      Buffer.byteLength(path) > 1024 ||
-      path
-        .split("/")
-        .some(
-          (part) =>
-            !part ||
-            part === "." ||
-            part === ".." ||
-            /[. ]$/.test(part) ||
-            Buffer.byteLength(part) > 255 ||
-            part.toLowerCase() === "node_modules" ||
-            /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part) ||
-            part.includes("\u007f"),
-        ) ||
-      folded.has(path.toLowerCase())
-    )
+    if (!isTaskBundlePath(path) || folded.has(path.toLowerCase()))
       fail("invalid_bundle", "Task Bundle include requires unique, portable exact file paths.");
     folded.add(path.toLowerCase());
     let prefix = "";

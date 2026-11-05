@@ -3,6 +3,13 @@
 Shared private owner/ACL, no-follow tree verification, immutable snapshot and
 file-mutex primitives. The retired Host re-export shims have been removed;
 consumers import these APIs directly.
+Artifact directories use native recursive `opendir` and bounded file streams.
+Relative directory arguments and read-only hard links are supported; symbolic
+links and special files are rejected. This read does not require callers to
+pre-canonicalize paths or claim atomicity through inode/timestamp comparisons.
+Caller budgets remain enforced and execution snapshots retain observed bytes
+and their digest. These simpler directory rules do not weaken the separate
+private-file, mutex or confined-file guards documented below.
 This layer has no scheduler, download, or Objective dependencies.
 Native mutex guards remain strongly owned until confirmed close; an unresolved
 callback's Promise becoming garbage-collectable must not release a live owner's lock.

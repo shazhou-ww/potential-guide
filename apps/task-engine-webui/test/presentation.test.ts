@@ -124,6 +124,7 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
         nav.open("create-dialog");
         await delay(10);
         assert.ok(element("#raw-schema-value") === raw);
+        assert.ok(document.activeElement === raw, "opening focuses the first editable field");
         assert.ok(document.querySelector('[data-slot="dialog-content"]'));
         nav.close("create-dialog");
         assert.equal(raw.isConnected, false);
@@ -135,10 +136,23 @@ test("React/shadcn owns rendering and isolates the persistent schema editor", as
         assert.equal(raw.value, "{ unfinished JSON");
         assert.equal(element<HTMLInputElement>("#bundle-reference-value").value, reference.value);
         assert.equal(document.querySelector("#type"), null);
+        assert.ok(document.activeElement === raw, "reopening focuses the retained form");
         nav.close("create-dialog");
         await delay(30);
       },
     );
+
+    await t.test("a create dialog without editable fields focuses its title", async () => {
+      view.form.replaceChildren();
+      element("#new-task").focus();
+      nav.open("create-dialog");
+      await delay(10);
+      assert.ok(document.activeElement === element("#create-title"));
+      assert.ok(document.activeElement?.closest('[role="dialog"]'));
+      nav.close("create-dialog");
+      await delay(30);
+      assert.ok(document.activeElement === element("#new-task"));
+    });
 
     await t.test(
       "inline glyphs retain labels, identity and callbacks without changing primary or entity buttons",

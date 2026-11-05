@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import test from "node:test";
 import { HostError, readArtifactTree } from "@potential-guide/check-runtime-files";
 import { readArtifactFiles } from "../src/files.js";
@@ -18,8 +18,6 @@ test("Check file facades retain HostError status and legacy portable-path diagno
     readArtifactFiles(directory, { fileBytes: 1 }),
     (error: unknown) => error instanceof HostError && error.status === 413,
   );
-  await assert.rejects(
-    readArtifactTree("relative"),
-    (error: unknown) => error instanceof HostError && error.status === 400,
-  );
+  const tree = await readArtifactTree(relative(process.cwd(), directory));
+  assert.equal(tree.files.get("empty/data")?.toString(), "value");
 });

@@ -1,24 +1,86 @@
 import { createHash, randomUUID } from "node:crypto";
-import { chmod, mkdir, open, rename, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { constants, type ReadStream } from "node:fs";
 import {
-  ArtifactTreeError,
-  type ArtifactTreeLimits,
-  readArtifactTree as readTree,
-} from "@potential-guide/artifact-files";
+  chmod,
+  lstat,
+  mkdir,
+  open,
+  opendir,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { join, relative, resolve, sep } from "node:path";
 import { HostError } from "./error.js";
 
-export type { ArtifactTreeLimits } from "@potential-guide/artifact-files";
+export interface ArtifactTreeLimits {
+  bytes: number;
+  fileBytes: number;
+  files: number;
+  paths: number;
+}
 export async function readArtifactTree(
   directory: string,
   configuration: Partial<ArtifactTreeLimits> = {},
 ) {
-  try {
-    return await readTree(directory, configuration);
-  } catch (error) {
-    if (error instanceof ArtifactTreeError) throw new HostError(error.status, error.message);
-    throw error;
+  const limits: ArtifactTreeLimits = {
+    bytes: 64 * 1024 * 1024,
+    fileBytes: 64 * 1024 * 1024,
+    files: 256,
+    paths: 512,
+    ...configuration,
+  };
+  if (Object.values(limits).some((value) => !Number.isSafeInteger(value) || value <= 0))
+    throw new HostError(400, "Invalid artifact tree capacity.");
+  const root = resolve(directory);
+  const rootInfo = await lstat(root);
+  if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink())
+    throw new HostError(400, "Artifact root must be a regular directory without links.");
+  const canonical = await realpath(root);
+  const files = new Map<string, Buffer>();
+  const executables = new Set<string>();
+  const directories: string[] = [];
+  let total = 0;
+  let paths = 0;
+  for await (const entry of await opendir(canonical, { recursive: true })) {
+    if (++paths > limits.paths) throw new HostError(413, "Artifact exceeds path bounds.");
+    if (entry.isSymbolicLink() || (!entry.isDirectory() && !entry.isFile()))
+      throw new HostError(400, "Artifact links and special files are forbidden.");
+    const full = join(entry.parentPath, entry.name);
+    const path = relative(canonical, full).split(sep).join("/");
+    if (entry.isDirectory()) {
+      directories.push(path);
+      continue;
+    }
+    if (files.size >= limits.files) throw new HostError(413, "Artifact exceeds file bounds.");
+    const details = await lstat(full);
+    if (!details.isFile()) throw new HostError(400, "Artifact requires regular files.");
+    const chunks: Buffer[] = [];
+    let size = 0;
+    const handle = await open(full, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    let stream: ReadStream | undefined;
+    try {
+      stream = handle.createReadStream({
+        autoClose: false,
+        end: Math.min(limits.fileBytes, limits.bytes - total),
+      });
+      for await (const chunk of stream) {
+        const bytes = Buffer.from(chunk);
+        size += bytes.length;
+        total += bytes.length;
+        if (size > limits.fileBytes || total > limits.bytes)
+          throw new HostError(413, "Artifact exceeds size bounds.");
+        chunks.push(bytes);
+      }
+    } finally {
+      stream?.destroy();
+      await handle.close();
+    }
+    files.set(path, Buffer.concat(chunks, size));
+    if ((details.mode & 0o111) !== 0) executables.add(path);
   }
+  return { directory: canonical, files, executables, directories };
 }
 export async function readArtifact(directory: string) {
   const { directory: canonical, files, executables } = await readArtifactTree(directory);

@@ -35,10 +35,10 @@ test("generic task production dependency graph is acyclic and business/adapter i
               "ipfs-unixfs-exporter",
               "ipfs-unixfs-importer",
               "@potential-guide/task-protocol",
-              "@potential-guide/check-artifacts",
+              "semver",
             ]
           : name === "task-protocol"
-            ? ["multiformats", "ajv"]
+            ? ["multiformats", "ajv", "yaml"]
             : ["@potential-guide/task-protocol"];
     assert.deepEqual(Object.keys(manifest.dependencies ?? {}), dependencies);
     const files = await readdir(join(directory, "src"), { recursive: true });
@@ -77,8 +77,6 @@ test("generic task production dependency graph is acyclic and business/adapter i
               dependencies.some(
                 (dependency) => specifier === dependency || specifier.startsWith(`${dependency}/`),
               ) ||
-                (name === "task-engine" &&
-                  specifier === "@potential-guide/check-artifacts/files") ||
                 (name === "task-protocol" &&
                   ["node:crypto", "ajv/dist/2020.js"].includes(specifier)) ||
                 (name !== "task-protocol" && specifier.startsWith("node:")),

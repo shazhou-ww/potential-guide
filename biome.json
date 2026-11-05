@@ -39,7 +39,7 @@
   },
   "overrides": [
     {
-      "includes": ["apps/task-engine-web-ui/src/style.css"],
+      "includes": ["apps/task-engine-webui/src/style.css"],
       "css": { "parser": { "tailwindDirectives": true } }
     }
   ]

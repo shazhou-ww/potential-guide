@@ -4,8 +4,8 @@ Run 详情的独立 **Logs · 诊断日志** 支持跟随/暂停、历史分页�
 并发/切换隔离；浏览器保留最多 300 条 / 1 MiB，显示未知尾部、缺口、截断、
 过期、不支持和故障。详见 [Run Logs 与独立安装](task-run-logs.md)。
 
-`apps/task-engine-web-ui` 是可选的 Node/TypeScript 应用，其本地产物提供
-`@potential-guide/task-engine-web-ui/server` 与完整浏览器资源供服务命令消费。
+`apps/task-engine-webui` 是可选的 Node/TypeScript 应用，其本地产物提供
+`@potential-guide/task-engine-webui/server` 与完整浏览器资源供服务命令消费。
 可通过 `pguide task-engine --ui` 前台组合启动，也可继续独立连接既有 HTTP 服务；
 见[声明式服务配置](task-server.md#declarative-local-service)。这不表示已经发布 npm。
 它独立于
@@ -16,7 +16,7 @@ fixture，生产 UI 入口不导入它。
 展示层采用真正的 React/shadcn/ui 组件，Tailwind 构建为本地静态 CSS，不依赖 CDN、
 字体下载、路由或 SSR 框架。组件来源固定为 `shadcn@4.23.0` /
 `96da9cc7f1aa10580a3741664e2a77c721206c00`，详见
-[来源、许可及适配说明](../apps/task-engine-web-ui/src/ui/SOURCES.md)。
+[来源、许可及适配说明](../apps/task-engine-webui/src/ui/SOURCES.md)。
 
 ## 构建与连接现有服务
 
@@ -24,7 +24,7 @@ fixture，生产 UI 入口不导入它。
 
 ```powershell
 pnpm install
-pnpm exec turbo run build --filter=@potential-guide/task-engine-web-ui...
+pnpm exec turbo run build --filter=@potential-guide/task-engine-webui...
 ```
 
 由可信本机操作员准备配置，例如 `ui-config.json`：
@@ -49,7 +49,7 @@ pnpm exec turbo run build --filter=@potential-guide/task-engine-web-ui...
 在启动 UI 的进程环境提供 `TASK_UI_BACKEND_TOKEN`，然后运行：
 
 ```powershell
-pnpm --filter @potential-guide/task-engine-web-ui start D:\Private\task-ui\ui-config.json
+pnpm --filter @potential-guide/task-engine-webui start D:\Private\task-ui\ui-config.json
 ```
 
 凭据只在 Server 端读取，作为 `Authorization: Bearer …` 发给配置好的后端。
@@ -262,7 +262,7 @@ fixture 拒绝覆盖已有配置/凭据。不要连接、停止或清理其他�
 
 ```powershell
 $demo = Join-Path (Get-Location) ('.cache\ui-demo-' + [guid]::NewGuid())
-pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\main.ts $demo
+pnpm --filter @potential-guide/task-engine-webui exec tsx fixture\main.ts $demo
 ```
 
 记下输出中的目录路径；fixture 只使用内存 Store、单资源模拟执行器和随机端口，
@@ -276,7 +276,7 @@ $credentials = Get-Content (Join-Path $demo 'credentials.json') -Raw | ConvertFr
 $credentials.PSObject.Properties | ForEach-Object {
   [Environment]::SetEnvironmentVariable($_.Name, $_.Value, 'Process')
 }
-pnpm --filter @potential-guide/task-engine-web-ui start (Join-Path $demo 'ui.json')
+pnpm --filter @potential-guide/task-engine-webui start (Join-Path $demo 'ui.json')
 ```
 
 打开终端 B 打印的准确 URL（端口自动分配）：
@@ -325,14 +325,14 @@ Dialog/Sheet 关闭后不在文档中，不能再检查原生 `dialog.open`；
 ## 检查
 
 ```powershell
-pnpm exec turbo run build typecheck test --filter=@potential-guide/task-engine-web-ui...
+pnpm exec turbo run build typecheck test --filter=@potential-guide/task-engine-webui...
 pnpm check
 ```
 
 可选原生浏览器冒烟验证（需要已安装 Chromium/Chrome；输出目录必须尚不存在）：
 
 ```powershell
-pnpm --filter @potential-guide/task-engine-web-ui exec tsx fixture\browser-smoke.ts `
+pnpm --filter @potential-guide/task-engine-webui exec tsx fixture\browser-smoke.ts `
   'C:\Program Files\Google\Chrome\Application\chrome.exe' `
   'D:\path\to\new-owned-evidence-directory' '9223,64319,61123,61144,62952,61109'
 ```

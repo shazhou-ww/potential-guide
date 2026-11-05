@@ -153,8 +153,12 @@ import them, and only with that direct development dependency; runtime
 dependencies and imports under `src/` remain forbidden. This permits repository
 Bundle fixtures and `check-environment/build.mjs` to use
 `@potential-guide/pguide-task-bundle` without coupling the Worker SDK or runtime
-packages to an author command. Shared `@potential-guide/artifact-files` primitives
-belong to the protocol layer and have no Check or author-command dependency.
+packages to an author command. Bundle budgets, paths and declaration/file
+inspection belong to `task-protocol`; local directory acquisition uses native
+Node file APIs in the author/runtime consumers, and Node version comparison
+uses `semver`. Check portable names use `sanitize-filename` without rewriting
+artifact identity. The former `artifact-files` workspace is retired rather
+than replaced by a generic filesystem or declaration utility layer.
 
 `packages/objective-monorepo-standard/test/package-layers.test.mjs` exercises valid downward/direct-protocol/same-layer
 edges and rejects reverse/deferred-concrete/unknown edges, including actual

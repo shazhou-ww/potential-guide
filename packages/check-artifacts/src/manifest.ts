@@ -1,13 +1,10 @@
 import { createHash } from "node:crypto";
 import {
-  ArtifactTreeError,
   type ArtifactTreeLimits,
-  readPortableTree as readTree,
-  rejectEmptyDirectories as rejectEmpty,
-} from "@potential-guide/artifact-files";
-import { HostError } from "@potential-guide/check-runtime-files";
+  readArtifactTree as readTree,
+} from "@potential-guide/check-runtime-files";
 import { Ajv, type AnySchema } from "ajv";
-import { safePath } from "./paths.js";
+import { artifactLimits, safePath } from "./paths.js";
 
 export { artifactLimits, safeComponent, safePath } from "./paths.js";
 
@@ -127,7 +124,6 @@ export function inspectFiles(files: ReadonlyMap<string, Buffer>) {
   return { manifest, digest: `${artifactDigestPrefix}${hash.digest("hex")}`, files };
 }
 function checkFileError(error: unknown): never {
-  if (error instanceof ArtifactTreeError) throw new HostError(error.status, error.message);
   if (error instanceof Error) {
     error.message = error.message
       .replace(/^Artifact root /, "Check root ")
@@ -140,7 +136,20 @@ async function readPortableTree(
   configuration: Partial<ArtifactTreeLimits> = {},
 ) {
   try {
-    return await readTree(directory, configuration);
+    const tree = await readTree(directory, {
+      bytes: artifactLimits.bytes,
+      fileBytes: artifactLimits.bytes,
+      files: artifactLimits.files,
+      paths: artifactLimits.paths,
+      ...configuration,
+    });
+    const seen = new Set<string>();
+    for (const path of [...tree.directories, ...tree.files.keys()]) {
+      if (!safePath(path) || seen.has(path.toLowerCase()))
+        throw new Error("Check artifact contains an unsafe or ambiguous path.");
+      seen.add(path.toLowerCase());
+    }
+    return tree;
   } catch (error) {
     checkFileError(error);
   }
@@ -149,11 +158,8 @@ function rejectEmptyDirectories(
   files: ReadonlyMap<string, Buffer>,
   directories: readonly string[],
 ) {
-  try {
-    rejectEmpty(files, directories);
-  } catch (error) {
-    checkFileError(error);
-  }
+  if (directories.some((name) => ![...files.keys()].some((file) => file.startsWith(`${name}/`))))
+    throw new Error("Check artifact contains an undeclared empty directory.");
 }
 export async function readArtifactFiles(
   directory: string,

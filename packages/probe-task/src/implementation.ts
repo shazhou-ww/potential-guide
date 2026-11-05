@@ -12,7 +12,7 @@ import {
   prepareObjective,
 } from "@potential-guide/check-artifacts/observation";
 import type { ArtifactSource } from "@potential-guide/check-task";
-import { newId } from "@potential-guide/task-engine";
+import { newId } from "@potential-guide/task-engine/identity";
 import { createExecutorPool, type RunningWork } from "@potential-guide/task-engine/pool";
 import {
   authorizeSync,

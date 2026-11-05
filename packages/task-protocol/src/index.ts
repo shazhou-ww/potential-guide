@@ -1,4 +1,6 @@
 export * from "./bundle.js";
+export * from "./bundle-files.js";
+export * from "./bundle-paths.js";
 export * from "./json.js";
 export * from "./logs.js";
 export * from "./presentation.js";

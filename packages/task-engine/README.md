@@ -3,6 +3,16 @@
 按 Bundle 根 CID 字符串或 `{cid, hint}` 受理 Request，协调独立 Task 与可共享的完整 Run。
 没有类型注册、当前版本选择或 `discoverTypes`。名称只展示，CID 确定内容。
 
+只需要生成 Request/Run 身份的 Worker 使用轻量公开入口：
+
+```ts
+import { newId } from "@potential-guide/task-engine/identity";
+```
+
+该入口只依赖 Node 内置代码，不初始化 Engine、Gateway 或 Helia 依赖图。
+根入口的 `newId` 继续导出同一函数，保留 ULID 格式、指定时间与随机身份语义。
+避免为身份生成导入整个宿主入口，使类型守护启动不承担无关内容后端的初始化成本。
+
 ```ts
 const engine = createTaskEngine({
   store,
@@ -39,6 +49,11 @@ Facts/SQLite v5 明确拒绝 v4 等旧格式；操作者必须显式选择新域
 `maxPreparing` 默认 1000，`maxWaitMs` 默认 30,000ms，
 `requestResultRetentionMs` 默认 86,400,000ms。队列等待不构成 preparation 超时。
 目录、精确清单、声明、Schema 闭包、路径和文件尺寸校验在 Task 创建前完成；
+文件容量、便携路径、严格 YAML 与 Bundle 文件/Schema 结构读取来自
+`@potential-guide/task-protocol` 的独立实现，与作者工具共用。
+Node runtime 版本比较直接使用 `semver`；
+生产依赖闭包不包含 `artifact-files`、Check 制品或运行时包，
+缓存保留/hint/DAG 预算仍由 Engine 管理。
 默认按需读取资源后继块，`bundlePrefetch: true` 才在准入时验证完整资源内容。
 因此 Gateway 后续不可用可使已受理 Run 的首次资源读取失败；已缓存的块仍可复用。
 内部内存复用使用有界 verified blocks 及租约保护在途准备/运行，不提供公开缓存管理 API；

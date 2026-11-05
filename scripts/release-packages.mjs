@@ -1,3 +1,22 @@
+import { join } from "node:path";
+
+export const taskEngineReleaseIds = [
+  "cli-core",
+  "task-protocol",
+  "task-sdk",
+  "task-engine-http",
+  "task-engine-storage",
+  "task-engine-webui",
+  "pguide-task-bundle",
+  "task-engine",
+  "task-engine-server",
+  "pguide-task-engine",
+];
+
+export function releasePackageDirectory({ directory, workspace }) {
+  return join(workspace ?? "packages", directory);
+}
+
 export const releasePackages = [
   {
     id: "pguide-task-bundle",
@@ -203,18 +222,6 @@ export const releasePackages = [
     name: "@potential-guide/pguide-objectives",
     bins: ["pguide-objectives"],
   },
-];
-
-// Local verification includes support packages without authorizing their publication.
-export const verificationPackages = [
-  ...releasePackages,
-  {
-    id: "artifact-files",
-    directory: "artifact-files",
-    name: "@potential-guide/artifact-files",
-    requiredExports: ["readArtifactFiles", "readArtifactTree", "parseArtifactYaml", "safePath"],
-    bins: [],
-  },
   {
     id: "pguide-task-engine",
     workspace: "apps",
@@ -224,10 +231,10 @@ export const verificationPackages = [
     requiredFiles: ["settings.json"],
   },
   {
-    id: "task-engine-web-ui",
+    id: "task-engine-webui",
     workspace: "apps",
-    directory: "task-engine-web-ui",
-    name: "@potential-guide/task-engine-web-ui",
+    directory: "task-engine-webui",
+    name: "@potential-guide/task-engine-webui",
     bins: [],
     sourceOutputDirectory: "dist/src/",
     requiredFiles: [
@@ -239,17 +246,37 @@ export const verificationPackages = [
     ],
   },
   {
-    id: "check-environment",
-    directory: "check-environment",
-    name: "@potential-guide/check-environment",
-    requiredExports: ["checkTools", "checkDirectories", "checkNetwork"],
-    bins: [],
-  },
-  {
     id: "task-sdk",
     directory: "task-sdk",
     name: "@potential-guide/task-sdk",
     requiredExports: ["runTask", "RunFailure"],
+    bins: [],
+  },
+  {
+    id: "task-engine-server",
+    directory: "task-engine-server",
+    name: "@potential-guide/task-engine-server",
+    requiredExports: ["startTaskServer"],
+    bins: [],
+    forbiddenFiles: ["dist/main.js"],
+    forbiddenDependencies: [
+      "@potential-guide/check-task",
+      "@potential-guide/probe-task",
+      "@potential-guide/check-artifacts",
+      "@potential-guide/checker-host",
+      "@potential-guide/objective-host",
+    ],
+  },
+];
+
+// Local verification includes support packages without authorizing their publication.
+export const verificationPackages = [
+  ...releasePackages,
+  {
+    id: "check-environment",
+    directory: "check-environment",
+    name: "@potential-guide/check-environment",
+    requiredExports: ["checkTools", "checkDirectories", "checkNetwork"],
     bins: [],
   },
   {
@@ -271,21 +298,6 @@ export const verificationPackages = [
     requiredExports: ["createCheckTaskType", "createArtifactSource", "validateCheckInput"],
     bins: [],
     forbiddenDependencies: ["@potential-guide/checker-host", "@potential-guide/objective-host"],
-  },
-  {
-    id: "task-engine-server",
-    directory: "task-engine-server",
-    name: "@potential-guide/task-engine-server",
-    requiredExports: ["startTaskServer"],
-    bins: [],
-    forbiddenFiles: ["dist/main.js"],
-    forbiddenDependencies: [
-      "@potential-guide/check-task",
-      "@potential-guide/probe-task",
-      "@potential-guide/check-artifacts",
-      "@potential-guide/checker-host",
-      "@potential-guide/objective-host",
-    ],
   },
   {
     id: "check-runtime-files",
@@ -315,6 +327,9 @@ export function parseReleaseTag(tag) {
   const version = tag.slice(selected.id.length + 2);
   if (!releaseVersion.test(version)) {
     throw new Error(`Release tags require a valid 0.x stable or RC version: ${tag}.`);
+  }
+  if (taskEngineReleaseIds.includes(selected.id) && !version.includes("-rc.")) {
+    throw new Error(`Task Engine releases require an RC version: ${tag}.`);
   }
   return { ...selected, version, distTag: version.includes("-rc.") ? "rc" : "latest" };
 }

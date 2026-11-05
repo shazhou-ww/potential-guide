@@ -1,6 +1,6 @@
 import { createIpfsGatewayClient } from "@potential-guide/task-engine";
 import { startTaskServer } from "@potential-guide/task-engine-server";
-import { startUiServer, validateUiConfig } from "@potential-guide/task-engine-web-ui/server";
+import { startUiServer, validateUiConfig } from "@potential-guide/task-engine-webui/server";
 import {
   type Authorize,
   type Caller,

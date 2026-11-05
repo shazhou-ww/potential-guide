@@ -78,6 +78,9 @@ catalogs:
     '@types/react-dom':
       specifier: 19.3.0
       version: 19.3.0
+    '@types/semver':
+      specifier: 7.8.0
+      version: 7.8.0
     ajv:
       specifier: 8.20.0
       version: 8.20.0
@@ -150,6 +153,12 @@ catalogs:
     react-dom:
       specifier: 19.3.1
       version: 19.3.1
+    sanitize-filename:
+      specifier: 1.6.4
+      version: 1.6.4
+    semver:
+      specifier: 7.8.5
+      version: 7.8.5
     tailwind-merge:
       specifier: 3.7.0
       version: 3.7.0
@@ -212,9 +221,9 @@ importers:
       '@potential-guide/task-engine-server':
         specifier: workspace:^
         version: link:../../packages/task-engine-server
-      '@potential-guide/task-engine-web-ui':
+      '@potential-guide/task-engine-webui':
         specifier: workspace:^
-        version: link:../task-engine-web-ui
+        version: link:../task-engine-webui
       '@potential-guide/task-protocol':
         specifier: workspace:^
         version: link:../../packages/task-protocol
@@ -229,7 +238,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/task-sdk
 
-  apps/task-engine-web-ui:
+  apps/task-engine-webui:
     dependencies:
       '@potential-guide/task-protocol':
         specifier: workspace:^
@@ -311,17 +320,8 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  packages/artifact-files:
-    dependencies:
-      yaml:
-        specifier: 'catalog:'
-        version: 2.9.1
-
   packages/check-artifacts:
     dependencies:
-      '@potential-guide/artifact-files':
-        specifier: workspace:^
-        version: link:../artifact-files
       '@potential-guide/check-runtime-files':
         specifier: workspace:^
         version: link:../check-runtime-files
@@ -331,6 +331,12 @@ importers:
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
+      sanitize-filename:
+        specifier: 'catalog:'
+        version: 1.6.4
+      semver:
+        specifier: 'catalog:'
+        version: 7.8.5
       tar:
         specifier: 'catalog:'
         version: 7.5.22
@@ -341,6 +347,9 @@ importers:
       '@potential-guide/effects':
         specifier: workspace:^
         version: link:../effects
+      '@types/semver':
+        specifier: 'catalog:'
+        version: 7.8.0
       jsonata:
         specifier: 'catalog:'
         version: 2.1.0
@@ -360,11 +369,7 @@ importers:
         specifier: workspace:^
         version: link:../task-sdk
 
-  packages/check-runtime-files:
-    dependencies:
-      '@potential-guide/artifact-files':
-        specifier: workspace:^
-        version: link:../artifact-files
+  packages/check-runtime-files: {}
 
   packages/check-task:
     dependencies:
@@ -774,9 +779,6 @@ importers:
       '@libp2p/logger':
         specifier: 'catalog:'
         version: 6.2.8
-      '@potential-guide/artifact-files':
-        specifier: workspace:^
-        version: link:../artifact-files
       '@potential-guide/cli-core':
         specifier: workspace:^
         version: link:../pguide-cli-core
@@ -807,9 +809,16 @@ importers:
       multiformats:
         specifier: 'catalog:'
         version: 14.0.5
+      semver:
+        specifier: 'catalog:'
+        version: 7.8.5
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
+    devDependencies:
+      '@types/semver':
+        specifier: 'catalog:'
+        version: 7.8.0
 
   packages/pilot-protocol:
     dependencies:
@@ -883,9 +892,6 @@ importers:
       '@helia/unixfs':
         specifier: 'catalog:'
         version: 8.0.9(encoding@0.1.14)(supports-color@10.2.2)
-      '@potential-guide/check-artifacts':
-        specifier: workspace:^
-        version: link:../check-artifacts
       '@potential-guide/task-protocol':
         specifier: workspace:^
         version: link:../task-protocol
@@ -901,6 +907,9 @@ importers:
       multiformats:
         specifier: 'catalog:'
         version: 14.0.5
+      semver:
+        specifier: 'catalog:'
+        version: 7.8.5
     devDependencies:
       '@potential-guide/ipfs-content':
         specifier: workspace:^
@@ -911,6 +920,9 @@ importers:
       '@potential-guide/task-sdk':
         specifier: workspace:^
         version: link:../task-sdk
+      '@types/semver':
+        specifier: 'catalog:'
+        version: 7.8.0
 
   packages/task-engine-http:
     dependencies:
@@ -974,6 +986,9 @@ importers:
       multiformats:
         specifier: 'catalog:'
         version: 14.0.5
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
 
   packages/task-sdk:
     dependencies:
@@ -2561,6 +2576,9 @@ packages:
 
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
+
+  '@types/semver@7.8.0':
+    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/ssri@7.1.5':
     resolution: {integrity: sha512-odD/56S3B51liILSk5aXJlnYt99S6Rt9EFDDqGtJM26rKHApHcwyU/UoYHrzKkdkHMAIquGWCuHtQTbes+FRQw==}
@@ -6036,6 +6054,8 @@ snapshots:
   '@types/react@19.3.0':
     dependencies:
       csstype: 3.2.3
+
+  '@types/semver@7.8.0': {}
 
   '@types/ssri@7.1.5':
     dependencies:

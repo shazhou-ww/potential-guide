@@ -1,8 +1,14 @@
 import { lstat, readdir, readFile, realpath } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { parseArtifactYaml, safePath } from "@potential-guide/artifact-files";
-import { type Json, type JsonObject, json, taskSchemaUri } from "@potential-guide/task-protocol";
+import {
+  type Json,
+  type JsonObject,
+  json,
+  isTaskBundlePath as safePath,
+  parseTaskBundleYaml,
+  taskSchemaUri,
+} from "@potential-guide/task-protocol";
 import type { TaskCallback } from "@potential-guide/task-sdk";
 import { Kind, OptionalKind, ReadonlyKind, type Static, type TSchema } from "@sinclair/typebox";
 import { Ajv2020 } from "ajv/dist/2020.js";
@@ -272,7 +278,7 @@ export async function readTaskBuild(file: string): Promise<BuildTaskBundleOption
   file = resolve(file);
   const root = dirname(file);
   await sourceFile(root, file.slice(root.length + 1));
-  const definition: unknown = parseArtifactYaml(await readFile(file));
+  const definition: unknown = parseTaskBundleYaml(await readFile(file));
   if (!validator(definition))
     throw new Error(`Invalid task.build.yaml: ${JSON.stringify(validator.errors)}.`);
   if (!safePath(definition.outDirectory))

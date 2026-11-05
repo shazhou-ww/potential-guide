@@ -15,9 +15,8 @@ import fs, {
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
 import test, { type TestContext } from "node:test";
-import { artifactLimits } from "@potential-guide/artifact-files";
 import { encodeContentCar } from "../src/car.js";
-import { taskSchemaUri } from "@potential-guide/task-protocol";
+import { taskBundleLimits as artifactLimits, taskSchemaUri } from "@potential-guide/task-protocol";
 import { checkTaskArtifact, readTaskArtifact } from "../src/artifact.js";
 
 async function fixture(t: TestContext) {

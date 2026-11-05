@@ -6,7 +6,8 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
-import { parseArtifactYaml, readArtifactFiles } from "@potential-guide/artifact-files";
+import { readTaskArtifactFiles as readArtifactFiles } from "../src/local-files.js";
+import { parseTaskBundleYaml } from "@potential-guide/task-protocol";
 import { checkTaskArtifact, readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { validateContentCar } from "../src/car.js";
 import {
@@ -369,7 +370,7 @@ test("build emits YAML and no persistent sidecar, and rebuilds a copied artifact
     const bytes = await readFile(join(built.directory, "task.yaml"));
     assert.match(bytes.toString(), /^\$schema: /);
     assert.throws(() => JSON.parse(bytes.toString()));
-    assert.deepEqual(parseArtifactYaml(bytes), built.declaration);
+    assert.deepEqual(parseTaskBundleYaml(bytes), built.declaration);
     for (const [index, name] of (
       ["inputSchema", "resultSchema", "messageSchema"] as const
     ).entries()) {
@@ -382,9 +383,15 @@ test("build emits YAML and no persistent sidecar, and rebuilds a copied artifact
       await cp(built.directory, copied, { recursive: true });
       assert.equal((await buildTask(otherFile)).cid, built.cid);
     });
+    const previousCar = await readFile(built.car);
+    const previousWorker = await readFile(join(built.directory, "worker.cjs"));
     await writeFile(join(built.directory, "unknown.txt"), "preserve");
     await assert.rejects(buildTask(file), /extra|undeclared|unexpected/i);
     assert.equal(await readFile(join(built.directory, "unknown.txt"), "utf8"), "preserve");
+    assert.deepEqual(await readFile(built.car), previousCar);
+    assert.equal((await checkTaskArtifact(built.car)).cid, built.cid);
+    assert.deepEqual(await readFile(join(built.directory, "worker.cjs")), previousWorker);
+    assert.deepEqual(await readFile(join(built.directory, "task.yaml")), bytes);
   });
 });
 test("existing locks and changed ownership preserve the complete prior output and recovery files", async () => {

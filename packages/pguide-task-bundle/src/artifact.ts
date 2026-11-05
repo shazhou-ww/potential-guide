@@ -2,45 +2,19 @@ import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  artifactLimits,
-  assertRuntime,
-  parseArtifactYaml,
-  readArtifactFiles,
-  safePath,
-} from "@potential-guide/artifact-files";
-import {
-  type JsonObject,
-  resolveBundleSchemas,
-  validateTaskBundle,
-  validateTaskBundleFiles,
+  isTaskBundlePath as safePath,
+  readTaskBundle,
+  taskBundleLimits,
 } from "@potential-guide/task-protocol";
 import { CID } from "multiformats/cid";
 import { exporter } from "ipfs-unixfs-exporter";
 import { computeContentCid, validateContentCar } from "./car.js";
+import { readTaskArtifactFiles } from "./local-files.js";
+import { assertTaskRuntime } from "./runtime.js";
 
 export async function inspectTaskArtifact(files: ReadonlyMap<string, Buffer>) {
-  if (
-    files.size > artifactLimits.files ||
-    [...files.values()].reduce((total, content) => total + content.length, 0) > artifactLimits.bytes
-  )
-    throw new Error("Task Bundle exceeds artifact capacity.");
-  const declaration = validateTaskBundle(
-    parseArtifactYaml(files.get("task.yaml") ?? Buffer.alloc(0)),
-  );
-  validateTaskBundleFiles(declaration, files.keys());
-  if (!files.get("worker.cjs")?.length)
-    throw new Error("Task Bundle requires a nonempty worker.cjs.");
-  new TextDecoder("utf-8", { fatal: true }).decode(files.get("worker.cjs"));
-  assertRuntime(declaration);
-  const schemas = [...files].filter(([path]) => path.startsWith("schemas/"));
-  const resolved = resolveBundleSchemas(
-    declaration,
-    schemas.map(
-      ([, bytes]) =>
-        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as JsonObject,
-    ),
-    schemas.map(([path]) => path),
-  );
+  const { declaration, resolved } = readTaskBundle(files);
+  assertTaskRuntime(declaration);
   const cid = await computeContentCid(files);
   return { declaration, resolved, cid, files: [...files.keys()].sort() };
 }
@@ -49,7 +23,7 @@ export async function inspectTaskArtifact(files: ReadonlyMap<string, Buffer>) {
 export async function readTaskArtifact(path: string) {
   const absolute = resolve(path);
   const info = await lstat(absolute, { bigint: true });
-  if (info.isDirectory()) return { files: await readArtifactFiles(absolute) };
+  if (info.isDirectory()) return { files: await readTaskArtifactFiles(absolute) };
   if (
     !info.isFile() ||
     info.isSymbolicLink() ||
@@ -57,7 +31,7 @@ export async function readTaskArtifact(path: string) {
     (await realpath(absolute)) !== absolute
   )
     throw new Error("Task CAR must be a canonical regular file, without links or hard links.");
-  if (info.size > BigInt(artifactLimits.archiveBytes))
+  if (info.size > BigInt(taskBundleLimits.archiveBytes))
     throw new Error("Task CAR exceeds artifact capacity.");
   const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   const chunks: Buffer[] = [];
@@ -79,14 +53,14 @@ export async function readTaskArtifact(path: string) {
       const buffer = Buffer.alloc(
         Math.min(
           65_536,
-          artifactLimits.archiveBytes - length + 1,
+          taskBundleLimits.archiveBytes - length + 1,
           Number(before.size) - length + 1,
         ),
       );
       const { bytesRead } = await handle.read(buffer);
       if (!bytesRead) break;
       length += bytesRead;
-      if (length > artifactLimits.archiveBytes)
+      if (length > taskBundleLimits.archiveBytes)
         throw new Error("Task CAR exceeds artifact capacity.");
       if (BigInt(length) > before.size) throw new Error("Task CAR changed while reading.");
       chunks.push(buffer.subarray(0, bytesRead));
@@ -119,7 +93,7 @@ export async function readTaskArtifact(path: string) {
   }
   const archive = Buffer.concat(chunks, length);
   const { cid, blockstore } = await validateContentCar(archive, undefined, {
-    maxCarBytes: artifactLimits.archiveBytes,
+    maxCarBytes: taskBundleLimits.archiveBytes,
   });
   const signal = new AbortController().signal;
   const files = new Map<string, Buffer>();
@@ -130,7 +104,7 @@ export async function readTaskArtifact(path: string) {
       if (!safePath(path) || paths.has(path.toLowerCase()))
         throw new Error("Task CAR contains an unsafe or ambiguous path.");
       paths.add(path.toLowerCase());
-      if (paths.size > artifactLimits.paths) throw new Error("Task CAR exceeds path capacity.");
+      if (paths.size > taskBundleLimits.paths) throw new Error("Task CAR exceeds path capacity.");
     }
     const entry = await exporter(CID.parse(root), blockstore, { signal });
     if (entry.type === "directory") {
@@ -147,11 +121,11 @@ export async function readTaskArtifact(path: string) {
       (entry.type === "raw" ||
         (entry.type === "file" && ["file", "raw"].includes(entry.unixfs.type)))
     ) {
-      if (files.size >= artifactLimits.files) throw new Error("Task CAR exceeds file capacity.");
+      if (files.size >= taskBundleLimits.files) throw new Error("Task CAR exceeds file capacity.");
       const parts: Buffer[] = [];
       for await (const part of entry.content({ signal })) {
         total += part.byteLength;
-        if (total > artifactLimits.bytes) throw new Error("Task CAR exceeds byte capacity.");
+        if (total > taskBundleLimits.bytes) throw new Error("Task CAR exceeds byte capacity.");
         parts.push(Buffer.from(part));
       }
       files.set(path, Buffer.concat(parts));

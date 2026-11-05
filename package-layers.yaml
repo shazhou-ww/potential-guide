@@ -1,5 +1,4 @@
 protocol:
-  - "@potential-guide/artifact-files"
   - "@potential-guide/ipfs-content"
   - "@potential-guide/task-protocol"
   - "@potential-guide/task-sdk"
@@ -20,7 +19,7 @@ business:
   - "@potential-guide/regulation-coordinator"
 tools:
   - "@potential-guide/pguide-task-engine"
-  - "@potential-guide/task-engine-web-ui"
+  - "@potential-guide/task-engine-webui"
   - "@potential-guide/test-tree"
   - pguide
   - "@potential-guide/cli-core"

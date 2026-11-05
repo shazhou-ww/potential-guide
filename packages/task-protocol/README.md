@@ -1,5 +1,25 @@
 # @potential-guide/task-protocol
 
+## Task Bundle bytes and structure
+
+The Bundle protocol owns `taskBundleLimits`, `TaskBundleFileLimits`,
+`isTaskBundlePath`, `parseTaskBundleYaml`, and `readTaskBundle`.
+Limits preserve the 64 MiB total/per-file, 256-file, 512-path and 72 MiB CAR
+budgets. Paths are portable, relative, NFC-normalized names without traversal,
+reserved device names or ambiguous casing.
+`parseTaskBundleYaml` reads bounded UTF-8 JSON-subset YAML, without aliases,
+tags, duplicate keys or non-finite numbers; it also reads author build
+declarations before their own schema validation.
+`readTaskBundle` takes an already supplied `ReadonlyMap<string, Uint8Array>`
+and checks exact file inclusion, capacities, nonempty UTF-8 Worker bytes and
+offline Schema resources. It returns declaration, resolved schemas, bytes and
+file count without evaluating the Worker, reading a directory or fetching data.
+Both author tooling and Engine use this implementation independently of
+`artifact-files`. Filesystem safety and Node runtime eligibility remain caller
+responsibilities; Engine cache/hint/retention budgets are not protocol limits.
+Browser reference and presentation subpaths remain independent of this reader
+and its YAML/Schema implementation.
+
 Task Bundle 的引用为根 CID 字符串或 `{cid, hint}`：
 `parseBundleReference(reference)` 接受 CID 文本或对象 JSON，
 `formatBundleReference(bundle)` 保留其填写形状及有序 hint。

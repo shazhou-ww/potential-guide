@@ -1,34 +1,28 @@
-import {
-  type ArchiveLimits,
-  artifactLimits,
-  assertRuntime,
-  parseArtifactYaml,
-  safePath,
-} from "@potential-guide/check-artifacts/files";
-import { createIpfsGatewayClient, type IpfsClient, openContent } from "./content.js";
+import { gte } from "semver";
 import {
   type BundleReference,
   bundleCid,
-  type JsonObject,
+  isTaskBundlePath as safePath,
+  readTaskBundle,
   type ResolvedTaskBundle,
-  resolveBundleSchemas,
   type TaskBundleDeclaration,
+  type TaskBundleFileLimits,
+  taskBundleLimits,
   TaskError,
   validateBundleReference,
-  validateTaskBundle,
-  validateTaskBundleFiles,
 } from "@potential-guide/task-protocol";
+import { createIpfsGatewayClient, type IpfsClient, openContent } from "./content.js";
 
-export type BundleLimits = Pick<ArchiveLimits, "bytes" | "files" | "paths" | "fileBytes"> & {
+export type BundleLimits = TaskBundleFileLimits & {
   hints: number;
   retainedBytes: number;
   blocks: number;
 };
 export const defaultBundleLimits: Readonly<BundleLimits> = Object.freeze({
-  bytes: artifactLimits.bytes,
-  files: artifactLimits.files,
-  paths: artifactLimits.paths,
-  fileBytes: 64 * 1024 * 1024,
+  bytes: taskBundleLimits.bytes,
+  files: taskBundleLimits.files,
+  paths: taskBundleLimits.paths,
+  fileBytes: taskBundleLimits.fileBytes,
   hints: 16,
   retainedBytes: 256 * 1024 * 1024,
   blocks: 16_384,
@@ -47,75 +41,19 @@ export function inspectTaskBundle(
   files: ReadonlyMap<string, Buffer>,
   limits: BundleLimits = defaultBundleLimits,
 ) {
-  const seen = new Set<string>();
-  const spellings = new Map<string, string>();
-  let bytes = 0;
-  if (files.size > limits.files)
-    throw new TaskError("capacity_exceeded", "Bundle file capacity exceeded.");
-  for (const [path, content] of files) {
-    if (
-      !safePath(path) ||
-      seen.has(path.toLowerCase()) ||
-      (!["task.yaml", "worker.cjs"].includes(path) &&
-        !path.startsWith("schemas/") &&
-        !path.startsWith("resources/"))
-    )
-      throw new TaskError("invalid_bundle", "Unsafe, duplicate or unsupported Bundle path.");
-    seen.add(path.toLowerCase());
-    let prefix = "";
-    for (const part of path.split("/")) {
-      prefix = prefix ? `${prefix}/${part}` : part;
-      const folded = prefix.toLowerCase();
-      if (spellings.has(folded) && spellings.get(folded) !== prefix)
-        throw new TaskError("invalid_bundle", "Ambiguous Bundle path casing.");
-      spellings.set(folded, prefix);
-    }
-    bytes += content.length;
-    if (content.length > limits.fileBytes || bytes > limits.bytes || spellings.size > limits.paths)
-      throw new TaskError("capacity_exceeded", "Bundle tree capacity exceeded.");
-  }
-  for (const path of files.keys()) {
-    const parts = path.split("/");
-    parts.pop();
-    while (parts.length) {
-      if (files.has(parts.join("/")))
-        throw new TaskError("invalid_bundle", "Bundle file is also a parent.");
-      parts.pop();
-    }
-  }
-  const yaml = files.get("task.yaml");
-  if (!yaml || !files.get("worker.cjs")?.length)
-    throw new TaskError("invalid_bundle", "Bundle requires task.yaml and nonempty worker.cjs.");
-  let declaration: TaskBundleDeclaration;
-  let schemas: JsonObject[];
-  const schemaFiles = [...files].filter(([path]) => path.startsWith("schemas/"));
-  try {
-    declaration = validateTaskBundle(parseArtifactYaml(yaml));
-    validateTaskBundleFiles(declaration, files.keys());
-    schemas = schemaFiles.map(
-      ([, content]) =>
-        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(content)) as JsonObject,
-    );
-    new TextDecoder("utf-8", { fatal: true }).decode(files.get("worker.cjs"));
-  } catch (error) {
-    if (error instanceof TaskError) throw error;
-    throw new TaskError("invalid_bundle", "Invalid Bundle declaration, Worker or Schema JSON.");
-  }
-  try {
-    assertRuntime(declaration);
-  } catch {
+  const inspected = readTaskBundle(files, {
+    bytes: limits.bytes,
+    fileBytes: limits.fileBytes,
+    files: limits.files,
+    paths: limits.paths,
+  });
+  if (
+    !gte(process.versions.node, "22.13.0") ||
+    !gte(process.versions.node, inspected.declaration.runtime.minVersion)
+  ) {
     throw new TaskError("unsupported_runtime", "Bundle Node runtime is unsupported.");
   }
-  return {
-    declaration,
-    resolved: resolveBundleSchemas(
-      declaration,
-      schemas,
-      schemaFiles.map(([path]) => path),
-    ),
-    bytes,
-    files: files.size,
-  };
+  return inspected;
 }
 export interface BundleCacheOptions {
   ipfsClient: IpfsClient;

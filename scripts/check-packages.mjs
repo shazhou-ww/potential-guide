@@ -43,7 +43,6 @@ if (authoringOnly) {
   }
 }
 const sdkPackages = new Set([
-  "artifact-files",
   "check-artifacts",
   "check-runtime-files",
   "pguide-cli-core",
@@ -53,7 +52,6 @@ const sdkPackages = new Set([
   "task-sdk",
 ]);
 const bundlePackages = new Set([
-  "artifact-files",
   "pguide-cli-core",
   "pguide-task-bundle",
   "check-runtime-files",

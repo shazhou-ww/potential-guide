@@ -304,11 +304,11 @@ UI 不硬编码业务类型，不解析业务 URL 补齐 subject 契约，不承
 | [Schema 编译与结构判等](../../packages/task-protocol/src/schema.ts) | 对应 AX-06、AX-07；equals 独立做结构投影，提交校验另有入口 |
 | [Engine](../../packages/task-engine/src/engine.ts) 的 compatible、bindings、startGroup、start 和 recur | 核对 AX-03、AX-08、AX-13、AX-20；其中 currentVersions 及多版本 key 仍偏离 AX-05 |
 | [旧 updatedAt 回补与终结例外](../../packages/task-protocol/src/projection.ts)、[TaskRecord.updatedAt 可选声明](../../packages/task-protocol/src/types.ts) | restoreTaskUpdates 和旧 preparation_failed/allocation_failed 例外偏离 AX-10、AX-23，是明确候选；当前事件重放本身符合 AX-20 |
-| [UI 回执模型](../../apps/task-engine-web-ui/src/model.ts)、[当前生命周期展示](../../apps/task-engine-web-ui/src/lifecycle.ts) | validSnapshot 仍接受旧 Task 阶段，偏离 AX-10；连接、业务和物理回收区分仍符合 AX-22 |
+| [UI 回执模型](../../apps/task-engine-webui/src/model.ts)、[当前生命周期展示](../../apps/task-engine-webui/src/lifecycle.ts) | validSnapshot 仍接受旧 Task 阶段，偏离 AX-10；连接、业务和物理回收区分仍符合 AX-22 |
 | [SQLite 格式检查](../../packages/task-engine-storage/src/index.ts) | 只接受当前格式并拒绝旧格式，符合 AX-23，不是双格式桥接 |
 | [类型守护](../../packages/task-engine/src/type-supervisor.ts)、[类型 Worker](../../packages/task-engine/src/type-worker.ts) | 当前结果复验、代际隔离、释放证明对应 AX-15、AX-17、AX-19、AX-20，不按 historical/old generation 命名删除 |
 | [Check 内部实现](../../packages/check-task/src/implementation.ts)、[Probe 内部实现](../../packages/probe-task/src/implementation.ts)、[业务 pool](../../packages/task-engine/src/pool.ts) | 真实业务内部 prepare/execute/pool 符合 AX-04、AX-14；只有为旧 Engine 类型接口保留的桥接才属于 AX-23 |
-| [UI 收藏服务](../../apps/task-engine-web-ui/src/server.ts) | 仍有 Task 星标与无来源模板路径；由收藏负责 session 收敛，不用本整理替代其决定 |
+| [UI 收藏服务](../../apps/task-engine-webui/src/server.ts) | 仍有 Task 星标与无来源模板路径；由收藏负责 session 收敛，不用本整理替代其决定 |
 
 ## 审阅范围
 
@@ -317,7 +317,7 @@ UI 不硬编码业务类型，不解析业务 URL 补齐 subject 契约，不承
 不将本文或现有清理候选当作代码删除授权。
 
 本次仍限定 8 个 workspace：task-protocol、task-engine、task-engine-storage、task-engine-http、
-task-engine-server、check-task、probe-task、task-engine-web-ui，及直接相关测试、文档、脚本。
+task-engine-server、check-task、probe-task、task-engine-webui，及直接相关测试、文档、脚本。
 旧 check-host/objective-host 和独立 objective-pilot/objective-regulator/regulation-coordinator 不在清理范围。
 
 ## 来源索引
@@ -334,7 +334,7 @@ task-engine-server、check-task、probe-task、task-engine-web-ui，及直接相
 | [task-type-schema-discovery][schema] | 输入 Schema 与发现 | completed | Validate/Equals、发现与消费者分工 |
 | [task-history-query][history] | 任务目录 | completed | 授权范围、冻结分页、更新事实 |
 | [whole-execution-reuse][whole] | 完整 Run | completed | 覆盖早期分段生命周期，隔离、消息和资源证明 |
-| [task-engine-web-ui][ui] | 可选调试工作台 | implementing | 当前明确产品边界和试用反馈，不宣称全部交付 |
+| [task-engine-webui][ui] | 可选调试工作台 | implementing | 当前明确产品边界和试用反馈，不宣称全部交付 |
 | [task-type-artifact-management][assets] | 通用资产管理 | abandoned | 关闭方向与不纳入当前职责的边界 |
 | [regulate-task][regulate] | 统一治理业务 | preparing | 识别未决范围，不将候选方案写成现有能力 |
 | [engine-current-only-cleanup][cleanup] | 新链路清理 | preparing | 本次单版本与开发数据决定；仍未验收 |

@@ -109,6 +109,8 @@ test("Task and Run grids integrate column filters, sorting and pagination withou
         assert.ok(element(`#${id}`).closest("[popover]"));
       for (const id of ["execution-type", "started-from", "started-before"])
         assert.ok(element(`#${id}`).closest("[popover]"));
+      for (const id of ["history-type", "execution-type"])
+        assert.equal(element<HTMLInputElement>(`#${id}`).placeholder, "完整根 CID（可选）");
       assert.equal(document.querySelectorAll("#directory .column-filter-trigger").length, 4);
       assert.equal(
         document.querySelectorAll("#execution-directory .column-filter-trigger").length,

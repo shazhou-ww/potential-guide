@@ -1,6 +1,6 @@
 {
-  "name": "@potential-guide/task-engine-web-ui",
-  "version": "0.1.0",
+  "name": "@potential-guide/task-engine-webui",
+  "version": "0.1.0-rc.0",
   "description": "Local HTTP task workbench and packaged browser assets.",
   "exports": {
     "./server": {
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/shazhou-ww/potential-guide.git",
-    "directory": "apps/task-engine-web-ui"
+    "directory": "apps/task-engine-webui"
   },
   "type": "module",
   "scripts": {

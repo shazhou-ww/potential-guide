@@ -17,13 +17,22 @@ import { inputSchemas, resultSchema } from "../src/contracts.js";
 const caller = { scope: "environment-tests", subject: "consumer" };
 const bundles = fileURLToPath(new URL("../dist/bundles/", import.meta.url));
 
-test("all three directory bundles run through the Engine using verified root CIDs", async () => {
+test("all three CAR bundles preserve results, faults and cancellation through the Engine", {
+  timeout: 60000,
+}, async () => {
   await mkdir(resolve(".cache"), { recursive: true });
   const directory = await realpath(await mkdtemp(join(resolve(".cache"), "environment-bundles-")));
-  const refs: Record<string, { directory: string; cid: string }> = JSON.parse(
+  const refs: Record<string, { directory: string; car: string; cid: string }> = JSON.parse(
     await readFile(join(bundles, "references.json"), "utf8"),
   );
-  const server = createServer((_request, response) => response.end("ok"));
+  let markHanging: (() => void) | undefined;
+  const server = createServer((request, response) => {
+    if (request.url === "/hang") {
+      markHanging?.();
+      return;
+    }
+    response.end("ok");
+  });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   assert.ok(address && typeof address !== "string");
@@ -31,10 +40,9 @@ test("all three directory bundles run through the Engine using verified root CID
   const clock = new VirtualClock();
   const ipfsClient = new MemoryIpfsClient();
   for (const ref of Object.values(refs)) {
-    assert.equal(
-      await ipfsClient.import((await readTaskArtifact(join(bundles, ref.directory))).files),
-      ref.cid,
-    );
+    const artifact = await readTaskArtifact(join(bundles, ref.car));
+    assert.deepEqual(artifact.files, (await readTaskArtifact(join(bundles, ref.directory))).files);
+    assert.equal(await ipfsClient.import(artifact.files), ref.cid);
   }
   const engine = createTaskEngine({
     store,
@@ -44,6 +52,33 @@ test("all three directory bundles run through the Engine using verified root CID
   });
   try {
     await engine.start();
+    async function submit(kind: string, input: JsonObject) {
+      const ref = refs[kind];
+      assert.ok(ref);
+      const request = {
+        ...input,
+        requestId: newId(clock.now()),
+        bundle: ref.cid,
+        timeoutMs: 10000,
+      };
+      await engine.submit(request, caller);
+      const accepted = await engine.getRequestStatus(request.requestId, { waitMs: 10000 }, caller);
+      assert.equal(accepted.status, "accepted", JSON.stringify(accepted));
+      if (accepted.status !== "accepted") throw new Error(JSON.stringify(accepted));
+      engine.tick();
+      return accepted.taskId;
+    }
+    async function finished(taskId: string) {
+      const deadline = Date.now() + 10000;
+      let task = engine.getTask(taskId, caller);
+      while (!["completed", "failed", "stopped"].includes(task.stage)) {
+        if (Date.now() > deadline) throw new Error(`Task ${taskId} timed out.`);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        task = engine.getTask(taskId, caller);
+      }
+      await engine.waitForTaskRelease(task.taskId, caller);
+      return task;
+    }
     const inputs: Record<string, JsonObject> = {
       tools: {
         tools: [{ command: process.execPath, args: ["--version"], minimumVersion: "22.13.0" }],
@@ -113,38 +148,89 @@ test("all three directory bundles run through the Engine using verified root CID
         { input: passingInput, expected: { pass: true } },
         failure,
       ]) {
-        const ref = refs[kind];
-        assert.ok(ref);
-        const request = {
-          ...input,
-          requestId: newId(clock.now()),
-          bundle: ref.cid,
-          timeoutMs: 10000,
-        };
-        await engine.submit(request, caller);
-        const accepted = await engine.getRequestStatus(
-          request.requestId,
-          { waitMs: 10000 },
-          caller,
-        );
-        assert.equal(accepted.status, "accepted", JSON.stringify(accepted));
-        if (accepted.status !== "accepted") throw new Error(JSON.stringify(accepted));
-        engine.tick();
-        const deadline = Date.now() + 10000;
-        let task = engine.getTask(accepted.taskId, caller);
-        while (!["completed", "failed", "stopped"].includes(task.stage)) {
-          if (Date.now() > deadline) throw new Error(`Bundle ${kind} timed out.`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
-          task = engine.getTask(accepted.taskId, caller);
-        }
+        const task = await finished(await submit(kind, input));
         assert.equal(task.stage, "completed", JSON.stringify(task.error));
         assert.deepEqual(task.result, expected);
         compileJsonSchema(resultSchema).validate(task.result);
-        await engine.waitForTaskRelease(task.taskId, caller);
         const files = await readdir(join(bundles, kind));
         assert.deepEqual(files.sort(), ["task.yaml", "worker.cjs"]);
       }
     }
+    const faults: { kind: string; input: JsonObject; message: RegExp }[] = [
+      {
+        kind: "tools",
+        input: {
+          tools: [
+            {
+              command: process.execPath,
+              args: ["-e", "setInterval(()=>{},1000)"],
+              minimumVersion: "1.0",
+            },
+          ],
+          checkTimeoutMs: 100,
+        },
+        message: /timed out|cleanup/,
+      },
+      {
+        kind: "tools",
+        input: {
+          tools: [
+            {
+              command: process.execPath,
+              args: ["-e", "process.stdout.write('x'.repeat(300000));setInterval(()=>{},1000)"],
+              minimumVersion: "1.0",
+            },
+          ],
+        },
+        message: /output|cleanup/,
+      },
+      {
+        kind: "directories",
+        input: { directories: [{ path: ".", requirements: ["write"] }] },
+        message: /absolute paths/,
+      },
+      {
+        kind: "network",
+        input: {
+          dns: [],
+          http: [
+            {
+              url: `http://127.0.0.1:${address.port}/hang`,
+              expectedStatus: [200],
+              followRedirects: false,
+            },
+          ],
+          checkTimeoutMs: 100,
+        },
+        message: /timed out/,
+      },
+    ];
+    for (const fault of faults) {
+      const task = await finished(await submit(fault.kind, fault.input));
+      assert.equal(task.stage, "failed");
+      assert.match(task.error?.message ?? "", fault.message);
+      assert.equal(task.result, undefined);
+    }
+    const hanging = new Promise<void>((resolve) => {
+      markHanging = resolve;
+    });
+    const taskId = await submit("network", {
+      dns: [],
+      http: [
+        {
+          url: `http://127.0.0.1:${address.port}/hang`,
+          expectedStatus: [200],
+          followRedirects: false,
+        },
+      ],
+    });
+    await hanging;
+    engine.cancelTask(taskId, caller);
+    const canceled = await finished(taskId);
+    assert.ok(canceled.canceledAt);
+    assert.equal(canceled.stage, "stopped");
+    assert.equal(canceled.result, undefined);
+    assert.deepEqual(await readdir(directory), []);
   } finally {
     await engine.close();
     store.close();
