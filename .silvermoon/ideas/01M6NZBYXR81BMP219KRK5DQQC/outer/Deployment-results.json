@@ -1,0 +1,424 @@
+{
+  "observedAt": "2026-11-05T16:26:15.296Z",
+  "implementationCommit": "38d91f9fb96571256149a62f10ac63fd2948030d",
+  "node": "v24.11.1",
+  "pnpm": "11.22.0",
+  "kubo": "0.43.1-acc53c093",
+  "publication": {
+    "status": "blocked",
+    "code": "TOKEN_REQUIRED",
+    "source": "local CARs, not Pinboard exports"
+  },
+  "intendedPublicEndpoint": "https://pinboard.shazhou.work",
+  "verification": {
+    "gateway": "http://127.0.0.1:56579",
+    "engine": "http://127.0.0.1:59190",
+    "source": "Locally built CARs imported into an owned offline Kubo; not Pinboard exports.",
+    "packedConsumersOutsideRepository": true,
+    "caseCount": 12,
+    "referenceCount": 14,
+    "physicalRelease": true,
+    "httpRequestsReleased": true,
+    "releasedToolPids": [
+      3692,
+      48596
+    ],
+    "pathRedaction": "Directory problem targets replace the owned temporary directory prefix with <owned-scratch>."
+  },
+  "bundles": {
+    "tools": {
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "carSha256": "eb4f8c14b3284587471fbea9164af4f4bc5a8466959a8643234daaaebf8a6018"
+    },
+    "directories": {
+      "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "carSha256": "0833f5bc181c8a8a86d59ad6ce9617a32357599fa8fdfd1e31b2c19b6cefc47c"
+    },
+    "network": {
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "carSha256": "5ca8f0079b24eb997b37706d62a20b6ce9f38a02058d0b86593170882b93c683"
+    },
+    "example": {
+      "cid": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+      "carSha256": "13a43fb808802e0aaedb138d6c2cd1a758fb3f5dbe68357a437453ffb74d9061"
+    }
+  },
+  "cases": [
+    {
+      "label": "tools-pass",
+      "requestId": "01M6P8GA5TX7GBDMXB4M7NQMER",
+      "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "taskId": "01M6P8GAZK9QGS0358CETEM3C3",
+      "runId": "01M6P8GB08BMYYVB5N5XT957TZ",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": true
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 9,
+        "occurredAt": "2026-11-05T16:26:08.041Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:08.044Z"
+    },
+    {
+      "label": "tools-gap",
+      "requestId": "01M6P8GBAN9AQSWNSNGT69Q0VB",
+      "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "taskId": "01M6P8GBAW5ZCKQ9KK1E9FGS7T",
+      "runId": "01M6P8GBB27BT4ZR61D0AN12SP",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": false,
+        "problems": [
+          {
+            "target": "C:\\nvm4w\\nodejs\\node.exe",
+            "code": "tool-version",
+            "actual": "1.0.0"
+          }
+        ]
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 18,
+        "occurredAt": "2026-11-05T16:26:08.365Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:08.368Z"
+    },
+    {
+      "label": "tools-fault",
+      "requestId": "01M6P8GBMPWC2YAE362JR5QNGD",
+      "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "taskId": "01M6P8GBMXXMCKSRBFH1A1VG4R",
+      "runId": "01M6P8GBN2JZW1BHHBG2KGEGQQ",
+      "taskStage": "failed",
+      "runStage": "failed",
+      "canceled": false,
+      "error": {
+        "code": "run_failed",
+        "message": "Command timed out."
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 27,
+        "occurredAt": "2026-11-05T16:26:09.958Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:09.962Z"
+    },
+    {
+      "label": "tools-cancel",
+      "requestId": "01M6P8GD66CNFXTCNYEXKMKZQB",
+      "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "taskId": "01M6P8GD6KDE9JHW394MN44VS3",
+      "runId": "01M6P8GD6VAS60D2K4H83B61N2",
+      "taskStage": "failed",
+      "runStage": "failed",
+      "canceled": true,
+      "error": {
+        "code": "run_failed",
+        "message": "Command cancelled."
+      },
+      "stopRequested": {
+        "occurredAt": "2026-11-05T16:26:10.236Z",
+        "sequence": 36,
+        "reason": "no_active_demand"
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 39,
+        "occurredAt": "2026-11-05T16:26:10.654Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:10.661Z"
+    },
+    {
+      "label": "directories-pass",
+      "requestId": "01M6P8GDWZA50Z9FD003KG5XS3",
+      "bundle": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "taskId": "01M6P8GEKAY1SD18KTFFEJ2E6J",
+      "runId": "01M6P8GEKXRY99P4VZS5F95PKZ",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": true
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 48,
+        "occurredAt": "2026-11-05T16:26:11.631Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:11.637Z"
+    },
+    {
+      "label": "directories-gap",
+      "requestId": "01M6P8GETQYWA1J1JAMBZJJJ3Z",
+      "bundle": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "taskId": "01M6P8GEV2JPVCKBW3SG592249",
+      "runId": "01M6P8GEVFXEVBFPHCY4RP1CTK",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": false,
+        "problems": [
+          {
+            "target": "<owned-scratch>\\absent",
+            "code": "directory-unusable",
+            "actual": "ENOENT"
+          }
+        ]
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 57,
+        "occurredAt": "2026-11-05T16:26:11.844Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:11.851Z"
+    },
+    {
+      "label": "network-pass",
+      "requestId": "01M6P8GF27G0V624JX6AEM1Y29",
+      "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "taskId": "01M6P8GFRADMG1NC8TNHEVPYAR",
+      "runId": "01M6P8GFSDTT5JS3Z7YPVNC1T1",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": true
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 66,
+        "occurredAt": "2026-11-05T16:26:12.866Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:12.874Z"
+    },
+    {
+      "label": "network-gap",
+      "requestId": "01M6P8GG1WAF6TE1BJXVV6ZVKD",
+      "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "taskId": "01M6P8GG2BPTQ91EZH8AD8SH9S",
+      "runId": "01M6P8GG2N3CX3DE14S590AGS5",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": false,
+        "problems": [
+          {
+            "target": "http://127.0.0.1:59189/gap",
+            "code": "http-status",
+            "actual": "503"
+          }
+        ]
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 75,
+        "occurredAt": "2026-11-05T16:26:13.152Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:13.161Z"
+    },
+    {
+      "label": "network-fault",
+      "requestId": "01M6P8GGBCD7R25PNHB5E3MWBC",
+      "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "taskId": "01M6P8GGBYHABPKJQW7WZ1KQXW",
+      "runId": "01M6P8GGCA42B9BYB9WK8GVBNY",
+      "taskStage": "failed",
+      "runStage": "failed",
+      "canceled": false,
+      "error": {
+        "code": "run_failed",
+        "message": "HTTP check timed out."
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 84,
+        "occurredAt": "2026-11-05T16:26:13.512Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:13.521Z"
+    },
+    {
+      "label": "network-cancel",
+      "requestId": "01M6P8GGR3X02GQEASXK18TG20",
+      "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "taskId": "01M6P8GGRKN8XB8TDYY514GC4W",
+      "runId": "01M6P8GGRYRXDBDGSS3D7JY30J",
+      "taskStage": "stopped",
+      "runStage": "stopped",
+      "canceled": true,
+      "stopRequested": {
+        "occurredAt": "2026-11-05T16:26:13.840Z",
+        "sequence": 93,
+        "reason": "no_active_demand"
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 95,
+        "occurredAt": "2026-11-05T16:26:13.866Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:13.877Z"
+    },
+    {
+      "label": "independent-author-pass",
+      "requestId": "01M6P8GH2N4CKMFP8SG9VJNTD0",
+      "bundle": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+      "taskId": "01M6P8GHMZ0TQPAPRS0AWSRTNT",
+      "runId": "01M6P8GHNRYY7F802477T0W5GX",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": true
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 104,
+        "occurredAt": "2026-11-05T16:26:14.747Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:14.759Z"
+    },
+    {
+      "label": "independent-author-gap",
+      "requestId": "01M6P8GHZ15B6ZZM3R943XS1BG",
+      "bundle": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+      "taskId": "01M6P8GHZPGQ3CG8BTWVDH5HYR",
+      "runId": "01M6P8GJ06YSSHE2EX63873VQW",
+      "taskStage": "completed",
+      "runStage": "completed",
+      "canceled": false,
+      "result": {
+        "pass": false,
+        "problems": [
+          {
+            "target": "text",
+            "code": "text-empty",
+            "actual": "   "
+          }
+        ]
+      },
+      "exit": {
+        "basis": "worker",
+        "code": 0,
+        "forced": false,
+        "sequence": 113,
+        "occurredAt": "2026-11-05T16:26:15.069Z"
+      },
+      "reclaimedAt": "2026-11-05T16:26:15.084Z"
+    }
+  ],
+  "references": [
+    {
+      "kind": "tools",
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "path": "resources/references/en/check.md",
+      "sha256": "f3757f1b567993b9a350ec45b41feb7ade9939bd84e1d90796d2774ae3aa4ef0"
+    },
+    {
+      "kind": "tools",
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "path": "resources/references/en/problems/tool-missing.md",
+      "sha256": "ed5084378668b61c21f2a76600e411862af399ce1125c5feb202bb1ebdc06c37"
+    },
+    {
+      "kind": "tools",
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "path": "resources/references/en/problems/tool-unusable.md",
+      "sha256": "b342a78ba9b52700ba175fe20d9e22f9e9fbd42d8925e56ffdd3553a378c7dd4"
+    },
+    {
+      "kind": "tools",
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "path": "resources/references/en/problems/tool-version.md",
+      "sha256": "dc099e8035fd79b570d156cfe9cb83990048f4a514a048099c760e6d7612e4f5"
+    },
+    {
+      "kind": "tools",
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "path": "resources/references/en/problems/version-unparseable.md",
+      "sha256": "faaefdd0af59581af558539414ace890246bf827d39e7eee06158c8e33f37429"
+    },
+    {
+      "kind": "directories",
+      "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "path": "resources/references/en/check.md",
+      "sha256": "044a43ac46d097de14c6f3b666f76b23cc0988b869a68cef057c247749fe7af6"
+    },
+    {
+      "kind": "directories",
+      "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "path": "resources/references/en/problems/directory-unusable.md",
+      "sha256": "a1077d637521c95be9d45f51a8ac59fd14a7e0db5831755a062aace52a5aae82"
+    },
+    {
+      "kind": "directories",
+      "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "path": "resources/references/en/problems/not-directory.md",
+      "sha256": "15429d3998c845052fa44087fc7386470d88b28bc36346b53e4041a312aec24e"
+    },
+    {
+      "kind": "network",
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "path": "resources/references/en/check.md",
+      "sha256": "fdfae092b014e81f2adbc980be0b232cc259f77864d56f576ee7039976eeaabd"
+    },
+    {
+      "kind": "network",
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "path": "resources/references/en/problems/dns-unavailable.md",
+      "sha256": "60f7e7fc491ac186553780f6d2c99c74ad345285fa34590b449709177e3895be"
+    },
+    {
+      "kind": "network",
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "path": "resources/references/en/problems/http-status.md",
+      "sha256": "393e113c74f9fb83e942feed06229e0590a761e4fc61768ebe6f3f28ed4521a9"
+    },
+    {
+      "kind": "network",
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "path": "resources/references/en/problems/http-unavailable.md",
+      "sha256": "4e429389f35e3c4e9e9fb4314017009052083ed206e3ef7ed0e0d7256852d606"
+    },
+    {
+      "kind": "example",
+      "cid": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+      "path": "resources/references/en/check.md",
+      "sha256": "6e365baa971760c8a9d56eb9531452262ab74fa39108f05c38f19f9acd88485a"
+    },
+    {
+      "kind": "example",
+      "cid": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+      "path": "resources/references/en/problems/text-empty.md",
+      "sha256": "83ee065ba73e7692dfd54bf4920ddd9e18fb599741a3b9ce166e59d5c2ab33e4"
+    }
+  ]
+}
