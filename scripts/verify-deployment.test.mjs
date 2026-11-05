@@ -4,7 +4,7 @@ import { basename, join } from "node:path";
 import test from "node:test";
 import { createDeploymentWorkspace, execute } from "./verify-deployment-helpers.mjs";
 
-test("CI separates default package structure from full cross-platform isolated consumers", async () => {
+test("main CI owns full validation while publishing reuses verified results", async () => {
   const root = new URL("../", import.meta.url);
   const manifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
   assert.match(manifest.scripts["deployment:verify"], /scripts\/verify-deployment\.mjs/);
@@ -23,13 +23,14 @@ test("CI separates default package structure from full cross-platform isolated c
   assert.doesNotMatch(consumers, /"--offline"/);
   const ci = await readFile(new URL(".github/workflows/ci.yaml", root), "utf8");
   assert.match(ci, /run: pnpm deployment:verify/);
-  assert.doesNotMatch(ci, /run: pnpm consumers:check/);
+  assert.match(ci, /run: pnpm consumers:check/);
   for (const os of ["ubuntu-latest", "macos-latest", "windows-latest"]) assert.ok(ci.includes(os));
   assert.match(ci, /22\.13\.0/);
   assert.match(ci, /24\.11\.1/);
   const publishing = await readFile(new URL(".github/workflows/publish-npm.yaml", root), "utf8");
-  assert.match(publishing, /run: pnpm check/);
-  assert.match(publishing, /run: pnpm consumers:check/);
+  assert.doesNotMatch(publishing, /run: pnpm check/);
+  assert.doesNotMatch(publishing, /run: pnpm consumers:check/);
+  assert.match(publishing, /run: node scripts\/verify-release-ci\.mjs/);
   const packs = await readFile(new URL("scripts/check-packages.mjs", root), "utf8");
   assert.match(packs, /else\s+await checkPackageConsumers\(/);
 });

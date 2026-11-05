@@ -79,6 +79,36 @@ commit must be reachable from `origin/main`. Each tag publishes only one
 package, which keeps a failure from partially publishing a multi-package
 release.
 
+### Reuse main CI verification
+
+Every push to `main` runs the full Node.js check matrix, cross-platform packed
+CLI checks, and isolated package consumer verification (`pnpm consumers:check`).
+The consumer job runs once per main push, not once per package release.
+
+Before a tag release or manual dry-run, the publishing workflow requires the
+latest main **push** run of `ci.yaml` for the exact checked-out commit SHA to
+have completed successfully. A PR run, manual CI run, or success for another
+commit cannot authorize publishing. The same run attempt must also contain a
+successful `Release verification (v1)` job and its verification step. This job
+requires every check-matrix, package-consumer, and deployment-matrix job to
+succeed; skipped checks do not qualify. Its versioned name identifies the
+required validation configuration, so a green run from the old workflow without
+consumer validation is rejected even when its SHA matches.
+Missing, pending, failed, or cancelled CI
+blocks the release; there is no fallback that silently skips verification.
+Wait for main CI to succeed before pushing package tags. If a release was
+blocked before publishing, rerun it after the required main CI succeeds without
+moving the tag. Older commits without this verification job must not be used for
+new releases; release a commit containing this workflow change or a descendant.
+
+Package releases reuse that verification result and record its CI run URL and
+commit in the Actions summary. They install dependencies and build only the
+selected package and its transitive workspace dependencies using Turborepo,
+then pack and publish it. They do not repeat `pnpm check` or the full consumer
+suite, and do not download cached build artifacts from the CI run.
+Version/tag validation, main ancestry, existing-version rejection, OIDC
+publishing, and published metadata/provenance checks remain in place.
+
 During the pre-1.0 phase, versions remain on `0.x`. Breaking changes and
 compatible new features advance the minor version; compatible fixes advance
 the patch version. An existing candidate series advances `rc.N` while it
@@ -410,7 +440,9 @@ gh workflow run publish-npm.yaml --ref main \
   -f package=effects -f mode=verify-published -f expected_latest=0.0.0
 ```
 
-This mode skips packing, dry-run publishing and actual publishing. Its receipt
+This mode skips CI authorization, dependency installation, building, packing,
+dry-run publishing and actual publishing. It only verifies an existing release;
+it cannot authorize a new publish. Its receipt
 records the original package tag's source commit separately from the
 verification commit. Never rerun a successful publish step to repair a
 metadata propagation failure.

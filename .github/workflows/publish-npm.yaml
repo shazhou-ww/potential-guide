@@ -95,6 +95,7 @@ jobs:
     environment: npm
     timeout-minutes: 20
     permissions:
+      actions: read
       contents: read
       id-token: write
 
@@ -115,9 +116,6 @@ jobs:
         with:
           node-version: 24.11.1
           cache: pnpm
-
-      - name: Install the trusted publishing client
-        run: npm install --global npm@11.21.0
 
       - name: Verify release metadata
         id: release
@@ -208,6 +206,16 @@ jobs:
             exit 1
           fi
 
+      - name: Verify successful main CI for release commit
+        if: github.event_name == 'push' || inputs.mode != 'verify-published'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/verify-release-ci.mjs
+
+      - name: Install the trusted publishing client
+        if: github.event_name == 'push' || inputs.mode != 'verify-published'
+        run: npm install --global npm@11.21.0
+
       - name: Reject an existing npm version
         if: github.event_name == 'push'
         env:
@@ -234,13 +242,14 @@ jobs:
           fi
 
       - name: Install dependencies
+        if: github.event_name == 'push' || inputs.mode != 'verify-published'
         run: pnpm install --frozen-lockfile
 
-      - name: Validate repository
-        run: pnpm check
-
-      - name: Validate isolated package consumers
-        run: pnpm consumers:check
+      - name: Build package and workspace dependencies
+        if: github.event_name == 'push' || inputs.mode != 'verify-published'
+        env:
+          PACKAGE_NAME: ${{ steps.release.outputs.name }}
+        run: pnpm exec turbo run build --filter="${PACKAGE_NAME}..."
 
       - name: Assign a temporary dry-run version
         if: github.event_name == 'workflow_dispatch' && inputs.mode != 'verify-published'

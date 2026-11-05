@@ -58,6 +58,35 @@ jobs:
       - name: Run all checks
         run: pnpm check
 
+  package-consumers:
+    name: Isolated package consumers
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.11.1
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate isolated package consumers
+        run: pnpm consumers:check
+
   deployment-cli:
     name: Packed CLI (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -105,3 +134,23 @@ jobs:
       - name: Reject conflicting consumer inputs
         if: inputs.latest == true && inputs.published == true
         run: node scripts/verify-deployment.mjs --published --latest
+
+  release-verification:
+    name: Release verification (v1)
+    needs: [check, package-consumers, deployment-cli]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Confirm all release checks passed
+        env:
+          CHECK_RESULT: ${{ needs.check.result }}
+          CONSUMERS_RESULT: ${{ needs.package-consumers.result }}
+          DEPLOYMENT_RESULT: ${{ needs.deployment-cli.result }}
+        run: |
+          if [ "$CHECK_RESULT" != success ] ||
+             [ "$CONSUMERS_RESULT" != success ] ||
+             [ "$DEPLOYMENT_RESULT" != success ]; then
+            echo "::error::Release verification requires all checks, package consumers and deployment jobs to succeed."
+            exit 1
+          fi
