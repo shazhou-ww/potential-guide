@@ -14,6 +14,32 @@ The package contains `dist/bundles/<kind>/task.yaml`, the self-contained
 standard UnixFS root `cid`. The CAR and directory describe the same file tree
 and root CID; there is no parallel Bundle digest. Build output is ignored by Git.
 
+## Standard author pipeline
+
+The three `*.check.build.yaml` files are the only author declarations.
+Their problemCodes generate the literal business types, runtime allowed-code
+list, result Schema and Reference coverage matrix through
+[`check-sdk/authoring`](../check-sdk/README.md).
+The first stage snapshots source, generated code definitions and validated
+Reference bytes into `dist/staging/<kind>/`, including a generated
+`task.build.yaml` with explicit `runTask` entry and exact resource includes.
+The second stage uses the ordinary Task Bundle `buildTask` API.
+It reads only those fixed business inputs, not the live source or Reference
+directories. No Check-specific compiler is added.
+
+Before acceptance the orchestration compares CAR and directory CIDs and exact
+resource bytes. All three candidates must succeed before `dist/bundles/` and
+its final references.json are replaced together; failures retain accepted
+artifacts and references. Staging and candidate outputs are not release inputs.
+
+Each Bundle contains `schemas/`, `resources/check.json`, and only its own
+`resources/references/en/check.md` plus `problems/<code>.md`. Read them through
+`ipfs://<CID>/resources/references/en/check.md` or the resource index. Reference
+frontmatter accepts only title and description (nonempty, description <=200
+Unicode code points). Filename/language/problem coverage and exact bytes are
+gated; Markdown bodies, sections and links are deliberately not validated.
+Language completeness is declared per Check, with no automatic fallback.
+
 ## Migration and entry points
 
 The three Task Bundles are the execution entry points. The retired Check Host
@@ -87,7 +113,8 @@ not evidence that an endpoint is unavailable.
 The Task Request's separate `timeoutMs` controls task eligibility/lifetime and
 is reserved by the Engine; it is not passed to the business callback.
 
-Each list is bounded to 100 items. `messageSchema` is `false`; the checks do not
+Each list is bounded to 100 items. The message contract is TypeBox `Never`
+(equivalent to JSON Schema `false`); the checks do not
 accept business messages. Request/Run cancellation still works through the SDK.
 
 ## Results and submission

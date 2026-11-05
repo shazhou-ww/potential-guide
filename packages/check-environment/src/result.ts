@@ -1,28 +1,28 @@
+import { createCheckResult } from "@potential-guide/check-sdk";
+
+export type { CheckProblem, CheckResult } from "@potential-guide/check-sdk";
+
 export interface CheckContext {
   signal?: AbortSignal;
 }
 
-export interface CheckItem {
+export interface CheckItem<Code extends string = string> {
   target: string;
   ok: boolean;
-  code: string;
+  code: Code | "pass";
   actual: string | null;
 }
 
-export interface CheckProblem {
-  target: string;
-  code: string;
-  actual: string | null;
-}
-
-export type CheckResult = { pass: true } | { pass: false; problems: CheckProblem[] };
-
-export function result(checks: CheckItem[]): CheckResult {
-  const problems = checks
+export function problems<Code extends string>(checks: CheckItem<Code>[]) {
+  return checks
     .filter((check) => !check.ok)
-    .map(({ target, code, actual }) => ({ target, code, actual }));
-  return problems.length ? { pass: false, problems } : { pass: true };
+    .map(({ target, code, actual }) => {
+      if (code === "pass") throw new Error("A failing check requires a problem code.");
+      return { target, code: code as Code, actual };
+    });
 }
+
+export const result = createCheckResult;
 
 export function errorCode(error: unknown): string | undefined {
   return error instanceof Error && "code" in error && typeof error.code === "string"

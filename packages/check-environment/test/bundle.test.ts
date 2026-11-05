@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { toTaskSchema } from "@potential-guide/pguide-task-bundle";
 import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { createTaskEngine, newId } from "@potential-guide/task-engine";
 import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
@@ -151,9 +152,9 @@ test("all three CAR bundles preserve results, faults and cancellation through th
         const task = await finished(await submit(kind, input));
         assert.equal(task.stage, "completed", JSON.stringify(task.error));
         assert.deepEqual(task.result, expected);
-        compileJsonSchema(resultSchema).validate(task.result);
+        compileJsonSchema(toTaskSchema(resultSchema)).validate(task.result);
         const files = await readdir(join(bundles, kind));
-        assert.deepEqual(files.sort(), ["task.yaml", "worker.cjs"]);
+        assert.deepEqual(files.sort(), ["resources", "schemas", "task.yaml", "worker.cjs"]);
       }
     }
     const faults: { kind: string; input: JsonObject; message: RegExp }[] = [
@@ -244,11 +245,11 @@ test("all three CAR bundles preserve results, faults and cancellation through th
 
 test("bundle input contracts reject missing fields, unknown fields and invalid budgets", () => {
   for (const [kind, schema] of Object.entries(inputSchemas)) {
-    const contract = compileInputSchema(schema);
+    const contract = compileInputSchema(toTaskSchema(schema));
     assert.throws(() => contract.validate({}), kind);
     assert.throws(() => contract.validate({ unknown: true }), kind);
   }
-  const tools = compileInputSchema(inputSchemas.tools);
+  const tools = compileInputSchema(toTaskSchema(inputSchemas.tools));
   assert.throws(() => tools.validate({ tools: [] }));
   assert.throws(() =>
     tools.validate({ tools: [{ command: "node", args: [], minimumVersion: ">=22" }] }),
@@ -259,12 +260,12 @@ test("bundle input contracts reject missing fields, unknown fields and invalid b
       checkTimeoutMs: 99,
     }),
   );
-  const network = compileInputSchema(inputSchemas.network);
+  const network = compileInputSchema(toTaskSchema(inputSchemas.network));
   assert.throws(() => network.validate({ dns: [], http: [] }));
 });
 
 test("result contract accepts only the exact pass or nonempty-problems variants", () => {
-  const contract = compileJsonSchema(resultSchema);
+  const contract = compileJsonSchema(toTaskSchema(resultSchema));
   contract.validate({ pass: true });
   contract.validate({
     pass: false,

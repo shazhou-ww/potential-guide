@@ -1,5 +1,6 @@
+import { problemCodes } from "../dist/definitions/tools.js";
 import { executeCommand } from "./command.js";
-import { type CheckContext, type CheckItem, result, timeoutValue } from "./result.js";
+import { type CheckContext, type CheckItem, problems, result, timeoutValue } from "./result.js";
 
 export interface ToolInput {
   tools: { command: string; args: string[]; minimumVersion: string }[];
@@ -24,12 +25,12 @@ export function compareVersions(actual: string, expected: string): number {
   return 0;
 }
 
-export async function checkTools(input: ToolInput, context: CheckContext = {}) {
+export async function inspectTools(input: ToolInput, context: CheckContext = {}) {
   if (!input.tools.length || input.tools.length > 100)
     throw new Error("Specify between 1 and 100 tools.");
   const timeout = timeoutValue(input.checkTimeoutMs);
   for (const tool of input.tools) compareVersions(tool.minimumVersion, tool.minimumVersion);
-  const checks: CheckItem[] = [];
+  const checks: CheckItem<(typeof problemCodes)[number]>[] = [];
   for (const tool of input.tools) {
     const output = await executeCommand(tool.command, tool.args, timeout, context.signal);
     const actual = parseToolVersion(output.stdout + output.stderr);
@@ -44,7 +45,11 @@ export async function checkTools(input: ToolInput, context: CheckContext = {}) {
             : "pass";
     checks.push({ target: tool.command, ok: code === "pass", code, actual: actual ?? null });
   }
-  return result(checks);
+  return problems(checks);
+}
+
+export async function checkTools(input: ToolInput, context: CheckContext = {}) {
+  return result(problemCodes, await inspectTools(input, context));
 }
 
 export default checkTools;

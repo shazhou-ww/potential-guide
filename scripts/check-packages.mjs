@@ -155,7 +155,10 @@ try {
     assert.equal(packed.version, manifest.version);
     const files = packed.files.map(({ path }) => path);
     const output = expected.sourceOutputDirectory ?? "dist/";
-    for (const file of files.filter((path) => path.startsWith(output) && path.endsWith(".js"))) {
+    for (const file of files.filter(
+      (path) =>
+        path.startsWith(output) && path.endsWith(".js") && !expected.generatedFiles?.includes(path),
+    )) {
       await assert.doesNotReject(
         Promise.any(
           ["ts", "tsx"].map((extension) =>
@@ -170,6 +173,7 @@ try {
     }
     for (const required of [
       ...(expected.requiredFiles ?? []),
+      ...(expected.generatedFiles ?? []),
       ...(expected.requiredExports === undefined ? [] : ["dist/index.js", "dist/index.d.ts"]),
       ...(expected.bins === undefined
         ? []

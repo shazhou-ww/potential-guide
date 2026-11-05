@@ -11,6 +11,7 @@ protocol:
   - "@potential-guide/effects"
   - "@potential-guide/pilot-protocol"
 business:
+  - "@potential-guide/check-sdk"
   - "@potential-guide/check-environment"
   - "@potential-guide/check-task"
   - "@potential-guide/probe-task"
@@ -42,3 +43,4 @@ deferredExternalization:
 developmentTools:
   "@potential-guide/pguide-task-bundle":
     - packages/check-environment/build.mjs
+    - packages/check-sdk/examples/text/build.mjs

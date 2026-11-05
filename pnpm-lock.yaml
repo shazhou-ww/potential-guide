@@ -355,6 +355,13 @@ importers:
         version: 2.1.0
 
   packages/check-environment:
+    dependencies:
+      '@potential-guide/check-sdk':
+        specifier: workspace:^
+        version: link:../check-sdk
+      '@sinclair/typebox':
+        specifier: 'catalog:'
+        version: 0.34.52
     devDependencies:
       '@potential-guide/pguide-task-bundle':
         specifier: workspace:^
@@ -368,8 +375,36 @@ importers:
       '@potential-guide/task-sdk':
         specifier: workspace:^
         version: link:../task-sdk
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
 
   packages/check-runtime-files: {}
+
+  packages/check-sdk:
+    dependencies:
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
+      '@sinclair/typebox':
+        specifier: 'catalog:'
+        version: 0.34.52
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
+    devDependencies:
+      '@potential-guide/pguide-task-bundle':
+        specifier: workspace:^
+        version: link:../pguide-task-bundle
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
 
   packages/check-task:
     dependencies:

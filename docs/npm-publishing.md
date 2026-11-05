@@ -48,7 +48,7 @@ packages and their release tags are retired.
 The generic Task Engine release scope is documented below. Its release routes
 prepare configuration only: they do not prove external publishing authorization
 or a successful npm release. `check-environment`, `check-task`, `probe-task`,
-`check-artifacts`, and `check-runtime-files` remain local-verification-only.
+`check-sdk`, `check-artifacts`, and `check-runtime-files` remain local-verification-only.
 Their pack/install checks do not authorize bootstrap or product publication.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes

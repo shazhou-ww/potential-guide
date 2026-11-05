@@ -12,24 +12,34 @@
     }
   },
   "files": [
-    "dist",
+    "dist/*.js",
+    "dist/*.d.ts",
+    "dist/*.map",
+    "dist/tasks",
+    "dist/definitions",
+    "dist/bundles",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b && node build.mjs",
-    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "node build.mjs",
+    "clean": "node -e \"for (const path of ['dist', '../../.cache/tsbuildinfo/check-environment.tsbuildinfo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "node prepare.mjs && tsc -b --pretty false"
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/check-sdk": "workspace:^",
+    "@sinclair/typebox": "catalog:"
   },
   "devDependencies": {
     "@potential-guide/task-sdk": "workspace:^",
     "@potential-guide/task-engine": "workspace:^",
     "@potential-guide/task-protocol": "workspace:^",
-    "@potential-guide/pguide-task-bundle": "workspace:^"
+    "@potential-guide/pguide-task-bundle": "workspace:^",
+    "yaml": "catalog:"
   },
   "publishConfig": {
     "access": "public"

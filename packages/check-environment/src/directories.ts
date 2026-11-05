@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { access, lstat, readFile, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
-import { type CheckContext, type CheckItem, errorCode, result } from "./result.js";
+import { problemCodes } from "../dist/definitions/directories.js";
+import { type CheckContext, type CheckItem, errorCode, problems, result } from "./result.js";
 
 export interface DirectoryInput {
   directories: { path: string; requirements: ("exists" | "read" | "write")[] }[];
@@ -23,7 +24,7 @@ export async function probeDirectoryWrite(path: string, signal?: AbortSignal): P
   }
 }
 
-export async function checkDirectories(input: DirectoryInput, context: CheckContext = {}) {
+export async function inspectDirectories(input: DirectoryInput, context: CheckContext = {}) {
   if (!input.directories.length || input.directories.length > 100)
     throw new Error("Specify between 1 and 100 directories.");
   for (const directory of input.directories) {
@@ -35,10 +36,10 @@ export async function checkDirectories(input: DirectoryInput, context: CheckCont
     )
       throw new Error("Directories require absolute paths and explicit access requirements.");
   }
-  const checks: CheckItem[] = [];
+  const checks: CheckItem<(typeof problemCodes)[number]>[] = [];
   for (const directory of input.directories) {
     context.signal?.throwIfAborted();
-    let code = "pass";
+    let code: (typeof checks)[number]["code"] = "pass";
     let actual: string | null = null;
     try {
       const info = await lstat(directory.path);
@@ -61,7 +62,11 @@ export async function checkDirectories(input: DirectoryInput, context: CheckCont
     }
     checks.push({ target: directory.path, ok: code === "pass", code, actual });
   }
-  return result(checks);
+  return problems(checks);
+}
+
+export async function checkDirectories(input: DirectoryInput, context: CheckContext = {}) {
+  return result(problemCodes, await inspectDirectories(input, context));
 }
 
 export default checkDirectories;

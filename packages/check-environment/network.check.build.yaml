@@ -1,0 +1,16 @@
+name: Environment network check
+kind: network
+source:
+  root: src
+  entry: src/tasks/network/main.ts
+  contract: src/tasks/network/contract.ts
+languages: [en]
+problemCodes: [dns-unavailable, http-status, http-unavailable]
+referenceRoot: references/network
+references:
+  en:
+    check: references/network/en/check.md
+    problems:
+      dns-unavailable: references/network/en/problems/dns-unavailable.md
+      http-status: references/network/en/problems/http-status.md
+      http-unavailable: references/network/en/problems/http-unavailable.md

@@ -1,0 +1,12 @@
+import { createCheckTask } from "@potential-guide/check-sdk";
+import { runTask } from "@potential-guide/task-sdk";
+import type { Static } from "@sinclair/typebox";
+import { problemCodes } from "../dist/definitions/text.js";
+import type contract from "./contract.js";
+
+runTask(
+  createCheckTask(problemCodes, async (input: Static<typeof contract.input>, context) => {
+    context.signal.throwIfAborted();
+    return input.text.trim() ? [] : [{ target: "text", code: "text-empty", actual: input.text }];
+  }),
+);

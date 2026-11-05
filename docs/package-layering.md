@@ -12,6 +12,15 @@ Allowed dependencies point downwards, or stay within a layer. Tools can consume
 protocol directly. Same-layer dependencies are permitted, not special exceptions;
 ordinary workspace/build cycle restrictions still apply.
 
+The Check author library `@potential-guide/check-sdk` belongs to business logic,
+alongside `check-environment`. Its runtime root contains only result/callback
+adaptation, its `contracts` subpath owns TypeBox Schemas, and its `authoring`
+subpath prepares validated Task inputs. Only the environment build script and
+the SDK's independent example build script may consume Task Bundle tooling
+through the explicit development-tool policy; the shared SDK never embeds that
+compiler or imports a concrete check. Generic Task SDK/Engine packages do not
+depend on Check business rules.
+
 `regulation-coordinator` is an independent scoped command-to-fact service. Its
 helpers and public resource/runner types are owned locally, and ranking comes
 from Pilot. Portfolio Supervisor and its command are [retired](./supervisor-retirement.md),

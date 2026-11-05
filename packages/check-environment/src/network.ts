@@ -1,5 +1,6 @@
+import { problemCodes } from "../dist/definitions/network.js";
 import { executeCommand } from "./command.js";
-import { type CheckContext, type CheckItem, result, timeoutValue } from "./result.js";
+import { type CheckContext, type CheckItem, problems, result, timeoutValue } from "./result.js";
 
 export interface NetworkInput {
   dns: string[];
@@ -7,7 +8,7 @@ export interface NetworkInput {
   checkTimeoutMs?: number;
 }
 
-export async function checkNetwork(input: NetworkInput, context: CheckContext = {}) {
+export async function inspectNetwork(input: NetworkInput, context: CheckContext = {}) {
   if (
     (!input.dns.length && !input.http.length) ||
     input.dns.length > 100 ||
@@ -32,7 +33,7 @@ export async function checkNetwork(input: NetworkInput, context: CheckContext = 
         "HTTP checks require HTTP(S) URLs without credentials and valid status codes.",
       );
   }
-  const checks: CheckItem[] = [];
+  const checks: CheckItem<(typeof problemCodes)[number]>[] = [];
   for (const host of input.dns) {
     // A subprocess bounds native DNS lookup lifetime, including cancellation.
     const source =
@@ -58,7 +59,7 @@ export async function checkNetwork(input: NetworkInput, context: CheckContext = 
       AbortSignal.timeout(timeout),
       ...(context.signal ? [context.signal] : []),
     ]);
-    let check: CheckItem;
+    let check: CheckItem<(typeof problemCodes)[number]>;
     try {
       const response = await fetch(endpoint.url, {
         redirect: endpoint.followRedirects ? "follow" : "manual",
@@ -86,7 +87,11 @@ export async function checkNetwork(input: NetworkInput, context: CheckContext = 
     }
     checks.push(check);
   }
-  return result(checks);
+  return problems(checks);
+}
+
+export async function checkNetwork(input: NetworkInput, context: CheckContext = {}) {
+  return result(problemCodes, await inspectNetwork(input, context));
 }
 
 export default checkNetwork;

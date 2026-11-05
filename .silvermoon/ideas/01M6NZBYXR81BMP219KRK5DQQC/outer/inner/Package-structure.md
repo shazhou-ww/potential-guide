@@ -1,6 +1,6 @@
 # Check 分包结构草案
 
-本文是 [实施契约](./Implementation.md) 的设计说明，尚未实现；不新增独立验收契约。
+本文记录 [实施契约](./Implementation.md) 的分包设计与边界；落地结果和可复核证据见 [实施证据](./Implementation-evidence.md)，不新增独立验收契约。
 
 ## 两个源码包，三个执行制品
 
@@ -17,9 +17,9 @@
 
 包含四类职责：
 
-1. **统一结果契约**：导出 `CheckProblem`、`CheckResult` 和对应 TypeBox Schema，类型从 Schema 推导；提供 `createCheckContract(inputSchema)`，组合业务输入、公共结果和不接受业务消息的契约。
+1. **统一结果契约**：导出 `CheckProblem`、`CheckResult` 和对应 TypeBox Schema 工厂，类型从 Schema 推导；提供 `createCheckContract(inputSchema, problemCodes)`，组合业务输入、公共结果和不接受业务消息的契约。
 2. **统一结果组装**：提供问题列表到结果的转换。空列表返回 `{pass:true}`；非空列表返回 `{pass:false,problems}`，不输出通过项。
-3. **回调适配**：提供 `createCheckTask(check)`，将返回问题列表的业务函数转换为可传给 `runTask` 的回调，保留输入类型推导与 Task Context，执行前后检查取消。
+3. **回调适配**：提供 `createCheckTask(problemCodes, inspect)`，将返回问题列表的业务函数转换为可传给 `runTask` 的回调，保留输入类型推导与 Task Context，执行前后检查取消。
 4. **作者侧转换与文档校验**：由 `@potential-guide/check-sdk/authoring` 从 Check Build YAML 出发校验语言、定义页与问题页，生成标准 Task Build YAML 及其完整输入。环境检查和后续检查的构建必须使用此门禁；它不实现第二套 Bundle 编译器。
 
 工具归属已确认：保留在 Check SDK 内，使用独立子路径，不另拆校验工具包。
@@ -57,14 +57,14 @@ type CheckResult = { pass: true } | { pass: false; problems: CheckProblem[] };
 
 上面是形状示意；实际 Schema 要求失败列表非空、通过结果不含 `problems`，拒绝额外字段，并保留现有字段约束。
 
-拟议用法如下，API 尚未实现：
+实际用法如下；`problemCodes` 从唯一的 Check Build YAML 生成，不另维护源码清单：
 
 ```ts
 // contract.ts
-export default createCheckContract(toolsInputSchema);
+export default createCheckContract(toolsInputSchema, problemCodes);
 
 // main.ts
-runTask(createCheckTask(inspectTools));
+runTask(createCheckTask(problemCodes, inspectTools));
 ```
 
 `inspectTools(input, context)` 只返回实际问题列表。现有 `checkTools` 库函数继续通过同一个公共结果组装函数返回 `CheckResult`，不能破坏 Objective 消费者。

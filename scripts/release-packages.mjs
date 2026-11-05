@@ -273,10 +273,33 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "check-sdk",
+    directory: "check-sdk",
+    name: "@potential-guide/check-sdk",
+    requiredExports: ["createCheckResult", "createCheckTask"],
+    requiredFiles: [
+      "references/en/check-result.md",
+      "references/en/check-callback.md",
+      "examples/text/build.mjs",
+      "examples/text/text.check.build.yaml",
+      "examples/text/src/main.ts",
+      "examples/text/src/contract.ts",
+    ],
+    bins: [],
+  },
+  {
     id: "check-environment",
     directory: "check-environment",
     name: "@potential-guide/check-environment",
     requiredExports: ["checkTools", "checkDirectories", "checkNetwork"],
+    generatedFiles: [
+      "dist/definitions/tools.js",
+      "dist/definitions/tools.d.ts",
+      "dist/definitions/directories.js",
+      "dist/definitions/directories.d.ts",
+      "dist/definitions/network.js",
+      "dist/definitions/network.d.ts",
+    ],
     bins: [],
   },
   {

@@ -1,0 +1,57 @@
+{
+  "name": "@potential-guide/check-sdk",
+  "version": "0.1.0",
+  "description": "Reusable Check contracts, callbacks and Task authoring inputs.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./authoring": {
+      "types": "./dist/authoring.d.ts",
+      "import": "./dist/authoring.js"
+    }
+  },
+  "files": [
+    "dist",
+    "references",
+    "examples",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b && node build.mjs",
+    "clean": "node -e \"for (const path of ['dist', 'examples/text/dist', '../../.cache/tsbuildinfo/check-sdk.tsbuildinfo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/task-sdk": "workspace:^",
+    "@sinclair/typebox": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@potential-guide/pguide-task-bundle": "workspace:^",
+    "@potential-guide/task-engine": "workspace:^",
+    "@potential-guide/task-protocol": "workspace:^",
+    "esbuild": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/check-sdk"
+  }
+}

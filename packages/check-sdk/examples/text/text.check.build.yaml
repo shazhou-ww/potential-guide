@@ -1,0 +1,14 @@
+name: Nonempty text check
+kind: text
+source:
+  root: src
+  entry: src/main.ts
+  contract: src/contract.ts
+languages: [en]
+problemCodes: [text-empty]
+referenceRoot: references
+references:
+  en:
+    check: references/en/check.md
+    problems:
+      text-empty: references/en/problems/text-empty.md
