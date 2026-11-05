@@ -7,11 +7,15 @@ export async function checkMvpConsumer(root, directory, label, graph, run) {
   assert.ok(!names.has("@potential-guide/checker-host"));
   assert.ok(!names.has("@potential-guide/objective-host"));
   if (label === "mvp-server") {
-    assert.ok(names.has("@potential-guide/check-artifacts"));
-    assert.ok(names.has("@potential-guide/check-runtime-files"));
-    assert.ok(!names.has("@potential-guide/task-sdk"));
-    assert.ok(!names.has("@potential-guide/check-task"));
-    assert.ok(!names.has("@potential-guide/probe-task"));
+    for (const forbidden of [
+      "@potential-guide/artifact-files",
+      "@potential-guide/check-artifacts",
+      "@potential-guide/check-runtime-files",
+      "@potential-guide/task-sdk",
+      "@potential-guide/check-task",
+      "@potential-guide/probe-task",
+    ])
+      assert.ok(!names.has(forbidden), `Generic Task server must not install ${forbidden}.`);
   } else {
     assert.ok(names.has("esbuild"), "A subpath is not installation dependency isolation.");
     assert.ok(names.has("tar"));

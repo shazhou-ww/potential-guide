@@ -1,11 +1,35 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+test("generic packed server rejects Check and authoring runtime dependencies", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pguide-server-dependency-"));
+  try {
+    for (const name of [
+      "@potential-guide/artifact-files",
+      "@potential-guide/check-artifacts",
+      "@potential-guide/check-runtime-files",
+      "@potential-guide/task-sdk",
+      "@potential-guide/check-task",
+      "@potential-guide/probe-task",
+    ])
+      await assert.rejects(
+        checkMvpConsumer(root, directory, "mvp-server", [{ name }], async () => {
+          throw new Error("Forbidden dependency reached consumer execution.");
+        }),
+        /Generic Task server must not install/,
+      );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("generic task production dependency graph is acyclic and business/adapter independent", async () => {
   for (const name of [
     "task-protocol",
