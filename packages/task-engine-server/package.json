@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/task-engine-server",
-  "version": "0.1.0-rc.0",
+  "version": "0.1.0-rc.1",
   "description": "Generic authenticated Node HTTP/SSE task server.",
   "type": "module",
   "sideEffects": false,
