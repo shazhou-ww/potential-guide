@@ -1,0 +1,207 @@
+{
+  "releaseCommit": "61aa5e50e5402e66afb3073b97a990536b2add0e",
+  "workflows": {
+    "sdk": "https://github.com/shazhou-ww/potential-guide/actions/runs/42142928328",
+    "environment": "https://github.com/shazhou-ww/potential-guide/actions/runs/42143360575"
+  },
+  "publication": {
+    "observedAt": "2026-11-06T01:29:25.544Z",
+    "node": "v24.22.2",
+    "installed": {
+      "pguide": "0.3.0-rc.0",
+      "@potential-guide/cli-core": "0.3.0-rc.0",
+      "@potential-guide/task-protocol": "0.1.0-rc.0",
+      "@potential-guide/task-sdk": "0.1.0-rc.0",
+      "@potential-guide/task-engine-http": "0.1.0-rc.0",
+      "@potential-guide/task-engine-storage": "0.1.0-rc.0",
+      "@potential-guide/task-engine-webui": "0.1.0-rc.0",
+      "@potential-guide/pguide-task-bundle": "0.1.0-rc.0",
+      "@potential-guide/task-engine": "0.1.0-rc.0",
+      "@potential-guide/task-engine-server": "0.1.0-rc.1",
+      "@potential-guide/pguide-task-engine": "0.1.0-rc.2",
+      "@potential-guide/check-sdk": "0.1.0",
+      "@potential-guide/check-environment": "0.1.0"
+    },
+    "packages": [
+      {
+        "name": "@potential-guide/check-sdk",
+        "version": "0.1.0",
+        "latest": "0.1.0",
+        "integrity": "sha512-yI5ARiEOZkupuhOJ8VrWupH1fqE89BSveht6jL0KY2EBuedY8N21NHeQSL2+ltenuig4xtMGYGD8btqgvq1KNg==",
+        "attestations": {
+          "url": "https://registry.npmjs.org/-/npm/v1/attestations/@potential-guide%2fcheck-sdk@0.1.0",
+          "provenance": {
+            "predicateType": "https://slsa.dev/provenance/v1"
+          }
+        }
+      },
+      {
+        "name": "@potential-guide/check-environment",
+        "version": "0.1.0",
+        "latest": "0.1.0",
+        "integrity": "sha512-6ADhiwweyw2Ek4Zx3aonP3gYu8WZ9l5QE49TtfSZkBbJfuiCsXPOOKVr7TtbHKVXDg71UEfBaSWhBB4MS7AKuA==",
+        "attestations": {
+          "url": "https://registry.npmjs.org/-/npm/v1/attestations/@potential-guide%2fcheck-environment@0.1.0",
+          "provenance": {
+            "predicateType": "https://slsa.dev/provenance/v1"
+          }
+        }
+      }
+    ],
+    "gateway": "https://pinboard.shazhou.work",
+    "pinboard": [
+      {
+        "kind": "tools",
+        "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+        "carBytes": 23554,
+        "carSha256": "52f0c45d3ea1a5bbe287a6f6c58aef58bb52706bdad70c3a22d638e31ab904e6",
+        "command": [
+          "pinboard",
+          "import",
+          "/home/scottwei/.local/share/potential-guide/task-engine-20261106/tools.car",
+          "--name",
+          "check-environment-tools-0.1.0",
+          "--endpoint",
+          "https://pinboard.shazhou.work",
+          "--json"
+        ],
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": "{\"error\":{\"code\":\"TOKEN_REQUIRED\",\"message\":\"No token for this endpoint. Use config set-token, PINBOARD_AGENT_TOKEN or --token-stdin.\"}}",
+        "rawGateway": {
+          "status": 404,
+          "contentType": "application/json",
+          "bytes": 27,
+          "error": "{\"error\":\"Block not found\"}"
+        }
+      },
+      {
+        "kind": "directories",
+        "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+        "carBytes": 20473,
+        "carSha256": "3dd957f6df18c4ec3fea91158567c070806788d13c314f177dbf912b3106801c",
+        "command": [
+          "pinboard",
+          "import",
+          "/home/scottwei/.local/share/potential-guide/task-engine-20261106/directories.car",
+          "--name",
+          "check-environment-directories-0.1.0",
+          "--endpoint",
+          "https://pinboard.shazhou.work",
+          "--json"
+        ],
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": "{\"error\":{\"code\":\"TOKEN_REQUIRED\",\"message\":\"No token for this endpoint. Use config set-token, PINBOARD_AGENT_TOKEN or --token-stdin.\"}}",
+        "rawGateway": {
+          "status": 404,
+          "contentType": "application/json",
+          "bytes": 27,
+          "error": "{\"error\":\"Block not found\"}"
+        }
+      },
+      {
+        "kind": "network",
+        "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+        "carBytes": 24323,
+        "carSha256": "94d002208aa78f1d5daa0ee59939beb9c8d4a28d36069a139e5fed14f948d1ea",
+        "command": [
+          "pinboard",
+          "import",
+          "/home/scottwei/.local/share/potential-guide/task-engine-20261106/network.car",
+          "--name",
+          "check-environment-network-0.1.0",
+          "--endpoint",
+          "https://pinboard.shazhou.work",
+          "--json"
+        ],
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": "{\"error\":{\"code\":\"TOKEN_REQUIRED\",\"message\":\"No token for this endpoint. Use config set-token, PINBOARD_AGENT_TOKEN or --token-stdin.\"}}",
+        "rawGateway": {
+          "status": 404,
+          "contentType": "application/json",
+          "bytes": 27,
+          "error": "{\"error\":\"Block not found\"}"
+        }
+      }
+    ]
+  },
+  "cliSmoke": {
+    "observedAt": "2026-11-06T01:28:45.643Z",
+    "source": "Published npm packages only",
+    "gateway": "https://pinboard.shazhou.work",
+    "ready": {
+      "event": "ready",
+      "url": "http://127.0.0.1:36761",
+      "uiUrl": "http://127.0.0.1:44957",
+      "pid": 1733311
+    },
+    "engineTasksStatus": 200,
+    "uiStatus": 200,
+    "shutdown": {
+      "code": 0,
+      "signal": null,
+      "closedEvent": true
+    }
+  },
+  "checkAttempt": {
+    "observedAt": "2026-11-06T01:28:01.578Z",
+    "node": "v24.22.2",
+    "source": "Published npm packages only",
+    "success": false,
+    "directToolsLibraryPassed": true,
+    "gateway": "https://pinboard.shazhou.work",
+    "engine": "http://127.0.0.1:39159",
+    "bundles": {
+      "tools": {
+        "directory": "tools",
+        "car": "tools.car",
+        "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota"
+      },
+      "directories": {
+        "directory": "directories",
+        "car": "directories.car",
+        "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi"
+      },
+      "network": {
+        "directory": "network",
+        "car": "network.car",
+        "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca"
+      }
+    },
+    "submissions": [
+      {
+        "kind": "tools",
+        "request": {
+          "requestId": "01M6Q7GH6SZMYVFA9KGT4D6646",
+          "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+          "timeoutMs": 30000,
+          "tools": [
+            {
+              "command": "/home/scottwei/.nvm/versions/node/v24.22.2/bin/node",
+              "args": [
+                "--version"
+              ],
+              "minimumVersion": "22.13.0"
+            }
+          ]
+        },
+        "decision": {
+          "status": "rejected",
+          "requestId": "01M6Q7GH6SZMYVFA9KGT4D6646",
+          "error": {
+            "code": "bundle_fetch_failed",
+            "message": "IPFS acquisition or CID verification failed."
+          }
+        }
+      }
+    ],
+    "cases": [],
+    "error": {
+      "name": "AssertionError",
+      "message": "{\"status\":\"rejected\",\"requestId\":\"01M6Q7GH6SZMYVFA9KGT4D6646\",\"error\":{\"code\":\"bundle_fetch_failed\",\"message\":\"IPFS acquisition or CID verification failed.\"}}\n+ actual - expected\n\n+ 'rejected'\n- 'accepted'\n"
+    }
+  },
+  "outcome": "npm-published-and-installed; Pinboard-auth-blocked; public-CID-check-not-passed"
+}

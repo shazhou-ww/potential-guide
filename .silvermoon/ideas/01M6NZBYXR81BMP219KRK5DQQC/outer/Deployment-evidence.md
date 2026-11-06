@@ -1,4 +1,4 @@
-# 独立消费验证与发布阻塞
+# 部署验证与 Pinboard 阻塞
 
 本文对应 [Deployment.md](./Deployment.md)。实施已经监督者依据用户授权独立复验、接受并同步；现实世界尚未完成，不提交或接受 Outer。机器证据见 [Deployment-results.json](./Deployment-results.json)。
 
@@ -7,6 +7,21 @@
 用户随后授权通过仓库 GitHub Actions 发布 SDK 和 environment 两个 npm 包，并在授权 Ubuntu 设备安装全套 Task Engine，以 `https://pinboard.shazhou.work` 为公共 Gateway 实跑检查。Deployment 已纳入这些要求；D-AC02 因新增证明要求重置为未完成。以下是追加要求之前的本地验证记录，不能替代 Ubuntu 公共 Gateway 验证或 npm 发布回执。
 
 发布候选 `61aa5e50e5402e66afb3073b97a990536b2add0e` 已通过本地完整 `pnpm check`，其 [exact-main CI](https://github.com/shazhou-ww/potential-guide/actions/runs/42141060533) 第二次 attempt 全部通过，包括 Release verification (v1)。首次 attempt 的既有 Node 24 Probe 清理测试失败后仅重跑失败 job，没有修改代码、跳过测试或绕过门限。
+
+## npm 发布与 Ubuntu 实测
+
+以下结果依据同步后的 Deployment 修订 `06d324690e14` 执行。实际观察时间为 `2026-11-06T01:28:01Z` 至 `2026-11-06T01:29:25Z`，完整机器证据见 [Remote-delivery-results.json](./Remote-delivery-results.json)。
+
+- SDK tag `check-sdk-v0.1.0` 与 environment tag `check-environment-v0.1.0` 均指向发布候选 `61aa5e50e5402e66afb3073b97a990536b2add0e`。先完成 [SDK 发布 Action](https://github.com/shazhou-ww/potential-guide/actions/runs/42142928328)，再执行 [environment 发布 Action](https://github.com/shazhou-ww/potential-guide/actions/runs/42143360575)；两者均成功，包括实际 Publish package 和 Verify published metadata and provenance。没有在本机或 Ubuntu 执行 `npm publish`，没有添加 npm token。
+- 授权 Ubuntu 为 Node `v24.22.2`、npm `12.2.2`。远端 registry 实际确认两个包的 `0.1.0` 和 `latest=0.1.0`、tarball integrity、SLSA provenance 地址。没有从受策略限制的本机访问 npmjs。
+- 全局安装并核验 13 个指定版本：`pguide`、`cli-core` 为 `0.3.0-rc.0`；`task-protocol`、`task-sdk`、`task-engine-http`、`task-engine-storage`、`task-engine-webui`、`pguide-task-bundle`、`task-engine` 为 `0.1.0-rc.0`；`task-engine-server` 为 `0.1.0-rc.1`；`pguide-task-engine` 为 `0.1.0-rc.2`；`check-sdk`、`check-environment` 为 `0.1.0`。原有 ahplex、corepack、npm 未移除。
+- 两个 CLI 帮助入口可用；另外实际通过 `pguide task-engine` 启动 Engine 与 Web UI，显式禁用全局配置，使用独占数据库、随机 loopback 端口和指定 Pinboard Gateway。Engine `/tasks` 与 UI HTML 均返回 200。向本次启动的子进程发送 SIGTERM 后，观察到 closed 事件、退出码 0，无长期服务遗留。没有改写用户现有服务配置，也没有安装或启动 Kubo。
+- 从已发布的环境包直接调用工具检查，Node 版本检查得到严格 `{pass:true}`。然后启动已安装的 HTTP Task Server，真实提交 tools CID；请求 `01M6Q7GH6SZMYVFA9KGT4D6646` 被拒绝为 `bundle_fetch_failed`。这不是 Check 业务失败，没有产生可声称通过的 Task/Run，九项远端业务用例尚未运行完成。
+- 随后从 Ubuntu 使用 Pinboard CLI 对三个 CAR 分别执行显式 endpoint 的 import，全部退出 1，返回 `TOKEN_REQUIRED`。三个 CID 的 raw Gateway 请求实际返回 404、`{"error":"Block not found"}`。CAR 大小、SHA-256、CLI 错误、Gateway 状态与原始提交决定都保存在机器证据中。这里能确认当前块不可获取，不能据此推断 Pinboard 在制品上传后的全部 Gateway 协议兼容性。
+
+因此 npm 发布与安装已经完成，公共 CID 运行仍明确阻塞，全部 D-* 保持未完成；没有 submitOuter 或 acceptOuter。恢复需要在目标 endpoint 安全配置有效 Pinboard token（例如通过 CLI 的 `config set-token --endpoint https://pinboard.shazhou.work --token-stdin`），不要把 token 写入聊天、仓库或报告。原先展示的 MCP 重新授权也不能视为 CLI 自动获得 token。
+
+授权设备的操作目录保留了安装及复测脚本、三个 CAR 和 JSON 回执，位于 `~/.local/share/potential-guide/task-engine-20261106`；临时验证数据库已清理。认证恢复后先按原 CAR 导入、核对 CID，再重跑公共 Gateway 检查和 Reference 读取，不能以本次 CLI/UI 启动成功替代最终门禁。安装过程遵循 npm 默认脚本限制，没有放宽 esbuild 安装脚本权限；没有宣称在 Ubuntu 验证了新的作者项目构建。
 
 ## 本地验证时点的结论
 
