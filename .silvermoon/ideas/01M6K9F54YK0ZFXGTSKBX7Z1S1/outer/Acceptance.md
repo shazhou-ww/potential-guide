@@ -2,6 +2,14 @@
 
 Idea：`01M6K9F54YK0ZFXGTSKBX7Z1S1` / `pnpm-check-performance`。本轮验证源码为刷新后的 primary `3be07d321a57637e9189eda452cfb2f5703eb295`。契约验收标准、已接受 Inner/Ideal、仓库源码和依赖清单均未修改；只更新当前 Outer 证据及镜像 ledger。验收授权不包含接受或完成该 idea。
 
+## 三类结论与提交绑定
+
+1. **CI 覆盖证明**：`42209946131` 绑定 `3be07d321a57637e9189eda452cfb2f5703eb295`；7 jobs 及下表必需 steps 全部实际 success，依原 D-S01 / D-AC01 判定覆盖。它不是性能测量。
+2. **本地环境与检查结果**：独立 store 安装 exit 0，实际路径与配置核验成功，绕开原 SQLite 故障；完整 `pnpm check` 仍因 `pguide-task-bundle` symlink `EPERM` exit 1，检查未通过。
+3. **性能证明不足**：旧 artifact 的 SHA-256、测量字段和门槛复核只确认旧证据真实性及旧候选结果。`3be07d32` 相对 `c50c6fac` 的可执行路径实质漂移，D-S02 / D-AC02 仍不通过，不证明当前性能。
+
+首轮证据经普通 merge 同步于 `2d1445e142bf685d72481ec37f357e9e9ee3638a`。补充索引前又正常整合已观察 primary `fc043fc651d5fbefcb70553427827e1883bf39af`，保留其他 idea 的并发证据。以上 CI、本地检查和漂移证据始终绑定实际验证源码 `3be07d32`；同步提交只是证据载体，不是新提交的成功检查或性能样本。历史八轮始终绑定 `b330d934` / `c50c6fac`。本次补充不再运行失败检查来制造新的性能样本。
+
 ## D-* 结论
 
 | ID | 结论 | 证据及限制 |
@@ -88,6 +96,18 @@ git diff --quiet 3be07d321a57637e9189eda452cfb2f5703eb295 -- package.json pnpm-l
 ```
 
 运行时 `--store-dir` 直接传给 `check` 会因 `Unknown option: store-dir` 退出 1，需使用上述受支持的 `--config.store-dir`。后者确认 store 配置并真实运行完整检查：sources/layers、format、lint、typecheck 已通过，进入 test 后 `pguide-task-bundle` 的 CAR 和 init 文件 symlink 测试报 `EPERM`，Turbo 显示 42/47 successful，根退出 1；后续根脚本测试和 pack 阶段未完整执行。关键原始日志摘录见 [LocalCheck.txt](./LocalCheck.txt)。
+
+五个实际 `EPERM` 失败用例的源码定位（均对应 `3be07d32`，不是事后修改过的测试）：
+
+| 失败用例 | 定义 / 失败 symlink 行 | 原始错误 |
+| --- | --- | --- |
+| CAR input rejects symbolic links without reading their target | [car-files.test.ts:67](../../../../packages/pguide-task-bundle/test/car-files.test.ts#L67) / 70 | `bundle.car` -> `alias.car` |
+| link | [init.test.ts:185](../../../../packages/pguide-task-bundle/test/init.test.ts#L185) / 194 | `custom-ignore` -> `.gitignore` |
+| broken-link | [init.test.ts:185](../../../../packages/pguide-task-bundle/test/init.test.ts#L185) / 194 | `missing` -> `.gitignore` |
+| manifest | [init.test.ts:397](../../../../packages/pguide-task-bundle/test/init.test.ts#L397) / 414 | `outside/package.json` -> `task/package.json` |
+| broken-template | [init.test.ts:397](../../../../packages/pguide-task-bundle/test/init.test.ts#L397) / 418 | `outside/missing.ts` -> `task/src/main.ts` |
+
+精确固定源码：[CAR 用例](https://github.com/shazhou-ww/potential-guide/blob/3be07d321a57637e9189eda452cfb2f5703eb295/packages/pguide-task-bundle/test/car-files.test.ts#L67)、[gitignore 用例](https://github.com/shazhou-ww/potential-guide/blob/3be07d321a57637e9189eda452cfb2f5703eb295/packages/pguide-task-bundle/test/init.test.ts#L185)、[manifest/template 用例](https://github.com/shazhou-ww/potential-guide/blob/3be07d321a57637e9189eda452cfb2f5703eb295/packages/pguide-task-bundle/test/init.test.ts#L397)。完整失败命令为上方受支持的 `pnpm --config.store-dir=... check`，日志摘录保留五次 `EPERM`、42/47 任务结果和根退出 1；不是只执行定向测试后的结论。
 
 这是宿主符号链接权限阻塞，不是此次证据更新引入的实现失败；没有跳过测试、提权、修改系统设置或包装成功。该失败运行不作为任何冷/热成功样本，也不执行另一个性能轮次掩盖失败。
 
