@@ -4,7 +4,7 @@
 
 当前项目是 **shazhou-ww/potential-guide**。11 项建议中，**7 项完全属于本仓库、3 项主要属于其他项目、1 项跨项目**；跨项目 R-11 拆出本地报告适配后，共创建 **8 个本仓库子 IDEA**。
 
-本次按用户要求创建和复制方案，不实施产品改动，不提交或接受子 IDEA，也没有创建任何外部 GitHub issue。父子关系以总览和子 IDEA 的双向链接表达：当前 Silvermoon CLI 没有 parent 创建选项，未擅自增加 schema 字段、父子事件或嵌套目录。各子 IDEA 是独立的平铺构想，父级不会替它们自动审批。
+本次按用户要求创建和复制方案，不实施产品改动，不提交或接受子 IDEA。用户随后授权直接创建外部 issue，并要求跳过归属不确定的项；现已创建下表三条 issue，另两项明确跳过。父子关系以总览和子 IDEA 的双向链接表达：当前 Silvermoon CLI 没有 parent 创建选项，未擅自增加 schema 字段、父子事件或嵌套目录。各子 IDEA 是独立的平铺构想，父级不会替它们自动审批。
 
 ## 当前项目：已创建的子 IDEA
 
@@ -34,17 +34,21 @@
 | R-10 | `01M6QB9ZJ30JANS39FMV8KS1SK` | `check-reference-verified-read` | preparing / 未提交 / 未批准 |
 | R-11-local | `01M6QBD9WBX8TFH5ZSEZGHJ309` | `delivery-evidence-scope-report` | preparing / 未提交 / 未批准 |
 
-## 其他项目：待提 GitHub issue 的候选
+## 其他项目：GitHub issue 与跳过项
 
-这里列的是待讨论的 issue 范围和目标，不是已经创建的 issue。Pinboard 和 Silvermoon 仓库已通过 GitHub 元数据核实；未确认的目标明确留空，不因名字相似而指派。
+2026-11-06 已核对 Pinboard 和 Silvermoon 仓库及既有 issue，创建后逐条回读并确认正文与提交内容一致、状态为 Open。归属未确认的 EXT-02、EXT-04 按用户要求跳过，不因名字相似而指派；这里记录的是创建时点，不承诺 issue 后续状态不变。
 
-| 候选 | 来源建议 | 对应产品 / GitHub 仓库 | 建议 issue 范围 | 创建前需要明确的事项 |
+| 编号 | 来源建议 | 对应产品 / GitHub 仓库 | Issue 范围与边界 | 结果 |
 | --- | --- | --- | --- | --- |
-| EXT-01 | [R-04](./recommendations/R-04-auth-capabilities.md) | Pinboard CLI：[shazhou-ww/pinboard](https://github.com/shazhou-ww/pinboard) | 按 endpoint 诊断 API token 与实际能力，区分命令存在、只读可用、写权限未知；给出不泄密的恢复指引 | 与 MCP Portal 分工，CLI 不读取或同步宿主 OAuth |
-| EXT-02 | [R-04](./recommendations/R-04-auth-capabilities.md) | MCP Portal / 客户端，**准确仓库待确认** | 区分发现、连接、OAuth 与具体工具能力；按故障层给恢复动作 | 先定位 Portal 与客户端边界；`unknown chat session` 尚不能归因给服务端 |
-| EXT-03 | [R-05](./recommendations/R-05-pinboard-import.md) | Pinboard 服务/CLI/MCP：[shazhou-ww/pinboard](https://github.com/shazhou-ww/pinboard) | 严格 CAR expected-root 校验、提交正式 pin 前拒绝错根、回执字节口径及结果未知的查询恢复 | 先核实既有 `cid` 参数语义；不要把本次误用直接写成已确认接口 bug |
-| EXT-04 | [R-06](./recommendations/R-06-local-file-upload.md) | 本地 Agent 宿主 / MCP 适配层，**准确仓库待确认**；Pinboard 配合 | 本地授权文件句柄由宿主读取、校验和编码，经已有授权通道发送，避免模型转抄 base64 | 不能让远端服务直接访问本地路径；确定宿主能力与服务配合后再选择 issue 目标，不默认指派给 Copilot SDK、VS Code 或 Pinboard 单方 |
-| EXT-05 | [R-11 外部部分](./recommendations/R-11-evidence-scope.md) | Silvermoon：[shazhou-ww/silvermoon](https://github.com/shazhou-ww/silvermoon) | 通用 gate review 展示当前可接受范围、尚缺证据和沿用依据，保留历史而不混淆结论 | 先以本地报告适配验证通用需求；不把 npm/Pinboard 专有字段或自动 acceptance 写进核心事件 |
+| EXT-01 | [R-04](./recommendations/R-04-auth-capabilities.md) | Pinboard CLI：[shazhou-ww/pinboard](https://github.com/shazhou-ww/pinboard) | 按 endpoint 诊断 API token 与实际能力；CLI 不读取或同步宿主 OAuth | 已创建 [shazhou-ww/pinboard#6](https://github.com/shazhou-ww/pinboard/issues/6) |
+| EXT-02 | [R-04](./recommendations/R-04-auth-capabilities.md) | MCP Portal / 客户端，**准确仓库待确认** | 区分发现、连接、OAuth 与工具能力；`unknown chat session` 尚不能归因给服务端 | **按用户要求跳过，未创建** |
+| EXT-03 | [R-05](./recommendations/R-05-pinboard-import.md) | Pinboard 服务/CLI/MCP：[shazhou-ww/pinboard](https://github.com/shazhou-ww/pinboard) | 新增明确 CAR expected-root 约束，完善回执口径；不重建已有完整 DAG 校验及恢复机制 | 已创建 [shazhou-ww/pinboard#7](https://github.com/shazhou-ww/pinboard/issues/7) |
+| EXT-04 | [R-06](./recommendations/R-06-local-file-upload.md) | 本地 Agent 宿主 / MCP 适配层，**准确仓库待确认**；Pinboard 配合 | 本地授权文件由宿主校验后走现有通道直传；不让远端服务访问本地路径、不默认指派给某一宿主产品 | **按用户要求跳过，未创建** |
+| EXT-05 | [R-11 外部部分](./recommendations/R-11-evidence-scope.md) | Silvermoon：[shazhou-ww/silvermoon](https://github.com/shazhou-ww/silvermoon) | 通用 gate review 展示可接受范围、证据缺项和沿用依据；本地报告仍由本仓库子 IDEA 负责 | 已创建 [shazhou-ww/silvermoon#18](https://github.com/shazhou-ww/silvermoon/issues/18) |
+
+### 提交前的事实校正
+
+Pinboard 当前 [MCP 文档](https://github.com/shazhou-ww/pinboard/blob/main/docs/mcp.md)明确说明 `upload.cid` 用于 **block mode**，不是 CAR expected-root 断言；[CLI 文档](https://github.com/shazhou-ww/pinboard/blob/main/docs/cli.md)也已包含服务器 DAG 校验及 publication 部分成功/请求恢复机制。因此 EXT-03 按新增严格导入能力提出，不把本次传错参数归为已确认接口违约，也不重复建议已有恢复协议。三条 issue 均使用必要的公开现象和验收场景，没有附带凭据、私有配置或整段会话。
 
 ### 不另行误派的边界
 

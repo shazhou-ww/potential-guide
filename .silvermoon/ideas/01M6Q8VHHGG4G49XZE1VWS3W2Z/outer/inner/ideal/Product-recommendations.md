@@ -6,7 +6,7 @@
 
 ## 项目归属与执行入口
 
-已按实际修改范围整理为[归属表与子 IDEA](./Ownership-and-child-ideas.md)：7 项完全属于本仓库，R-11 拆出本地报告适配后共创建 8 个子 IDEA，方案全文已复制。R-04、R-05、R-06 及 R-11 的 Silvermoon 部分列为外部项目候选，尚未创建 GitHub issue。子 IDEA 独立维护范围和门禁，本总览不代表统一批准或自动启动。
+已按实际修改范围整理为[归属表与子 IDEA](./Ownership-and-child-ideas.md)：7 项完全属于本仓库，R-11 拆出本地报告适配后共创建 8 个子 IDEA，方案全文已复制。外部部分已创建 Pinboard 的 CLI 认证诊断、CAR 严格导入和 Silvermoon 证据呈现共三条 issue；MCP Portal 与 Agent 宿主两项因归属未确认，按用户要求跳过。链接与提交范围见归属表。子 IDEA 独立维护范围和门禁，创建 issue 不代表统一批准或自动启动。
 
 ## 建议总览
 
