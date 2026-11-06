@@ -133,7 +133,7 @@ try {
   }
   const selections = {
     runtime: ["pguide", "@potential-guide/pguide-task-engine"],
-    author: ["@potential-guide/task-sdk", "@potential-guide/ipfs-content"],
+    author: ["@potential-guide/pguide-task-bundle"],
   };
   const needed = new Set();
   for (const entries of Object.values(selections))
@@ -202,21 +202,27 @@ export default async function(input,context) {
   await writeFile(join("author", "payload.bin"), Buffer.alloc(600_000, 42));
   await writeFile(join("author", "prepare.mjs"), `
 import assert from "node:assert/strict";
-import {writeFile} from "node:fs/promises";
-import {buildTaskBundle} from "@potential-guide/task-sdk/build";
-import {importTaskBundle} from "@potential-guide/task-sdk/publish";
-import {MemoryIpfsClient} from "@potential-guide/ipfs-content/testing";
+import {readFile,writeFile} from "node:fs/promises";
+import {createRequire} from "node:module";
+import {pathToFileURL} from "node:url";
+import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
+import {validateContentCar} from "@potential-guide/pguide-task-bundle/car";
+const require=createRequire(import.meta.resolve("@potential-guide/pguide-task-bundle/car"));
+const {CarReader}=await import(pathToFileURL(require.resolve("@ipld/car")).href);
 const built=await buildTaskBundle({
  declaration:{$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
  name:"Gateway-only External",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",
  inputSchema:{type:"object"},resultSchema:true,messageSchema:false},
  entry:"callback.mjs",outDirectory:"bundle",resources:{"resources/payload.bin":"payload.bin"}
 });
-const memory=new MemoryIpfsClient();
-await importTaskBundle(built.directory,memory);
-assert.ok(memory.pins.has(built.cid));assert.ok(memory.blocks.size>3);
-await writeFile("../blocks.json",JSON.stringify([...memory.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("base64")])));
-console.log(JSON.stringify({cid:built.cid,blocks:memory.blocks.size,standardImporter:true,memoryRootPin:true}));
+const bytes=await readFile(built.car);
+assert.equal((await validateContentCar(bytes,built.cid)).cid,built.cid);
+const reader=await CarReader.fromBytes(bytes),blocks=[];
+assert.equal((await reader.getRoots())[0].toString(),built.cid);
+for await(const {cid,bytes} of reader.blocks())blocks.push([cid.toString(),Buffer.from(bytes).toString("base64")]);
+assert.ok(blocks.length>3);
+await writeFile("../blocks.json",JSON.stringify(blocks));
+console.log(JSON.stringify({cid:built.cid,blocks:blocks.length,standardImporter:true,offlineCarValidated:true}));
 `);
   const publication = JSON.parse((await run(process.execPath, ["prepare.mjs"], "author", env)).stdout);
   report.bundle = { ...publication, expectedResult: {
@@ -225,6 +231,7 @@ console.log(JSON.stringify({cid:built.cid,blocks:memory.blocks.size,standardImpo
   await rm(join("author", "callback.mjs"));
   await rm(join("author", "payload.bin"));
   await rm(join("author", "bundle"), { recursive: true });
+  await rm(join("author", "bundle.car"));
   report.bundle.authorSourceAndBundleDirectoryRemovedBeforeRuntime = true;
   await writeFile("raw-source.mjs", `
 import {createServer} from "node:http";
