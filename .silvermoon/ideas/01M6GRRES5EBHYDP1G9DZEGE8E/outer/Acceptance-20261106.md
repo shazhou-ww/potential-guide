@@ -22,6 +22,10 @@
 本次 consumer binary、当前 Node 目录及系统工具目录，保留安装期包管理器 PATH；
 不修改宿主 PATH 或移除全局 binary。此辅助材料修正亦先同步再证明。
 
+第三次运行的离线作者夹具尝试 CommonJS 条件解析 ESM-only `@ipld/car`，
+在服务启动前被 export 边界拒绝；改为仅使用公开 `validateContentCar` 返回的
+blockstore 迭代块流，不绕过 package exports，不更改产品。
+
 跨盘临时目录的首次尝试被既有同盘路径安全断言拒绝，未启动进程或写入夹具。
 改用新建的仓库外同盘独占目录，未放宽断言。
 
