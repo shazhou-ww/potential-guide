@@ -19,3 +19,8 @@
 ### D-AC02: 两端 CID 一致
 
 Windows/Linux 独立消费回执证明同一规范内容根 CID 一致、合法不同容器无需哈希匹配、明确错根被拒绝。仅接受真实证据，不声称本地验证证明外部服务已 pin。
+
+## Deployment evidence
+
+准确提交、仓库外消费、跨平台实际 CID 和历史失败处理见
+[Deployment-evidence.md](./Deployment-evidence.md)。本证据不改变上述要求或扩大发布授权。
