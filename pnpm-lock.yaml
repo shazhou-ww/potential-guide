@@ -870,37 +870,6 @@ importers:
         specifier: 'catalog:'
         version: 2.9.1
 
-  packages/probe-task:
-    dependencies:
-      '@potential-guide/check-artifacts':
-        specifier: workspace:^
-        version: link:../check-artifacts
-      '@potential-guide/check-task':
-        specifier: workspace:^
-        version: link:../check-task
-      '@potential-guide/task-engine':
-        specifier: workspace:^
-        version: link:../task-engine
-      '@potential-guide/task-protocol':
-        specifier: workspace:^
-        version: link:../task-protocol
-    devDependencies:
-      '@potential-guide/pguide-task-bundle':
-        specifier: workspace:^
-        version: link:../pguide-task-bundle
-      '@potential-guide/task-engine-http':
-        specifier: workspace:^
-        version: link:../task-engine-http
-      '@potential-guide/task-engine-server':
-        specifier: workspace:^
-        version: link:../task-engine-server
-      '@potential-guide/task-engine-storage':
-        specifier: workspace:^
-        version: link:../task-engine-storage
-      '@potential-guide/task-sdk':
-        specifier: workspace:^
-        version: link:../task-sdk
-
   packages/regulation-coordinator:
     dependencies:
       '@potential-guide/effects':

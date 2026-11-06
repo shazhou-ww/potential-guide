@@ -24,8 +24,10 @@ also requires `IPFS_GATEWAY`. These helper environment variables are not service
 CLI configuration layers; the author builder no longer uses `IPFS_API`.
 Install `@potential-guide/task-engine` and `@potential-guide/task-protocol`
 alongside the programmatic helpers and Server/Engine packages they import.
-`check-config.mjs` and `probe-config.mjs` intentionally use that identical
-business-free configuration. Use a new v5 database path; older domains are
+`check-config.mjs` uses that identical business-free configuration.
+The old Probe adapter and its configuration/integration examples are retired;
+there is no replacement Objective observation command in these examples.
+Use a new v5 database path; older domains are
 rejected without migration or rewriting their bytes.
 
 On a separate author installation with `@potential-guide/pguide-task-bundle`,
@@ -34,11 +36,8 @@ chosen business packages), copy `build-bundles.mjs` and `echo-type.mjs`.
 `node build-bundles.mjs echo .cache/author-echo` prints the offline directory, CAR and root CID.
 For Check use `check` and explicitly authorize `CHECK_ORIGIN` and/or
 `CHECK_FILE_ROOT`. These are **business callback** policy, never a server
-registration. For Probe also supply `CHILD_SERVICE_URL`, `CHILD_SERVICE_TOKEN`
-and `CHECK_BUNDLE` (an exact root CID or `{cid,hint}` JSON Check Bundle reference).
-Child credentials are explicit private author configuration; never put real
-credentials in source control or publicly distributed Bundles. Run callbacks
-do not inherit general host credentials.
+registration. The builder accepts only `echo` and `check`; retired Probe
+authoring is rejected. Run callbacks do not inherit general host credentials.
 
 The SDK produces a self-contained `worker.cjs`, declaration, locked Schema
 closure and opaque resources. Import/upload and pin the resulting CAR using an
@@ -86,12 +85,9 @@ Reconnect with the last acknowledged `Last-Event-ID`; source members remain
 atomic. CLI readiness is a JSON `ready` line. Catchable signals close cleanly;
 Windows forced termination exercises restart recovery, not graceful shutdown.
 
-`node probe-integration.mjs` exercises real authored Check/Probe Bundles,
-negative business observations and evidence, direct/HTTP agreement, SSE
-reconnect, child history, SQLite reopen, and physical business Worker cleanup.
-`pnpm pack:check` runs it on installed production tarballs. Its local opaque
-resources are fixture callback configuration, not host resource bridges.
-The stronger separate-install proof is
+The separate-install proof is
 `node scripts/check-packages.mjs --task-bundles`: author dependencies/source
-are removed before a distinct business-free production process consumes both
-CID-addressed directories and validates their actual results/evidence.
+are removed before a distinct business-free production process consumes the
+CID-addressed Check Bundle and validates its actual result/evidence, HTTP log
+history and realtime replay. Local opaque resources are fixture callback
+configuration, not host resource bridges. This no longer runs a Probe scenario.

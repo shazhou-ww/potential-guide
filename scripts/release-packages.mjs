@@ -303,18 +303,6 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
-    id: "probe-task",
-    directory: "probe-task",
-    name: "@potential-guide/probe-task",
-    requiredExports: ["createProbeTaskType", "validateProbeInput"],
-    bins: [],
-    forbiddenDependencies: [
-      "@potential-guide/checker-host",
-      "@potential-guide/objective-host",
-      "@potential-guide/objective-pilot",
-    ],
-  },
-  {
     id: "check-task",
     directory: "check-task",
     name: "@potential-guide/check-task",

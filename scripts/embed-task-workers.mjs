@@ -8,7 +8,7 @@ import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const name = process.argv[2];
-if (!["check-runtime-files", "check-task", "probe-task"].includes(name))
+if (!["check-runtime-files", "check-task"].includes(name))
   throw new Error("Select an owned task Worker package.");
 const source = join(root, "packages", name, "src");
 const generated = new Set(["worker-source.ts", "runtime-identity.ts"]);

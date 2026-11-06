@@ -219,7 +219,7 @@ All commands below run from this checkout; create owned directories under
 required. Only third-party production dependencies may be downloaded.
 
 ```powershell
-pnpm exec turbo run build --filter=@potential-guide/task-engine-server --filter=@potential-guide/task-sdk --filter=@potential-guide/task-engine-webui --filter=@potential-guide/check-task --filter=@potential-guide/probe-task
+pnpm exec turbo run build --filter=@potential-guide/task-engine-server --filter=@potential-guide/task-sdk --filter=@potential-guide/task-engine-webui --filter=@potential-guide/check-task
 $env:PGUIDE_KEEP_PACK_CONSUMERS = "1"
 node scripts\check-packages.mjs --task-bundles
 Remove-Item Env:\PGUIDE_KEEP_PACK_CONSUMERS

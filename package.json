@@ -22,7 +22,7 @@
     "setup:check": "node scripts/build-setup-runtime.mjs --check",
     "workers:build": "node scripts/build-objective-package.mjs",
     "workers:check": "node scripts/build-check-workers.mjs --check",
-    "task-workers:check": "node scripts/embed-task-workers.mjs check-runtime-files --check && node scripts/embed-task-workers.mjs check-task --check && node scripts/embed-task-workers.mjs probe-task --check",
+    "task-workers:check": "node scripts/embed-task-workers.mjs check-runtime-files --check && node scripts/embed-task-workers.mjs check-task --check",
     "bootstrap:pack": "node scripts/create-npm-bootstrap-packages.mjs",
     "build": "turbo run build",
     "sources:check": "pnpm run settings:check && node scripts/check-generated-sources.mjs && pnpm run task-workers:check",

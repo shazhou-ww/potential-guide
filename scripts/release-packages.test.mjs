@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -32,7 +32,7 @@ test("local verification covers the internal runtime dependency closure without 
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
   }
-  for (const id of ["check-runtime-files", "check-artifacts", "check-task", "probe-task"]) {
+  for (const id of ["check-runtime-files", "check-artifacts", "check-task"]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
   }
@@ -73,6 +73,58 @@ test("release inventory contains the new packages and excludes retired Guide and
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
   }
+});
+
+test("retired Probe has no workspace, consumer dependency, pack or authoring scenario", async () => {
+  for (const path of [
+    "../packages/probe-task",
+    "../examples/task-server/probe-config.mjs",
+    "../examples/task-server/probe-integration.mjs",
+  ])
+    await assert.rejects(access(new URL(path, import.meta.url)), { code: "ENOENT" });
+  assert.ok(!verificationPackages.some(({ id }) => id === "probe-task"));
+  assert.throws(() => parseReleaseTag("probe-task-v0.1.0-rc.0"), /Unsupported package/);
+  for (const workspace of ["packages", "apps"])
+    for (const entry of await readdir(new URL(`../${workspace}/`, import.meta.url), {
+      withFileTypes: true,
+    })) {
+      if (!entry.isDirectory()) continue;
+      const path = new URL(`../${workspace}/${entry.name}/package.json`, import.meta.url);
+      let contents;
+      try {
+        contents = await readFile(path, "utf8");
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        throw error;
+      }
+      const manifest = JSON.parse(contents);
+      for (const field of [
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+      ])
+        assert.equal(
+          manifest[field]?.["@potential-guide/probe-task"],
+          undefined,
+          `${manifest.name} ${field}`,
+        );
+    }
+  for (const path of [
+    "../package.json",
+    "../turbo.json",
+    "../objectives.yaml",
+    "../package-layers.yaml",
+    "./check-generated-sources.mjs",
+    "./embed-task-workers.mjs",
+    "./check-package-consumers.mjs",
+    "./check-packages.mjs",
+    "../examples/task-server/build-bundles.mjs",
+  ])
+    assert.ok(
+      !(await readFile(new URL(path, import.meta.url), "utf8")).includes("probe-task"),
+      path,
+    );
 });
 
 test("Check packages have independent stable release routes in dependency order", () => {

@@ -63,7 +63,6 @@ const bundlePackages = new Set([
   "task-engine-storage",
   "task-engine-server",
   "check-task",
-  "probe-task",
 ]);
 const packages =
   bundlesOnly || sdkOnly || authoringOnly

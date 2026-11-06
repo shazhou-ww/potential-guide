@@ -1,12 +1,13 @@
-# Check, Probe and generic Server
+# Check and generic Server
 
 For the optional Chinese debugging workbench, see
 [Task Engine Web UI](task-engine-webui.md). It uses public HTTP only.
 It can run independently or be started alongside Engine by the service command.
 
-The generic v5 protocol is now Bundle-based. The Check/Probe composition examples
-in this guide are still being switched; they are not valid v5 registration
-instructions. See [the current generic API](task-engine.md).
+The generic v5 protocol is now Bundle-based. Historical Check registration
+examples in this guide are not valid v5 registration instructions.
+The old Probe adapter and its authoring/integration examples are retired.
+See [the current generic API](task-engine.md).
 
 The generic Server composes Engine, HTTP adapter and SQLite. It neither interprets
 Check/Objective business artifacts nor grants permissions based on Request fields. The standalone command
@@ -322,29 +323,16 @@ author-build package in this MVP. A split would change the existing `/build`
 consumer contract or leave a compatibility dependency and would not deliver
 installation isolation without migration. Packed-consumer evidence records the
 actual installed graph rather than claiming a subpath makes dependencies vanish.
-Engine's generic Bundle loader reuses the `/files` primitives, so these support
-packages now also appear transitively in the Server's production graph. The
-author-only `task-sdk` is not a Server production dependency.
+Engine's generic Bundle loader uses `task-protocol`, not the Check `/files`
+primitives. Check support packages and the author-only `task-sdk` are not
+Server production dependencies.
 
-## Probe composition
+## Probe retirement
 
-`@potential-guide/probe-task` registers Objective observation on the same Engine.
-The `probe-config.mjs` example uses trusted `bindService(engine)` to inject a
-scoped child caller before recovery/listener startup. Probe automatically declares
-an isolated bounded allocation lane, separate from the Check worker pool.
-`allocationLimits` is an optional generic trusted override, not an HTTP option.
-
-Probe pins exact root/static Checker bytes and the actual environment during
-preparation. Dynamic Objective selection evidence and child identities appear in
-the result transcript; validation replays the same interpreter used by the legacy
-ObjectiveService. References are composed from exact artifacts. Dependency
-requirements only cause observation and rechecking, never Agent/regulation.
-Task deadlines retain generic projection semantics; independent execution wall
-limits and cancellation reclaim the physical root worker and exclusively owned
-children. Shared child owners survive independently.
-
-Examples live under `examples/task-server`; none import repository source files
-or legacy Host packages. `probe-integration.mjs` exercises real HTTP/SSE reconnect
-and in-process usage against installed production packages. No artifact-query
-routes, Regulate type, automatic retries of unknown work, package publication or
-full legacy migration are included.
+`@potential-guide/probe-task`, its Probe author callback and its integration
+example have been removed. There is no compatibility registration, replacement
+Probe command or automatic migration of Objective observation/state.
+Legacy `check-task` support remains separate; new standalone checks use
+`check-sdk` and the normal Task Bundle authoring flow, as demonstrated by
+`check-environment`. The generic Engine, child Task APIs and business-free
+Server remain supported and are not deprecated.

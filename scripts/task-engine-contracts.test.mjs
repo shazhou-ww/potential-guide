@@ -1,13 +1,45 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+test("retired Probe authoring is rejected before creating an output directory", async () => {
+  const path = join(root, "examples", "task-server", "build-bundles.mjs");
+  const source = ts.createSourceFile(
+    path,
+    await readFile(path, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const declaration = source.statements.find(
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "buildExampleBundle",
+  );
+  assert.ok(declaration);
+  const buildExampleBundle = new Function(
+    "mkdir",
+    `return (${declaration
+      .getText(source)
+      .replace(/^export /, "")
+      .replaceAll("import.meta.url", JSON.stringify(pathToFileURL(path).href))});`,
+  )(async () => assert.fail("Retired authoring must not create output."));
+  const scratch = await mkdtemp(join(tmpdir(), "pguide-retired-probe-"));
+  const directory = join(scratch, "author");
+  try {
+    await assert.rejects(
+      buildExampleBundle({ kind: "probe", directory }),
+      /Unknown example callback/,
+    );
+    await assert.rejects(access(directory), { code: "ENOENT" });
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+});
+
 test("generic packed server rejects Check and authoring runtime dependencies", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pguide-server-dependency-"));
   try {

@@ -8,9 +8,12 @@ are no longer exported. This package retains Objective business observation,
 dependency handling, evidence, and explicit memory/process probes; it does not
 provide a replacement Task scheduler or translate old Host requests.
 CLI `probe`, `regulate` and `continue` explicitly reject execution until migrated.
-Use [Task Bundles](../../docs/axis/task-engine-contracts/task-bundle.md) with
-[`check-task`](../check-task/README.md) and [`probe-task`](../probe-task/README.md)
-for the generic Engine path.
+Use [Task Bundles](../../docs/axis/task-engine-contracts/task-bundle.md) for
+generic Engine execution. [`check-task`](../check-task/README.md) still supports
+legacy Checker callbacks; the old `probe-task` Objective observation adapter
+is retired without a direct replacement. New checks use
+[`check-sdk`](../check-sdk/README.md), as shown by
+[`check-environment`](../check-environment/README.md).
 
 Pilot definitions, schema compilation, strict parsing, reference validation and
 subject projection now have an independently installable canonical home:
