@@ -6,10 +6,10 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const [consumer, output] = process.argv.slice(2);
+const [consumer, output, deploymentRevision] = process.argv.slice(2);
 assert(
-  consumer && output,
-  "Usage: node --experimental-import-meta-resolve Delivery-verification.mjs <consumer> <output.json>",
+  consumer && output && /^[0-9a-f]{40}$/.test(deploymentRevision ?? ""),
+  "Usage: node --experimental-import-meta-resolve Delivery-verification.mjs <consumer> <output.json> <deploymentRevision>",
 );
 const resolve = (name) =>
   import.meta.resolve(name, pathToFileURL(join(consumer, "package.json")).href);
@@ -31,6 +31,7 @@ const evidence = {
   node: process.version,
   source: "Pinned published npm packages, outside repository; public Gateway only",
   gateway,
+  deploymentRevisionAtExecution: deploymentRevision,
   ubuntuVerified: false,
   bundles: [],
   cases: [],
@@ -48,6 +49,15 @@ let endpoint;
 let activeRequests = 0;
 const scratch = await mkdtemp(join(tmpdir(), "check-delivery-"));
 try {
+  evidence.installed = {};
+  const manifest = JSON.parse(await readFile(join(consumer, "package.json"), "utf8"));
+  for (const [name, expected] of Object.entries(manifest.dependencies)) {
+    const installed = JSON.parse(
+      await readFile(join(consumer, "node_modules", ...name.split("/"), "package.json"), "utf8"),
+    );
+    assert.equal(installed.version, expected);
+    evidence.installed[name] = installed.version;
+  }
   for (const [kind, reference] of Object.entries(references)) {
     const car = await readFile(join(bundlesPath, reference.car));
     const reader = await CarReader.fromBytes(car);

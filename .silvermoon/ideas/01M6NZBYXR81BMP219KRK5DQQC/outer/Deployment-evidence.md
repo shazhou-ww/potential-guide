@@ -1,8 +1,14 @@
-# 部署验证与授权入口阻塞
+# 部署验证与延期范围
 
-本文对应 [Deployment.md](./Deployment.md)。实施已经监督者依据用户授权独立复验、接受并同步；现实世界尚未完成，不提交或接受 Outer。机器证据见 [Deployment-results.json](./Deployment-results.json)。
+本文对应 [Deployment.md](./Deployment.md)。实施已经监督者依据用户授权独立复验、接受并同步；本轮仅准备 Outer 提交，不记录接受或 completed。历史本地机器证据见 [Deployment-results.json](./Deployment-results.json)。
 
-## 最新独立复验：公共 CID 与 Reference 已验证，Ubuntu 入口未确认
+## 当前范围：Ubuntu 验证延期
+
+用户于 2026-11-06 明确要求“那可以提交了，ubuntu 先不验了”。本轮据此调整 Deployment，将 Ubuntu 全套安装、CLI 入口和运行验证延期，保留 npm 发布回执、Windows 独立公共 CID/Reference 消费、独立作者新检查及业务/物理释放要求。Ubuntu 不标记已验证；此要求是提交授权，不是对尚未提交的准确 revision 的 acceptOuter 授权。
+
+调整后的契约及验收脚本先同步 primary，再观察稳定 deploymentRevision，随后完整复跑保留的交付证明。现有 ledger 的 D-S02、D-AC01、D-AC02 保持未勾选，直到新修订下的实际验证完成。历史 HTTP 路径 404 和仓库 Windows symlink EPERM 不抹去、不伪称通过。
+
+## 历史独立复验：公共 CID 与 Reference 已验证，Ubuntu 入口未确认
 
 本轮于 2026-11-06 独立隔离工作区开展交付验收，基线 primary 为 `3be07d321a57637e9189eda452cfb2f5703eb295`，原 Outer 修订为 `bd83119f936dc2afd57ea90ad6eda3e2df06e468`。[Deployment.md](./Deployment.md) 的步骤、标准和文件内容均未改变（Git blob `42be8318f0078fe5e9d91feacd8e589122aaf0e0`）；未修改源码、Ideal/Inner 合约或事件。以下新证据不把历史 Ubuntu 执行当作当前设备复验。
 
@@ -37,7 +43,8 @@ tools/directories/network 的当前 CAR SHA-256 分别为 `eb4f8c14b3284587471fb
 $consumer = 'C:\owned\public-check-consumer'
 Copy-Item -LiteralPath "$consumer\node_modules\@potential-guide\check-sdk\examples\text" -Destination "$consumer\author" -Recurse
 node "$consumer\author\build.mjs"
-node --experimental-import-meta-resolve '.silvermoon\ideas\01M6NZBYXR81BMP219KRK5DQQC\outer\Delivery-verification.mjs' $consumer 'C:\owned\delivery-results.json'
+$revision = git rev-parse 'HEAD:.silvermoon/ideas/01M6NZBYXR81BMP219KRK5DQQC/outer'
+node --experimental-import-meta-resolve '.silvermoon\ideas\01M6NZBYXR81BMP219KRK5DQQC\outer\Delivery-verification.mjs' $consumer 'C:\owned\delivery-results.json' $revision
 gh run view 42142928328 --repo shazhou-ww/potential-guide --json conclusion,headSha,jobs,url
 gh run view 42143360575 --repo shazhou-ww/potential-guide --json conclusion,headSha,jobs,url
 ```
