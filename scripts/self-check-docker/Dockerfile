@@ -23,7 +23,6 @@ FROM base AS fixture-runtime
 COPY --from=build /opt/consumer /opt/consumer
 COPY --from=build --chown=node:node /opt/objective /opt/objective
 COPY --from=build /harness/provenance.json /harness/provenance.json
-COPY fixture.mjs verify.mjs /harness/
 RUN mkdir -p /work/home /work/runs && chown -R node:node /work
 ENV HOME=/work/home
 ENV PATH=/opt/consumer/node_modules/.bin:/usr/local/bin:/usr/bin:/bin

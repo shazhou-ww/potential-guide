@@ -39,9 +39,9 @@ test("local verification covers the internal runtime dependency closure without 
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 32);
+  assert.equal(releasePackages.length, 31);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 32);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 31);
   }
   for (const name of [
     "@potential-guide/pguide-task-bundle",
@@ -69,6 +69,7 @@ test("release inventory contains the new packages and excludes retired Guide and
     "objective-portfolio-supervisor",
     "pguide-supervise",
     "artifact-files",
+    "pguide-pilot",
   ]) {
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
@@ -84,6 +85,7 @@ test("retired Check and Probe adapters have no workspace, consumer dependency, p
     "../examples/task-server/check-config.mjs",
     "../examples/task-server/check-in-process.mjs",
     "./check-task-bundle-consumer.mjs",
+    "./embed-task-workers.mjs",
   ])
     await assert.rejects(access(new URL(path, import.meta.url)), { code: "ENOENT" });
   assert.ok(!verificationPackages.some(({ id }) => id === "probe-task"));
@@ -133,7 +135,6 @@ test("retired Check and Probe adapters have no workspace, consumer dependency, p
     "../objectives.yaml",
     "../package-layers.yaml",
     "./check-generated-sources.mjs",
-    "./embed-task-workers.mjs",
     "./check-package-consumers.mjs",
     "./check-packages.mjs",
     "../examples/task-server/build-bundles.mjs",
@@ -148,7 +149,6 @@ test("retired Check and Probe adapters have no workspace, consumer dependency, p
     "../objectives.yaml",
     "../package-layers.yaml",
     "./check-generated-sources.mjs",
-    "./embed-task-workers.mjs",
     "./check-package-consumers.mjs",
     "./check-packages.mjs",
     "../examples/task-server/build-bundles.mjs",
@@ -158,6 +158,31 @@ test("retired Check and Probe adapters have no workspace, consumer dependency, p
         await readFile(new URL(path, import.meta.url), "utf8"),
       ),
       path,
+    );
+});
+
+test("retired Pilot command package has no workspace, default dependency, release route or replacement placeholders", async () => {
+  for (const id of ["pguide-pilot", "pguide-probe", "pguide-check"])
+    await assert.rejects(access(new URL(`../packages/${id}`, import.meta.url)), { code: "ENOENT" });
+  assert.ok(!verificationPackages.some(({ id }) => id === "pguide-pilot"));
+  assert.throws(() => parseReleaseTag("pguide-pilot-v0.4.0-rc.0"), /Unsupported package/);
+  const main = JSON.parse(
+    await readFile(new URL("../packages/pguide/package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(main.dependencies["@potential-guide/pguide-pilot"], undefined);
+  const runtime = JSON.parse(
+    await readFile(new URL("../packages/cli-runtime/package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(runtime.dependencies["@potential-guide/check-artifacts"], undefined);
+  for (const file of [
+    "../objectives.yaml",
+    "../package-layers.yaml",
+    "../tsconfig.json",
+    "../.github/workflows/publish-npm.yaml",
+  ])
+    assert.ok(
+      !(await readFile(new URL(file, import.meta.url), "utf8")).includes("pguide-pilot"),
+      file,
     );
 });
 
@@ -331,13 +356,7 @@ test("package-specific RC tags preserve package identity and never select latest
 });
 
 test("command wrappers use pguide-prefixed names including config", () => {
-  for (const id of [
-    "pguide-pilot",
-    "pguide-regulate",
-    "pguide-objectives",
-    "pguide-config",
-    "pguide-agents",
-  ]) {
+  for (const id of ["pguide-regulate", "pguide-objectives", "pguide-config", "pguide-agents"]) {
     const entry = releasePackages.find((entry) => entry.id === id);
     assert.equal(entry?.name, `@potential-guide/${id}`);
     assert.equal(entry?.directory, id);

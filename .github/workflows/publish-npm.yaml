@@ -26,7 +26,6 @@ on:
       - "pilot-protocol-v*"
       - "cli-runtime-v*"
       - "objective-declarations-v*"
-      - "pguide-pilot-v*"
       - "pguide-regulate-v*"
       - "pguide-objectives-v*"
       - "objective-monorepo-standard-v*"
@@ -65,7 +64,6 @@ on:
           - pilot-protocol
           - cli-runtime
           - objective-declarations
-          - pguide-pilot
           - pguide-regulate
           - pguide-objectives
           - objective-monorepo-standard

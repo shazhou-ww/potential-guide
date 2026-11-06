@@ -10,5 +10,5 @@ objectives:
         "roles": ["npm"], "runtime": "node",
         "allows": ["@potential-guide/check-runtime-files", "@potential-guide/effects"],
         "entries": ["src/index.ts", "src/build.ts", "src/pure.ts", "src/files.ts"], "generated": [], "deliveries": [],
-        "joins": [{"id": "public-library-suite", "kind": "npm"}, {"id": "developer-commands", "kind": "cli"}]
+        "joins": [{"id": "public-library-suite", "kind": "npm"}]
       }

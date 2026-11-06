@@ -1,14 +1,15 @@
 # @potential-guide/cli-runtime
 
-Tool-side static Objective artifact inspection and explicit npm package preparation.
+Tool-side explicit npm package preparation and retired execution diagnostics.
 No executable commands or business scheduling.
 
 ## Host retirement
 
 Checker Host and Objective Host have been removed. `withPilot` now rejects with
 `CliError` (`pilot-error`, exit code 2) before source acquisition, reports or callback
-execution. CLI `probe`, `regulate` and `continue` are not yet migrated to Task Bundles;
-they explicitly reject execution, including continuation of historical records.
+execution. The old probe/scaffold/validate package and static artifact CLI are removed.
+Remaining legacy `regulate` and `continue` wrappers explicitly reject execution,
+including continuation of historical records.
 No old source is translated, replayed or silently submitted to a new Engine.
 
 Use [`task-sdk`](../task-sdk/README.md) to build Task Bundles and the
@@ -17,12 +18,10 @@ This is an explicit author/consumer workflow, not an automatic CLI migration.
 
 ## Retained static capabilities
 
-`inspectObjectiveArtifact(directory)` validates the local data-only `objective.json`,
-declared file set and mappings and calculates its exact content digest.
-`objectiveArtifactLocation(directory, digest)` and
-`parseObjectiveArtifactLocation(location)` round-trip exact `artifact+file:` addresses.
-Inspection does not download external Check or dependency references or execute Checks.
-`pguide validate artifact` reports `validationScope: "local-artifact"` accordingly.
+The old `inspectObjectiveArtifact`, `objectiveArtifactLocation` and
+`parseObjectiveArtifactLocation` APIs and their example are removed, not
+reimplemented behind a new utility layer. This package no longer installs
+`check-artifacts` or validates the legacy `objective.json` format.
 
 `digestObjectivePackage`, `prepareObjectivePackage` and `restoreObjectivePackage`
 remain explicit, bounded npm package utilities. Preparation uses npm resolution
@@ -32,5 +31,6 @@ The default package cache is `stateRoot()/packages`; callers can explicitly sele
 an existing private cache with `cacheDirectory`. Retired Host discovery environment
 variables are no longer used.
 
-Static Pilot validation, scaffolding, Objective declarations and CLI configuration
-remain separate capabilities. See [package layering](../../docs/package-layering.md).
+Objective declarations, Agent resources and CLI configuration remain separate
+capabilities. New `task-bundle check` is unrelated to the removed top-level
+validation command. See [package layering](../../docs/package-layering.md).

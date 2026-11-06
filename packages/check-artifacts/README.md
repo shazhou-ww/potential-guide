@@ -3,7 +3,9 @@
 New generic Engine checks use [`check-sdk`](../check-sdk/README.md) and ordinary
 Task Bundles, as demonstrated by [`check-environment`](../check-environment/README.md).
 The old `check-task` and Probe execution adapters are retired; this package
-retains legacy artifact build/validation APIs for existing CLI consumers.
+retains legacy artifact build/validation APIs for repository schema generation
+and compatibility tests. There is no remaining production workspace consumer;
+its package retirement is a separate follow-up, not a reason to restore old CLI APIs.
 `@potential-guide/check-artifacts/contracts` is a pure validation entry for
 Checker/Objective manifests, complete supplied files/digests/References,
 mapping, subjects and results. It does not import network, filesystem, worker or

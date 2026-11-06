@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
@@ -8,12 +8,11 @@ import { parseConfig, parseLegacyConfig, validateAgentProfile } from "@potential
 export const root = resolve(import.meta.dirname, "..", "..", "..");
 export const scratch = join(root, ".cache");
 await mkdir(scratch, { recursive: true });
-export const commandPackage = (name: string) =>
-  name === "regulate" || name === "continue"
-    ? "pguide-regulate"
-    : name === "objectives"
-      ? "pguide-objectives"
-      : "pguide-pilot";
+export function commandPackage(name: string) {
+  if (name === "regulate" || name === "continue") return "pguide-regulate";
+  if (name === "objectives") return "pguide-objectives";
+  throw new Error(`Unknown retained command fixture: ${name}`);
+}
 export const bin = (name: string) =>
   join(root, "packages", commandPackage(name), "dist", "bin", `${name}.js`);
 const execute = promisify(execFile);
@@ -132,29 +131,33 @@ export async function fixture(baseDirectory = scratch, prefix = "pguide-test-") 
   await git(repository, "config", "user.name", "Fixture");
   await git(repository, "config", "user.email", "fixture@example.invalid");
   await git(repository, "remote", "add", "origin", pathToFileURL(repository).href);
-  const scaffold = await run(bin("scaffold"), [
-    "pilot",
-    join(repository, "objective"),
-    "--check",
-    "ready",
-    "--problem",
-    "not-ready",
-    "--language",
-    "en-US",
-    "--language",
-    "zh-CN",
-    "--format",
-    "json",
-  ]);
-  if (scaffold.code !== 0) throw new Error(scaffold.stdout + scaffold.stderr);
-  // These existing suites exercise legacy Git evidence, not npm package preparation.
   await mkdir(join(repository, "objective", "checks", "ready"), { recursive: true });
+  const manifest = join(repository, "objective", "objective.yaml");
+  await writeFile(
+    manifest,
+    JSON.stringify({
+      $schema: "https://shazhou-ww.github.io/potential-guide/schemas/objective/v3.json",
+      subjectSchema: { type: "object" },
+      levels: [{ id: "ready", checks: [{ id: "ready", problems: ["not-ready"] }] }],
+      defaultLanguage: "en-US",
+      languages: ["en-US", "zh-CN"],
+    }),
+  );
+  for (const language of ["en-US", "zh-CN"])
+    for (const id of [
+      "system/overview",
+      "system/404",
+      "levels/initial",
+      "levels/ready",
+      "levels/terminal",
+      "checks/ready",
+      "problems/not-ready",
+    ])
+      await page(repository, id, language, "Fixture reference.");
   await writeFile(
     join(repository, "objective", "checks", "ready", "worker.cjs"),
-    await readFile(join(repository, "objective", "src", "ready.cjs")),
+    'exports.execute = async () => ({status:200,payload:{ok:true,problems:[]},message:""});\n',
   );
-  await rm(join(repository, "objective", "package.json"));
-  const manifest = join(repository, "objective", "objective.yaml");
   const uri = `git+${pathToFileURL(repository).href}#objective/`;
   const subject = join(directory, "subject.json");
   await writeFile(subject, "{}");

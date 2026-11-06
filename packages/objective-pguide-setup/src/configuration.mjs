@@ -32,10 +32,10 @@ export async function configured(subject, context) {
   )
     throw new Fault("protocol: unsupported configuration response.");
   if (value.files.length === 0) throw new Problem("configuration-missing");
-  for (const name of ["agents", "probe", "regulate"]) requireCommand(name);
+  requireCommand("agents");
   if (
     value.issues.some((issue) =>
-      ["agents", "pguide", "cli-core", "pilot", "regulate"].includes(
+      ["agents", "pguide", "cli-core", "regulate"].includes(
         typeof issue?.id === "string" ? issue.id.split(".")[0] : "",
       ),
     )

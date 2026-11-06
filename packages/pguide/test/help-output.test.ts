@@ -8,7 +8,7 @@ const agents = join(root, "packages", "pguide-agents", "dist", "bin.js");
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 
 test("standalone command help JSON preserves existing fields and matches human content", async () => {
-  for (const command of ["probe", "regulate", "continue", "scaffold", "validate", "objectives"]) {
+  for (const command of ["regulate", "continue", "objectives"]) {
     const text = await run(bin(command), ["--help"]);
     const json = await run(bin(command), ["--help", "--format", "json"]);
     assert.equal(text.code, 0, text.stdout);
@@ -24,22 +24,6 @@ test("standalone command help JSON preserves existing fields and matches human c
     for (const option of [...help.optionDetails, ...help.globalOptions]) {
       assert.ok(text.stdout.includes(option.name));
       if ("default" in option) assert.ok(text.stdout.includes(`default: ${option.default}`));
-    }
-    if (command === "scaffold" || command === "validate") assert.deepEqual(help.types, ["pilot"]);
-    if (command === "probe") {
-      for (const name of [
-        "--pilot",
-        "--subject-file",
-        "--language",
-        "--revision",
-        "--report",
-        "--objective",
-        "--scope",
-        "--input-file",
-        "--report-dir",
-        "--no-reports",
-      ])
-        assert.ok(help.options.includes(name));
     }
   }
 });

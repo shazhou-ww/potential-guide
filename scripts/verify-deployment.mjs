@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { access, chmod, cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
 import {
   assertLatestVersion,
@@ -20,9 +20,6 @@ const workspace = await createDeploymentWorkspace();
 const scratch = workspace.path;
 const packs = join(scratch, "packs");
 const consumer = join(scratch, "consumer");
-const fixtureSource = join(root, "scripts", "fixtures", "deployment-acp");
-const fixture = join(consumer, "fixture");
-const objectiveUri = `git+${pathToFileURL(fixture).href}#guide/`;
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const binExtension = process.platform === "win32" ? ".cmd" : "";
@@ -275,46 +272,15 @@ async function verifyCliContract() {
   );
   assert.deepEqual(JSON.parse(before.stdout), JSON.parse(after.stdout));
 
-  await cp(fixtureSource, fixture, { recursive: true });
-  const subject = join(fixture, "subject.json");
-  await writeFile(subject, JSON.stringify({ marker: join(fixture, "ready") }));
-  for (const args of [
-    ["init", "-q"],
-    ["config", "user.name", "Deployment Fixture"],
-    ["config", "user.email", "fixture@example.invalid"],
-    ["remote", "add", "origin", pathToFileURL(fixture).href],
-    ["add", "."],
-    ["commit", "-qm", "Create committed deployment fixture"],
-  ]) {
-    await successful("git", ["-C", fixture, ...args], { cwd: consumer });
-  }
-  const direct = await execute(
-    executable("pguide-probe"),
-    ["--pilot", objectiveUri, "--subject-file", subject, "--format", "json"],
-    { cwd: consumer, env },
-  );
-  const dispatched = await execute(
-    executable("pguide"),
-    ["probe", "--pilot", objectiveUri, "--subject-file", subject, "--format", "json"],
-    { cwd: consumer, env },
-  );
-  for (const result of [direct, dispatched]) {
+  for (const command of ["probe", "check", "validate", "scaffold"]) {
+    const result = await execute(executable("pguide"), [command, "--format", "json"], {
+      cwd: consumer,
+      env,
+    });
     assert.equal(result.code, 2);
-    assert.match(result.stdout + result.stderr, /Legacy Pilot execution is retired/);
+    assert.match(result.stdout + result.stderr, new RegExp(`Unknown command.*${command}`));
+    assert.doesNotMatch(result.stdout + result.stderr, /Install/);
   }
-  const stdin = await execute(
-    executable("pguide-probe"),
-    ["--pilot", objectiveUri, "--subject-file", "-", "--format", "json"],
-    { cwd: consumer, env, input: await readFile(subject, "utf8") },
-  );
-  assert.equal(stdin.code, 2);
-  assert.match(stdin.stdout + stdin.stderr, /Legacy Pilot execution is retired/);
-
-  const badOption = await execute(executable("pguide"), ["probe", "--unknown", "x"], {
-    cwd: consumer,
-    env,
-  });
-  assert.equal(badOption.code, 2);
   console.log(`CLI contract verified on ${process.platform}/${process.arch}`);
   return env;
 }

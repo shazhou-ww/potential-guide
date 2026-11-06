@@ -17,7 +17,7 @@ import {
   parseStrictYaml,
   validateObjectivesDocument,
 } from "../../pilot-protocol/src/index.js";
-import { bin, fixture, git, run } from "./fixtures.js";
+import { bin, fixture, git, root, run } from "./fixtures.js";
 
 const unit = { type: "object", additionalProperties: false, maxProperties: 0 } as const;
 const declaration: ObjectiveDeclaration = {
@@ -368,19 +368,13 @@ test("context recognizes absent origin but explicitly rejects malformed and non-
     });
   }
   await writeFile(join(f.repository, "objectives.yaml"), document());
-  const invalid = await run(bin("probe"), [
-    "--objective",
-    "check",
-    "--scope",
-    "directory",
-    "--cwd",
-    f.repository,
-    "--format",
-    "json",
-  ]);
+  const invalid = await run(
+    join(root, "packages", "pguide", "dist", "bin.js"),
+    ["probe", "--cwd", f.repository, "--format", "json"],
+    { ...process.env, PATH: "" },
+  );
   assert.equal(invalid.code, 2, invalid.stdout + invalid.stderr);
-  assert.equal(JSON.parse(invalid.stdout).status, "pilot-error");
-  assert.match(invalid.stdout, /Legacy Pilot execution is retired/);
+  assert.match(JSON.parse(invalid.stdout).error, /Unknown command.*probe/);
   assert.ok(!invalid.stdout.includes("secret"));
 });
 

@@ -1,15 +1,16 @@
-# Credential-free self-check Docker harness
+# Isolated consumer and real-Agent Docker harness
 
-Validates the existing `packages/objective-pguide-self-check` through a **source-built,
-packed, installed** pguide in Linux. No real model, credentials, user config,
-host HOME, host environment forwarding, bind mounts, or Docker socket. This is
-controlled ACP integration evidence, **not** real-device/model acceptance.
+Builds a **source-built, packed, installed** pguide consumer in Linux and
+provides a separate opt-in real-Agent baseline. The old full-Pilot CLI verifier
+is retired. No host HOME, environment forwarding, bind mounts or Docker socket
+are imported into the base consumer. Real-Agent credentials remain an explicitly
+authorized, separate concern and are not part of ordinary image validation.
 
 ## Prepare and build (PowerShell, repository root)
 
 Choose an explicit, full committed source revision. Preparation does not invoke
 Docker: it writes a new, minimal context using `git archive`, then copies only
-the nine named harness files. Uncommitted source edits and untracked files
+the seven named harness files. Uncommitted source edits and untracked files
 (including `.env`, `node_modules`, and credentials) cannot enter the source
 archive. Harness edits may be uncommitted; their hashes are recorded separately.
 Do not build with the repository root as context.
@@ -74,73 +75,24 @@ Only the installed consumer, self-check Objective Git repository, and harness
 tools cross into the runtime stage—not the source workspace, build dependency
 tree, isolated toolchain, pnpm store, or tarballs. The Objective is committed during construction
 with fixed Git dates; provenance records both the original source revision and
-the separate Objective revision actually passed to the probe.
+the separate copied Objective revision, not proof of a current CLI probe.
 
 The Objective repository now includes both complete setup and self-check Pilot
 packages. The setup package's embedded sanity fixture and generated transport
 runtime stay with its manifest. Development dependencies and package tests are
 excluded from this repository copy.
 
-## Create a reusable container, then verify
+## Retired legacy CLI verification
 
-The image defaults to UID 1000 (`node`), HOME `/work/home`, and `sleep infinity`.
-No host settings are changed. These limits apply to this named container only;
-do not stop, inspect credentials from, or remove other users' containers.
+The old full-Pilot `probe` verifier and its deterministic ACP fixture are
+retired along with `pguide-pilot`. Do not invoke `/harness/verify.mjs` or
+interpret historical setup/self-check evidence as a current CLI capability.
+Existing historical containers and evidence are not removed by this change.
 
-```powershell
-$container = "pguide-pilot-migration-$suffix"
-docker run -d --name $container --network none --cap-drop ALL --security-opt no-new-privileges --cpus 2 --memory 1g --memory-swap 1g --pids-limit 128 $image
-docker exec $container node --version
-docker exec $container node /harness/verify.mjs fix
-docker exec $container node /harness/verify.mjs wrong
-docker exec $container node /harness/verify.mjs summary-only
-docker exec $container node /harness/verify.mjs fix setup
-docker exec $container node /harness/verify.mjs wrong setup
-docker exec $container node /harness/verify.mjs summary-only setup
-docker inspect --format '{{.Config.User}} {{.HostConfig.NetworkMode}} {{json .HostConfig.CapDrop}} {{json .HostConfig.SecurityOpt}} {{json .Mounts}}' $container
-```
-
-The earlier `pguide-self-check-811f28d-7dd2` has already been retained with all
-three self-check probe results. Inspect its existing evidence rather than
-rerunning prompts just to confirm; the older `pguide-self-check-7dd2b7ee` is also
-preserved, not replaced. The migration commands above use a distinct source-pinned
-image/container and need the new setup-capable verifier; do not run them against
-either retained historical image.
-Recorded source revisions are not a claim that later HEAD revisions were built.
-Parent-owned provenance and results are in the Idea's
-[Docker validation evidence](../../.silvermoon/ideas/01M5669R0P9ZK68XCGDD51ZNNA/outer/inner/Docker-validation.md).
-
-Each verifier invocation runs **one full probe, with exactly one prompt**. Do
-not repeat `fix` merely to confirm the same outcome. Numeric ACP initialize,
-session/new and session/prompt are handled by a deterministic local fixture.
-Configuration/readiness handshakes do not count as prompts. `fix` writes the
-requested marker nonce; `wrong` writes wrong content; `summary-only` reports
-success but never repairs the marker. Negative modes must remain `configured`
-with `sanity-failed`; only `fix` may reach `terminal` with no problems.
-
-Each run gets new absolute Linux config/subject/scratch paths below
-`/work/runs/<mode>-*`, a 24000 ms self-check budget, and an allowlisted child
-environment. Neither `allowSanity` nor `target` is supplied. The verifier checks
-the snapshot revision, exactly one safe prompt-count record, deletion of all
-owned task scratch, and preservation of an unrelated scratch sentinel.
-It writes `probe.json`, `prompts.jsonl` (mode/count only), and
-`verification.json` beside the config and subject, then prints the report.
-The fixture stores no prompt text or nonce. Assertions exit nonzero on any
-mismatch; do not interpret a helper-only result as a full probe.
-
-The optional second argument `setup` switches to the committed setup package,
-uses a 20000 ms check budget and explicitly sets `allowSanity: true` for this
-credential-free fixture only. It verifies the existing nested regulation repair
-and independent marker recheck. The default remains self-check with its direct
-Agent repair and no consent/target input. Neither mode uses a real account or
-paid model; Linux fixture evidence does not prove Windows nested-probe readiness
-or SSH identity/authentication on an external device.
-
-The container stays running for reuse; `/work` is its writable layer (no
-mounts). To independently inspect evidence, use `docker exec ... cat` with the
-printed run path or `docker cp <container>:/work/runs <chosen-local-directory>`.
-Parent/operator owns verification, approvals and lifecycle. When intentionally
-finished, remove **only** this container/image by their exact names.
+The image preparation and the separate real-Agent/keychain baseline below
+remain available. They do not prove Task Bundle migration of the setup or
+self-check Objectives. The generic CLI/SDK consumers and repository tests
+verify current command discovery, with no legacy probe executable.
 
 ## Real Agent baseline (separate, opt-in target)
 

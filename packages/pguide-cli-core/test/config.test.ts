@@ -412,7 +412,6 @@ test("JSONC discovery and atomic writes do not merge independent Agent profiles"
       JSON.stringify({
         "agents.defaultAgent": "fixture",
         "regulate.quota": { timeoutMs: 20000, maxAgentRuns: 5, maxStallRuns: 2 },
-        "pilot.probe": { timeoutMs: 5000, retry: { maxRetries: 2, delayMs: 10 } },
       }),
     );
     const resource = join(root, ".pguide", "agents.yaml");
@@ -427,10 +426,6 @@ test("JSONC discovery and atomic writes do not merge independent Agent profiles"
       timeoutMs: 20000,
       maxAgentRuns: 5,
       maxStallRuns: 2,
-    });
-    assert.deepEqual(loaded.value["pilot.probe"], {
-      timeoutMs: 5000,
-      retry: { maxRetries: 2, delayMs: 10 },
     });
     await writeFile(join(root, ".pguide", "config.yaml"), "schemaVersion: 1\n");
     await assert.rejects(loadConfig(root), /Legacy main configuration/);

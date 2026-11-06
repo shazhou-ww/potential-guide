@@ -4,10 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import spawn from "cross-spawn";
 
-export const generatedSources = [
-  "pguide-cli-core/src/built-in-settings.ts",
-  ...["worker-source.ts", "runtime-identity.ts"].map((file) => `check-runtime-files/src/${file}`),
-];
+export const generatedSources = ["pguide-cli-core/src/built-in-settings.ts"];
 
 export async function guardGeneratedSources(root, build) {
   const snapshots = await Promise.all(

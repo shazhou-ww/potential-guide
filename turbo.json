@@ -5,11 +5,6 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "examples/text/dist/**"]
     },
-    "@potential-guide/check-runtime-files#build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/embed-task-workers.mjs"],
-      "outputs": ["dist/**"]
-    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]

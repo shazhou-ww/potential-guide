@@ -353,7 +353,7 @@ test("diagnosis exposes command/config paths, conflicts and actual Agent initial
     for (const directory of directories) {
       await mkdir(directory);
       await writeFile(
-        join(directory, process.platform === "win32" ? "pguide-probe.cmd" : "pguide-probe"),
+        join(directory, process.platform === "win32" ? "pguide-extension.cmd" : "pguide-extension"),
         "",
         { mode: 0o755 },
       );
@@ -363,12 +363,12 @@ test("diagnosis exposes command/config paths, conflicts and actual Agent initial
     assert.equal(conflicted.code, 2);
     assert.match(conflicted.stdout, /Status: command conflicts found/);
     assert.match(conflicted.stdout, /## Command conflicts/);
-    assert.match(conflicted.stdout, /Command: `probe`/);
+    assert.match(conflicted.stdout, /Command: `extension`/);
     assert.match(conflicted.stdout, /first/);
     assert.match(conflicted.stdout, /second/);
     const json = await f.run(top, ["diagnose", "--format", "json"]);
     assert.equal(json.code, 2);
-    assert.equal(JSON.parse(json.stdout).conflicts.probe.length, 2);
+    assert.equal(JSON.parse(json.stdout).conflicts.extension.length, 2);
   } finally {
     await f.cleanup();
   }

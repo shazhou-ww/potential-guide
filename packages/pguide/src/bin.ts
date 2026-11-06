@@ -110,9 +110,6 @@ async function discover(
     else if (unique.length > 1) conflicts[command] = unique.map(({ path }) => path);
   }
   for (const [command, specifier] of Object.entries({
-    probe: "@potential-guide/pguide-pilot/bin/probe",
-    scaffold: "@potential-guide/pguide-pilot/bin/scaffold",
-    validate: "@potential-guide/pguide-pilot/bin/validate",
     config: "@potential-guide/pguide-config/bin/config",
     agents: "@potential-guide/pguide-agents/bin/agents",
     objectives: "@potential-guide/pguide-objectives/bin/objectives",
@@ -237,8 +234,8 @@ async function help(globals: GlobalOptions): Promise<void> {
         title: "Examples",
         lines: [
           "  pguide config path",
-          "  pguide validate pilot .\\objective\\objective.yaml",
-          "  pguide probe --pilot .\\objective --subject-file .\\subject.json --format json",
+          "  pguide objectives list --format json",
+          "  pguide agents list",
         ],
       },
       {
@@ -471,11 +468,11 @@ function complete(argv: string[], globals: GlobalOptions): void {
   }
   const shell = (option(argv, "--shell") as string | undefined) ?? "bash";
   const scripts: Record<string, string> = {
-    bash: 'complete -W "probe regulate continue scaffold validate config agents objectives diagnose complete" pguide',
-    zsh: '#compdef pguide\n_arguments "1:command:(probe regulate continue scaffold validate config agents objectives diagnose complete)"',
-    fish: "complete -c pguide -f -a 'probe regulate continue scaffold validate config agents objectives diagnose complete'",
+    bash: 'complete -W "regulate continue config agents objectives diagnose complete" pguide',
+    zsh: '#compdef pguide\n_arguments "1:command:(regulate continue config agents objectives diagnose complete)"',
+    fish: "complete -c pguide -f -a 'regulate continue config agents objectives diagnose complete'",
     powershell:
-      "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'probe','regulate','continue','scaffold','validate','config','agents','objectives','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }",
+      "Register-ArgumentCompleter -Native -CommandName pguide -ScriptBlock { param($wordToComplete) 'regulate','continue','config','agents','objectives','diagnose','complete' | Where-Object { $_ -like \"$wordToComplete*\" } }",
   };
   const script = scripts[shell];
   if (script === undefined) throw new CliError("Unsupported shell.");

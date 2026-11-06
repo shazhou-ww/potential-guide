@@ -144,12 +144,11 @@ SSH 示例（POSIX B；本机保存的 subject 文件路径仍是 A 的路径）
 `desiredVersion` 可省略；提供时按 `--version --format json` **精确匹配**。
 版本号不证明来源 commit；源码使用者须另外核对构建和 commit。
 `agent` 可省略，届时必须有有效的 defaultAgent。
-源码构建还需要有效的扩展发现。在选定配置的 `commandDirectories` 中加入已验证的绝对
-shim 目录，其中 `pguide-config` 指向 `packages\pguide-config\dist\bin.js`，
-`pguide-probe`、`pguide-regulate` 分别指向 `packages\pguide\dist\bin\probe.js`、
-`packages\pguide\dist\bin\regulate.js`。可使用设备级已链接安装提供的 shim；不要假设
-旧的 workspace `node_modules\.bin` shim 已更新。先核对 `pguide --help --format json`
-中三条命令均 `compatible:true` 且没有 conflicts；仅 help 退出成功不算配置就绪。
+源码构建需保持有效的配置与 Agent 命令发现。旧 pguide-pilot/probe/validate/scaffold
+已移除，不要再为旧 probe 创建 shim；旧 setup 的嵌套 CLI sanity 不再是可用验收路径。
+配置与 ACP 就绪阶段只要求 config/agents 资源命令，不再要求旧 probe 或可选 regulate。
+仅保留的配置/Agent 命令 help 成功不代表旧执行链恢复；独立 self-check 直接 Agent
+路径与未来 Task Bundle 迁移须各自验证。
 
 ### 认证与执行环境：两种入口不可混淆
 

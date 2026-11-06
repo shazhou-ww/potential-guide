@@ -414,9 +414,6 @@ importers:
       '@npmcli/run-script':
         specifier: 'catalog:'
         version: 10.0.4
-      '@potential-guide/check-artifacts':
-        specifier: workspace:^
-        version: link:../check-artifacts
       '@potential-guide/check-runtime-files':
         specifier: workspace:^
         version: link:../check-runtime-files
@@ -636,9 +633,6 @@ importers:
       '@potential-guide/pguide-objectives':
         specifier: workspace:^
         version: link:../pguide-objectives
-      '@potential-guide/pguide-pilot':
-        specifier: workspace:^
-        version: link:../pguide-pilot
       cross-spawn:
         specifier: 'catalog:'
         version: 7.0.6
@@ -723,27 +717,6 @@ importers:
       '@potential-guide/objective-declarations':
         specifier: workspace:^
         version: link:../objective-declarations
-
-  packages/pguide-pilot:
-    dependencies:
-      '@potential-guide/cli-core':
-        specifier: workspace:^
-        version: link:../pguide-cli-core
-      '@potential-guide/cli-runtime':
-        specifier: workspace:^
-        version: link:../cli-runtime
-      '@potential-guide/effects':
-        specifier: workspace:^
-        version: link:../effects
-      '@potential-guide/objective-declarations':
-        specifier: workspace:^
-        version: link:../objective-declarations
-      '@potential-guide/objective-pilot':
-        specifier: workspace:^
-        version: link:../objective-pilot
-      '@potential-guide/pilot-protocol':
-        specifier: workspace:^
-        version: link:../pilot-protocol
 
   packages/pguide-regulate:
     dependencies:

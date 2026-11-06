@@ -6,7 +6,7 @@
 | --- | --- |
 | Protocol | `@potential-guide/effects`, `@potential-guide/pilot-protocol` |
 | Business logic | `@potential-guide/objective-pilot`, `@potential-guide/objective-regulator`, `@potential-guide/regulation-coordinator` |
-| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/pguide-agents`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-pilot`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-objectives` |
+| Tools | `pguide`, `@potential-guide/cli-core`, `@potential-guide/pguide-config`, `@potential-guide/pguide-agents`, `@potential-guide/cli-runtime`, `@potential-guide/objective-declarations`, `@potential-guide/pguide-regulate`, `@potential-guide/pguide-objectives` |
 
 Allowed dependencies point downwards, or stay within a layer. Tools can consume
 protocol directly. Same-layer dependencies are permitted, not special exceptions;
@@ -35,7 +35,8 @@ resolver; it does not fetch sources, run checks, observe or invoke Agents.
 its former definition APIs from the protocol package for compatibility.
 
 `cli-core` owns CLI output/options, configuration, persistence and Agent clients.
-`cli-runtime` assembles Git-backed resources. `objective-declarations` shares
+`cli-runtime` retains explicit npm package preparation and retired-execution diagnostics.
+`objective-declarations` shares
 declaration selection and subject binding using CLI Core and protocol only,
 without installing execution. Neither service has command bins or depends on
 any command package.
@@ -55,34 +56,33 @@ source; the three layers must not depend on concrete Objective implementations.
 ## Default and optional command packages
 
 Command-wrapper npm packages follow `@potential-guide/pguide-<command-or-group>`.
-`pguide-pilot` groups Pilot authoring/validation/observation; `pguide-regulate`
-groups regulation and continuation. Shared libraries retain responsibility names
+`pguide-pilot` and its old probe/scaffold/validate commands are retired;
+no probe/check placeholder package is created. `pguide-regulate` retains
+legacy regulation/continuation rejection wrappers. Shared libraries retain responsibility names
 (`cli-runtime`, `objective-declarations`). Configuration now follows the same
 convention as `@potential-guide/pguide-config`; its existing `pguide-config`
 binary and `config` metadata remain unchanged.
 
 | Install | Commands / standalone binaries |
 | --- | --- |
-| `pguide` | discovery, dispatch, built-in `diagnose`, `complete`; installs Pilot, config and objectives commands below |
-| `@potential-guide/pguide-pilot` | `probe`, `scaffold`, `validate` / `pguide-probe`, `pguide-scaffold`, `pguide-validate` |
+| `pguide` | discovery, dispatch, built-in `diagnose`, `complete`; installs config, agents and objectives commands below |
 | `@potential-guide/pguide-regulate` | `regulate`, `continue` / `pguide-regulate`, `pguide-continue` |
 | `@potential-guide/pguide-objectives` | `objectives` / `pguide-objectives` |
 | `@potential-guide/pguide-config` | `config` / `pguide-config` |
 | `@potential-guide/pguide-agents` | `agents` / `pguide-agents` |
 
-Pilot authoring, validation and observation share source/definition conventions.
-Regulation and continuation share persisted state and Agent execution. These
-closely cooperating commands ship together.
-Declaration management is included by default so aliases can be managed alongside probing.
+Declaration and Agent resource management remain included by default without
+the removed execution and static artifact-validation commands. New Task Bundle
+authoring/checking and configuration validation remain separate supported surfaces.
 
-`pguide` ships only its own entrypoint bin, but installs `pguide-pilot`,
-`pguide-config`, `pguide-agents` and `pguide-objectives` as production dependencies. Its default
-commands are `probe`, `scaffold`, `validate`, `config`, `objectives`, `diagnose`,
-and `complete`. Regulation still requires explicit installation:
+`pguide` ships only its own entrypoint bin, but installs `pguide-config`,
+`pguide-agents` and `pguide-objectives` as production dependencies. Its five default
+commands are `agents`, `config`, `objectives`, `diagnose` and `complete`.
+Regulation still requires explicit installation and rejects legacy execution:
 
 ```sh
 npm install --global pguide
-pguide validate pilot ./objective
+pguide config path
 ```
 
 For an existing source checkout, run `pnpm clean`, then `pnpm install` and
@@ -93,11 +93,11 @@ For local installations use `pnpm exec pguide ...` or put the installation's
 `node_modules/.bin` on PATH. One-shot invocation includes the default commands:
 
 ```sh
-npx pguide probe --help
+npx pguide config --help
 ```
 
 Append explicit `@<version>` selectors for RC testing. Merely running
-`npx pguide probe` installs Pilot support implicitly. Standalone bins require
+`npx pguide config` installs configuration support implicitly. Standalone bins require
 explicit installation of their command package; transitive bins need not be
 exposed by npm or pnpm. Discovery uses configured directories before PATH, excludes the cwd
 PATH entry, deduplicates real paths, diagnoses same-tier conflicts and requires

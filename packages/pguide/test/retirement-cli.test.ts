@@ -39,3 +39,30 @@ test("root help and every completion shell omit the retired command", async () =
     assert.match(completion.stdout, /regulate/u);
   }
 });
+
+test("retired Pilot commands have no package, descriptor, help entry or installation recommendation", async () => {
+  for (const id of ["pguide-pilot", "pguide-probe", "pguide-check"])
+    await assert.rejects(access(join(root, "packages", id, "package.json")), { code: "ENOENT" });
+  const catalog = await loadSettingsCatalog();
+  assert.ok(![...catalog.settings.keys()].some((key) => key.startsWith("pilot.")));
+  const help = await run(pguide, ["--help", "--format", "json"], env);
+  assert.equal(help.code, 0, help.stdout + help.stderr);
+  assert.deepEqual(
+    JSON.parse(help.stdout)
+      .commands.map(({ command }: { command: string }) => command)
+      .sort(),
+    ["agents", "complete", "config", "diagnose", "objectives"],
+  );
+  for (const command of ["probe", "check", "validate", "scaffold"]) {
+    assert.ok(!Object.hasOwn(commandPackages, command));
+    const rejected = await run(pguide, [command, "--format", "json"], env);
+    assert.equal(rejected.code, 2, rejected.stdout + rejected.stderr);
+    assert.match(JSON.parse(rejected.stdout).error, new RegExp(`Unknown command.*${command}`));
+    assert.doesNotMatch(rejected.stdout + rejected.stderr, /Install|pguide-pilot/);
+  }
+  for (const shell of ["bash", "zsh", "fish", "powershell"]) {
+    const completion = await run(pguide, ["complete", "--shell", shell], env);
+    assert.equal(completion.code, 0, completion.stdout + completion.stderr);
+    assert.doesNotMatch(completion.stdout, /\b(?:probe|check|validate|scaffold)\b/);
+  }
+});

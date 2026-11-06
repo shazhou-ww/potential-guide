@@ -5,15 +5,7 @@ import { formatCommandHelp, globalHelpOptions, helpMetadata } from "../src/help.
 import { extractGlobals } from "../src/index.js";
 
 test("command help shares authoritative options, defaults, constraints and examples", () => {
-  for (const command of [
-    "agents",
-    "objectives",
-    "probe",
-    "regulate",
-    "continue",
-    "scaffold",
-    "validate",
-  ] as const) {
+  for (const command of ["agents", "objectives", "regulate", "continue"] as const) {
     const definition = getCommandHelp(command);
     const metadata = helpMetadata(definition);
     const text = formatCommandHelp(definition);
@@ -27,16 +19,14 @@ test("command help shares authoritative options, defaults, constraints and examp
   }
 });
 
-test("probe and regulate require either declaration or Pilot, never both", () => {
-  for (const command of ["probe", "regulate"] as const) {
-    const metadata = helpMetadata(getCommandHelp(command));
-    assert.match(metadata.constraints.join("\n"), /mutually exclusive; exactly one is required/);
-    assert.ok(metadata.optionDetails.some(({ name }) => name === "--objective"));
-    assert.ok(metadata.optionDetails.some(({ name }) => name === "--pilot"));
-    assert.ok(metadata.optionDetails.some(({ name }) => name === "--scope"));
-    const required = metadata.sections.find(({ title }) => title === "Required");
-    assert.match(required?.lines.join("\n") ?? "", /Choose exactly one/);
-  }
+test("legacy regulate requires either declaration or Pilot, never both", () => {
+  const metadata = helpMetadata(getCommandHelp("regulate"));
+  assert.match(metadata.constraints.join("\n"), /mutually exclusive; exactly one is required/);
+  assert.ok(metadata.optionDetails.some(({ name }) => name === "--objective"));
+  assert.ok(metadata.optionDetails.some(({ name }) => name === "--pilot"));
+  assert.ok(metadata.optionDetails.some(({ name }) => name === "--scope"));
+  const required = metadata.sections.find(({ title }) => title === "Required");
+  assert.match(required?.lines.join("\n") ?? "", /Choose exactly one/);
 });
 
 test("resource help is operation-specific and shares global defaults", () => {
@@ -64,8 +54,8 @@ test("JSON help preserves existing fields and adds complete metadata", (t) => {
   assert.match(agents.resourceSchema, /schemas\/agents\/v1.json$/);
   assert.equal(agents.usage, "pguide agents show <name>");
   output = "";
-  showCommandHelp("probe", globals);
-  const probe = JSON.parse(output);
+  showCommandHelp("regulate", globals);
+  const regulation = JSON.parse(output);
   for (const option of [
     "--pilot",
     "--subject-file",
@@ -75,11 +65,12 @@ test("JSON help preserves existing fields and adds complete metadata", (t) => {
     "--objective",
     "--scope",
     "--input-file",
-    "--report-dir",
-    "--no-reports",
   ])
-    assert.ok(probe.options.includes(option), option);
+    assert.ok(
+      regulation.optionDetails.some(({ name }: { name: string }) => name === option),
+      option,
+    );
   output = "";
-  showCommandHelp("scaffold", globals);
-  assert.deepEqual(JSON.parse(output).types, ["pilot"]);
+  showCommandHelp("objectives", globals);
+  assert.ok(JSON.parse(output).subcommands.includes("set"));
 });

@@ -191,6 +191,10 @@ export const releasePackages = [
     name: "@potential-guide/cli-runtime",
     requiredExports: ["withPilot"],
     bins: [],
+    forbiddenDependencies: ["@potential-guide/check-artifacts"],
+    forbiddenFiles: ["js", "d.ts", "js.map", "d.ts.map"].map(
+      (extension) => `dist/objective-artifact.${extension}`,
+    ),
   },
   {
     id: "objective-declarations",
@@ -203,12 +207,6 @@ export const releasePackages = [
       "@potential-guide/objective-regulator",
       "@potential-guide/cli-runtime",
     ],
-  },
-  {
-    id: "pguide-pilot",
-    directory: "pguide-pilot",
-    name: "@potential-guide/pguide-pilot",
-    bins: ["pguide-probe", "pguide-scaffold", "pguide-validate"],
   },
   {
     id: "pguide-regulate",
@@ -308,6 +306,15 @@ export const verificationPackages = [
     name: "@potential-guide/check-runtime-files",
     bins: [],
     requiredExports: ["readArtifact", "ensurePrivateDirectory", "closePrivateFileBackend"],
+    forbiddenFiles: [
+      "worker",
+      "worker-json",
+      "worker-types",
+      "worker-source",
+      "runtime-identity",
+    ].flatMap((name) =>
+      ["js", "d.ts", "js.map", "d.ts.map"].map((extension) => `dist/${name}.${extension}`),
+    ),
   },
   {
     id: "check-artifacts",

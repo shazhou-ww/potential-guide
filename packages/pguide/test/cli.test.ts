@@ -17,11 +17,8 @@ const toolPath = [
 ].join(delimiter);
 const top = join(root, "packages", "pguide", "dist", "bin.js");
 const bins = {
-  probe: bin("probe"),
   regulate: bin("regulate"),
   continue: bin("continue"),
-  scaffold: bin("scaffold"),
-  validate: bin("validate"),
   objectives: bin("objectives"),
   config: join(root, "packages", "pguide-config", "dist", "bin.js"),
   agents: join(root, "packages", "pguide-agents", "dist", "bin.js"),
@@ -217,7 +214,7 @@ test("top-level built-ins return machine-readable help, diagnosis and completion
   const help = await run(top, ["--help", "--format", "json"]);
   assert.equal(help.code, 0, help.stderr);
   assert.equal(JSON.parse(help.stdout).name, "pguide");
-  const leadingHelp = await run(top, ["--format", "json", "--help", "probe"]);
+  const leadingHelp = await run(top, ["--format", "json", "--help", "config"]);
   assert.equal(JSON.parse(leadingHelp.stdout).name, "pguide");
   const diagnose = await run(top, ["diagnose", "--format", "json"]);
   assert.equal(diagnose.code, 0, diagnose.stdout);
@@ -245,7 +242,7 @@ test("bare usage and text help never execute discovered command metadata", async
     );
     const config = join(temporary, "config.json");
     await writeFile(config, JSON.stringify({ schemaVersion: 2, commandDirectories: [commands] }));
-    for (const arguments_ of [[], ["--help"], ["--help", "probe"]]) {
+    for (const arguments_ of [[], ["--help"], ["--help", "config"]]) {
       const result = await run(top, ["--fixture-config", config, ...arguments_]);
       assert.equal(result.code, 0, result.stderr);
       assert.match(result.stdout, /Usage: pguide/);
@@ -263,62 +260,6 @@ test("bare usage and text help never execute discovered command metadata", async
     assert.match(dispatch.stdout + dispatch.stderr, /does not implement pguide-command-v1/);
   } finally {
     await rm(temporary, { recursive: true, force: true });
-  }
-});
-
-test("scaffold and static validate preserve multilingual Wiki while old execution is retired", async () => {
-  const f = await fixture();
-  try {
-    const guide = join(f.repository, "objective");
-    const manifest = f.manifest;
-    const validate = await run(bins.validate, ["pilot", manifest, "--format", "json"]);
-    assert.equal(validate.code, 0, validate.stdout);
-    const uncommitted = await run(bins.probe, [
-      "--pilot",
-      manifest,
-      "--subject-file",
-      f.subject,
-      "--format",
-      "json",
-    ]);
-    assert.equal(uncommitted.code, 2);
-    assert.match(uncommitted.stdout, /Legacy Pilot execution is retired/);
-    await f.commit();
-    const probe = await run(bins.probe, [
-      "--pilot",
-      manifest,
-      "--subject-file",
-      f.subject,
-      "--language",
-      "zh-CN",
-      "--format",
-      "json",
-    ]);
-    assert.equal(probe.code, 2, probe.stdout);
-    assert.equal(JSON.parse(probe.stdout).status, "pilot-error");
-    assert.match(probe.stdout, /Legacy Pilot execution is retired/);
-    const overviewPath = join(guide, "references", "system", "overview", "en-US.md");
-    const overview = await readFile(overviewPath, "utf8");
-    assert.match(overview, /references: \[\]/);
-    const level = await readFile(join(guide, "references", "levels", "ready", "en-US.md"), "utf8");
-    assert.doesNotMatch(level, /\noutcome:/);
-    assert.match(level, /---\n\nTODO: describe attainment conditions\./);
-    for (const invalid of [
-      overview.replace(/description: .*/, 'description: ""'),
-      overview.replace(/description: .*/, `description: ${"a".repeat(201)}`),
-      overview.replace(/\ndescription: .*/, ""),
-      overview.replace("references: []", "references: [pages/missing]"),
-    ]) {
-      await writeFile(overviewPath, invalid);
-      const rejected = await run(bins.validate, ["pilot", manifest, "--format", "json"]);
-      assert.equal(rejected.code, 2, rejected.stdout);
-      assert.match(rejected.stdout, /pilot-error/);
-    }
-    await writeFile(overviewPath, overview.replace("\nreferences: []", ""));
-    const withoutReferences = await run(bins.validate, ["pilot", manifest, "--format", "json"]);
-    assert.equal(withoutReferences.code, 0, withoutReferences.stdout);
-  } finally {
-    await rm(f.directory, { recursive: true, force: true });
   }
 });
 
@@ -405,11 +346,8 @@ test("missing optional commands explain installation and conflicting shims fail 
       "config",
       "diagnose",
       "objectives",
-      "probe",
-      "scaffold",
-      "validate",
     ]);
-    for (const command of ["probe", "scaffold", "validate", "config", "objectives"]) {
+    for (const command of ["config", "agents", "objectives"]) {
       const entry = commands.find((entry: { command: string }) => entry.command === command);
       assert.equal(entry.source, "bundled");
       assert.equal(entry.compatible, true);
@@ -435,7 +373,7 @@ test("missing optional commands explain installation and conflicting shims fail 
     const extension = process.platform === "win32" ? ".cmd" : "";
     for (const directory of [first, second]) {
       await writeFile(
-        join(directory, `pguide-probe${extension}`),
+        join(directory, `pguide-extension${extension}`),
         process.platform === "win32" ? "@echo off\r\nexit /b 99\r\n" : "#!/bin/sh\nexit 99\n",
         { mode: 0o755 },
       );
@@ -444,32 +382,40 @@ test("missing optional commands explain installation and conflicting shims fail 
       config,
       `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first, second])}\n`,
     );
-    const conflict = await run(top, ["probe", "--fixture-config", config, "--format", "json"], env);
+    const conflict = await run(
+      top,
+      ["extension", "--fixture-config", config, "--format", "json"],
+      env,
+    );
     assert.equal(conflict.code, 2, `${conflict.stderr}\n${conflict.stdout}`);
-    assert.match(JSON.parse(conflict.stdout).error, /Ambiguous command probe/);
+    assert.match(JSON.parse(conflict.stdout).error, /Ambiguous command extension/);
     const help = await run(top, ["--help", "--fixture-config", config, "--format", "json"], env);
     assert.equal(help.code, 0);
-    assert.equal(JSON.parse(help.stdout).conflicts.probe.length, 2);
+    assert.equal(JSON.parse(help.stdout).conflicts.extension.length, 2);
     assert.ok(
       !JSON.parse(help.stdout).commands.some(
-        (entry: { command: string }) => entry.command === "probe",
+        (entry: { command: string }) => entry.command === "extension",
       ),
     );
     await writeFile(config, `schemaVersion: 2\ncommandDirectories: ${JSON.stringify([first])}\n`);
     const incompatible = await run(
       top,
-      ["probe", "--fixture-config", config, "--format", "json"],
+      ["extension", "--fixture-config", config, "--format", "json"],
       env,
     );
     assert.equal(incompatible.code, 2, incompatible.stderr);
     assert.equal(JSON.parse(incompatible.stdout).status, "protocol-error");
     await writeFile(config, "schemaVersion: 2\n");
-    const pathConflict = await run(top, ["probe", "--fixture-config", config, "--format", "json"], {
-      ...env,
-      PATH: [first, second].join(delimiter),
-    });
+    const pathConflict = await run(
+      top,
+      ["extension", "--fixture-config", config, "--format", "json"],
+      {
+        ...env,
+        PATH: [first, second].join(delimiter),
+      },
+    );
     assert.equal(pathConflict.code, 2, pathConflict.stderr);
-    assert.match(JSON.parse(pathConflict.stdout).error, /Ambiguous command probe/);
+    assert.match(JSON.parse(pathConflict.stdout).error, /Ambiguous command extension/);
     const pathOverride = await run(
       top,
       ["--help", "--fixture-config", config, "--format", "json"],
@@ -480,7 +426,7 @@ test("missing optional commands explain installation and conflicting shims fail 
     );
     assert.equal(pathOverride.code, 0, pathOverride.stderr);
     const external = JSON.parse(pathOverride.stdout).commands.find(
-      (entry: { command: string }) => entry.command === "probe",
+      (entry: { command: string }) => entry.command === "extension",
     );
     assert.equal(external.source, "PATH");
     assert.equal(external.compatible, false);
@@ -498,8 +444,8 @@ test("missing bundled dependencies and bin files fail visibly instead of disappe
     const modules = join(temporary, "node_modules");
     await mkdir(join(modules, "@potential-guide"), { recursive: true });
     await symlink(
-      join(root, "packages", "pguide-objectives"),
-      join(modules, "@potential-guide", "pguide-objectives"),
+      join(root, "packages", "pguide-agents"),
+      join(modules, "@potential-guide", "pguide-agents"),
       "junction",
     );
     for (const [name, target] of [
@@ -518,8 +464,8 @@ test("missing bundled dependencies and bin files fail visibly instead of disappe
       XDG_CONFIG_HOME: temporary,
     };
     for (const [missing, installed] of [
-      ["pguide-pilot", "pguide-config"],
-      ["pguide-config", "pguide-pilot"],
+      ["pguide-objectives", "pguide-config"],
+      ["pguide-config", "pguide-objectives"],
     ] as const) {
       const installedPath = join(modules, "@potential-guide", installed);
       await symlink(join(root, "packages", installed), installedPath, "junction");
@@ -538,7 +484,7 @@ test("missing bundled dependencies and bin files fail visibly instead of disappe
         for (const args of [
           ["--help"],
           ["diagnose"],
-          [missing === "pguide-pilot" ? "probe" : "config", "--help"],
+          [missing === "pguide-objectives" ? "objectives" : "config", "--help"],
         ]) {
           const result = await run(
             join(temporary, "bin.js"),
@@ -625,7 +571,7 @@ test("all official commands dispatch through the top-level CLI", async () => {
     for (const command of Object.keys(bins)) {
       const result = await run(
         top,
-        command === "probe"
+        command === "config"
           ? ["--fixture-config", config, "--format", "json", command, "--help"]
           : ["--fixture-config", config, command, "--help", "--format", "json"],
         env,
@@ -654,7 +600,7 @@ test("malformed user/project Agent resources do not break main config or Objecti
         ["config", "path"],
         ["config", "set", "cli-core.defaultLanguage", '"en-US"', "--scope", "project"],
         ["config", "get", "cli-core.defaultLanguage"],
-        ["validate", "pilot", f.manifest],
+        ["objectives", "list"],
         ["diagnose"],
       ]) {
         const result = await run(top, [...args, ...common], env);

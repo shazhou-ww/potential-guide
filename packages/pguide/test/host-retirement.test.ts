@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
-import { pathToFileURL } from "node:url";
 import { bin, root, run, scratch } from "./fixtures.js";
 
 test("retired Hosts have no package, workspace importer or release entry", async () => {
@@ -13,33 +12,6 @@ test("retired Hosts have no package, workspace importer or release entry", async
     assert.ok(!lock.includes(`packages/${id}:`));
     assert.ok(!releases.includes(`directory: "${id}"`));
   }
-});
-
-test("artifact validation reports its local-only scope without resolving external Checks", async (t) => {
-  const directory = await mkdtemp(join(scratch, "retired-static-validate-"));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const { buildExample } = await import(
-    pathToFileURL(
-      join(root, "packages", "cli-runtime", "examples", "objective-artifact", "build.mjs"),
-    ).href
-  );
-  const built = await buildExample(join(directory, "delivery"));
-  const result = await run(bin("validate"), [
-    "artifact",
-    built.directory,
-    "--cwd",
-    directory,
-    "--format",
-    "json",
-  ]);
-  assert.equal(result.code, 0, result.stdout + result.stderr);
-  assert.deepEqual(JSON.parse(result.stdout), {
-    schemaVersion: 1,
-    status: "valid",
-    objectiveId: "objective:composition",
-    artifactDigest: built.digest,
-    validationScope: "local-artifact",
-  });
 });
 
 test("standalone and dispatched execution reject before touching state, reports or Agent configuration", async (t) => {
@@ -71,7 +43,7 @@ test("standalone and dispatched execution reject before touching state, reports 
   );
   await writeFile(join(directory, ".pguide", "agents.yaml"), "invalid Agent configuration");
   const before = (await readdir(directory)).sort();
-  for (const command of ["probe", "regulate", "continue"]) {
+  for (const command of ["regulate", "continue"]) {
     const args = command === "continue" ? ["existing"] : ["--pilot", "must-not-resolve"];
     for (const format of ["json", "markdown"]) {
       for (const dispatched of [false, true]) {

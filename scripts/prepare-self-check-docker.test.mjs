@@ -49,13 +49,11 @@ test("Docker context contains the exact commit archive plus only explicit harnes
     assert.deepEqual(Object.keys(result.harnessSha256).sort(), [
       "Dockerfile",
       "README.md",
-      "fixture.mjs",
       "keychain-entrypoint.sh",
       "keychain-unlock.sh",
       "keychain.mjs",
       "prepare-image.mjs",
       "real-agent.mjs",
-      "verify.mjs",
     ]);
     const second = await prepareContext(repository, revision, join(repository, "second"));
     assert.equal(second.sourceArchiveSha256, result.sourceArchiveSha256);

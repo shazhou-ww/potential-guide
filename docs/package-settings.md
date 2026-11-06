@@ -11,9 +11,10 @@ commands; setup/self-check additionally require at least one actual discovered f
 {
   // Complete IDs: dots are literal, not nested object paths.
   "agents.defaultAgent": "local",
-  "pilot.probe": {
+  "regulate.quota": {
     "timeoutMs": 90000,
-    "retry": { "maxRetries": 0, "delayMs": 0 }
+    "maxAgentRuns": 2,
+    "maxStallRuns": 1
   }
 }
 ```
@@ -23,9 +24,10 @@ Objects and arrays replace, never deep-merge. Explicit objects must include
 all required fields. Only an entirely absent setting receives its package's
 validated static default; defaults are visible in `config show` sources and are
 never written back. Optional settings without defaults remain absent.
-`cli-core.stateDirectory` and `pilot.reportDirectory` have dynamic resource-location
-semantics, not static path defaults. State-directory relative paths retain process
-cwd resolution; report-directory relative paths retain effective `--cwd`.
+`cli-core.stateDirectory` has dynamic resource-location semantics, not a static
+path default. State-directory relative paths retain process cwd resolution.
+The removed Pilot command package no longer supplies `pilot.probe`,
+`pilot.reportsEnabled` or `pilot.reportDirectory` descriptors/defaults.
 
 Syntax errors, duplicate keys (including nested keys), descriptor/registration
 damage and namespace conflicts always fail. Every selected layer is checked;
@@ -42,8 +44,8 @@ Validation with only unknown namespaces exits successfully with status
 ```powershell
 pguide config set agents.defaultAgent '"local"' --scope user
 pguide config get agents.defaultAgent
-pguide config set pilot.probe '{"timeoutMs":90000,"retry":{"maxRetries":0,"delayMs":0}}'
-pguide config unset pilot.probe --scope project
+pguide config set regulate.quota '{"timeoutMs":90000,"maxAgentRuns":2,"maxStallRuns":1}'
+pguide config unset regulate.quota --scope project
 pguide config edit --scope user
 ```
 
@@ -125,13 +127,13 @@ to select a farther new file.
 | `defaultAgent` | `agents.defaultAgent` | none |
 | `commandDirectories` | `pguide.commandDirectories` | `[]` |
 | `defaultLanguage`, `format`, `color`, `logLevel`, `stateDirectory` | `cli-core.<sameName>` | none |
-| `reports.enabled` | `pilot.reportsEnabled` | `true` |
-| `reports.directory` | `pilot.reportDirectory` | none; reports under state root |
+| `reports.enabled` | retired; remove rather than map | none |
+| `reports.directory` | retired; remove rather than map | none |
 | `retentionDays` | `regulate.retentionDays` | none |
 | `agentExecutionLimits.timeoutMs` | `regulate.agentTimeoutMs` | `1800000` |
 | same explicit timeout | `pguide.diagnoseAhpTimeoutMs` | `30000` |
 | `regulationStrategy.quota` | `regulate.quota` | `{"timeoutMs":300000,"maxAgentRuns":10,"maxStallRuns":3}` |
-| `regulationStrategy.probe` | `pilot.probe` | `{"timeoutMs":30000,"retry":{"maxRetries":0,"delayMs":0}}` |
+| `regulationStrategy.probe` | retired with the old Pilot CLI; no replacement mapping | none |
 | `regulationPermissions` | `regulate.permissions` | `{"ceiling":[],"grants":[]}` |
 | `objectives` | `objectives.aliases` | `{}` |
 
@@ -152,37 +154,12 @@ retired with explicit diagnostics; use user/project discovery and `--cwd`.
 
 Quota belongs to regulation. The retired `supervise.agentTimeoutMs` setting
 should be removed; it no longer has a built-in descriptor or default.
-`pilot.probe` supports three
-independent runtime budgets:
-
-```jsonc
-"pilot.probe": {
-  "timeoutMs": 300000,
-  "checkTimeoutMs": 60000,
-  "preparationTimeoutMs": 60000,
-  "observationBudget": {
-    "timeoutMs": 300000,
-    "maxDepth": 32,
-    "maxObservations": 128
-  },
-  "retry": { "maxRetries": 0, "delayMs": 0 }
-}
-```
-
-`preparationTimeoutMs` defaults to 60000 and bounds root preparation, including
-local Git inspection. Each lazily prepared dependency also gets this limit, but
-its preparation still consumes the **existing** aggregate observation deadline.
-`observationBudget` defaults to 30000 ms, depth 32 and 128 logical observations;
-reuse hits still consume the logical count and depth checks. `checkTimeoutMs`
-defaults to `timeoutMs` for backward compatibility and bounds each isolated
-process check. `timeoutMs` retains the Regulation outer probe deadline and retry
-semantics; increasing a check timeout alone never extends the aggregate deadline.
-All three settings reach probe and regulate observation bindings.
-Diagnostics distinguish `source-preparation-timeout`, `observation-timeout`,
-`observation-budget` and `check-timeout`, and retain Objective/check identity.
-Continue keeps archived profiles, timeouts, probe/quota and pinned sources,
-but re-reads **current** permissions and state/report locations. The saved
-permission snapshot never authorizes a new attempt. ACP diagnosis is unaffected.
+The old Pilot probe/report settings should also be removed from active settings.
+Unknown namespaces remain visible as unverified, not as restored command
+support. No old timeout or retry setting is silently translated to Task Bundle
+execution. Saved regulation records are not resumed or rewritten by this
+cleanup; the remaining legacy continuation wrapper rejects execution.
+ACP/AHP diagnosis and resource/config validation are unaffected.
 
 Independent `agents.yaml` and `objectives.yaml` resources keep their locations
 and schemas; do not re-migrate them. The explicit resource migration commands'

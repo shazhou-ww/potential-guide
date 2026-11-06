@@ -42,9 +42,6 @@
       "path": "./packages/cli-runtime"
     },
     {
-      "path": "./packages/pguide-pilot"
-    },
-    {
       "path": "./packages/pguide-regulate"
     },
     {

@@ -1,7 +1,8 @@
 # npm Objective 包与固定消费
 
 Checker/Objective Host 执行链路已退役。npm 包的显式准备、摘要计算与固定缓存验证仍保留；
-CLI `probe`、`regulate` 和 `continue` 在迁移到 Task Bundle 前明确拒绝执行，
+旧 `probe`、`scaffold`、`validate` 命令已随 pguide-pilot 移除；
+保留的 `regulate` 和 `continue` 包装仍明确拒绝执行，
 不会重放或改写旧治理记录。以下旧消费与恢复示例仅用于理解历史格式；
 新执行请按 [Task Bundle 契约](axis/task-engine-contracts/task-bundle.md)显式构建和提交。
 

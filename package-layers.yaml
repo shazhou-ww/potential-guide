@@ -26,7 +26,6 @@ tools:
   - "@potential-guide/pguide-task-bundle"
   - "@potential-guide/pguide-agents"
   - "@potential-guide/cli-runtime"
-  - "@potential-guide/pguide-pilot"
   - "@potential-guide/pguide-regulate"
   - "@potential-guide/pguide-objectives"
   - "@potential-guide/objective-declarations"

@@ -125,19 +125,19 @@ test("explicit objects are never completed by defaults; known unknown keys and p
   await fixture(t);
   const catalog = await loadSettingsCatalog();
   for (const value of [
-    { "pilot.probe": { timeoutMs: 10 } },
+    { "regulate.quota": { timeoutMs: 10 } },
     { "regulate.quota": { maxAgentRuns: 1 } },
     { "regulate.permissions": { ceiling: [], grants: ["missing"] } },
-    { "pilot.notASetting": true },
+    { "regulate.notASetting": true },
     { "regulate.agentTimeoutMs": 2147483648 },
     { "objectives.aliases": { "bad/name": "x" } },
   ])
     assert.ok(inspectSettings(value, "fixture", catalog).issues.length);
   assert.equal(inspectSettings({ "new-package.flag": true }, "fixture", catalog).issues.length, 0);
   const literal = parseConfig(
-    '{"pilot.probe":{"__proto__":{"timeoutMs":90,"retry":{"maxRetries":0,"delayMs":0}}}}',
+    '{"regulate.quota":{"__proto__":{"timeoutMs":90,"maxAgentRuns":1,"maxStallRuns":1}}}',
   );
-  assert.deepEqual(Object.keys(literal["pilot.probe"] as object), ["__proto__"]);
+  assert.deepEqual(Object.keys(literal["regulate.quota"] as object), ["__proto__"]);
   assert.ok(inspectSettings(literal, "fixture", catalog).issues.length);
 });
 
@@ -269,7 +269,7 @@ test("registration rejects owner collisions, invalid defaults, external refs and
   const metadata = { name: "@fixture/conflict", pguide: { settings: "./settings.json" } };
   await writeFile(join(root, "package.json"), JSON.stringify(metadata));
   for (const [description, message] of [
-    [{ schemaVersion: 1, namespace: "pilot", settings: {} }, /namespace conflict/],
+    [{ schemaVersion: 1, namespace: "regulate", settings: {} }, /namespace conflict/],
     [
       {
         schemaVersion: 1,

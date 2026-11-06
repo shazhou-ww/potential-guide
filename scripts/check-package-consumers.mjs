@@ -59,7 +59,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
     ],
     ["protocol", ["@potential-guide/pilot-protocol"]],
     ["main", ["pguide"]],
-    ["pilot", ["@potential-guide/pguide-pilot"]],
     ["regulation", ["@potential-guide/pguide-regulate"]],
     ["coordinator", ["@potential-guide/effects", "@potential-guide/regulation-coordinator"]],
     ["objectives", ["@potential-guide/pguide-objectives"]],
@@ -89,7 +88,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       "combined",
       [
         "pguide",
-        "@potential-guide/pguide-pilot",
         "@potential-guide/pguide-regulate",
         "@potential-guide/pguide-objectives",
         "@potential-guide/pguide-config",
@@ -581,12 +579,9 @@ assert.equal(count,16);
           "config",
           "diagnose",
           "objectives",
-          "probe",
-          "scaffold",
-          "validate",
         ]);
         assert.deepEqual(result.conflicts, {});
-        for (const command of ["probe", "scaffold", "validate", "config", "agents", "objectives"]) {
+        for (const command of ["config", "agents", "objectives"]) {
           const entry = result.commands.find((entry) => entry.command === command);
           assert.equal(entry.compatible, true);
           assert.equal(entry.source, "bundled");
@@ -667,25 +662,14 @@ assert.equal(count,16);
           directory,
           env,
         );
-        const objective = join(directory, "pilot");
-        const scaffolded = JSON.parse(
-          await run(
-            executable,
-            ["scaffold", "pilot", objective, "--format", "json"],
-            directory,
-            env,
-          ),
-        );
-        assert.equal(scaffolded.schemaVersion, 1);
-        const validated = JSON.parse(
-          await run(
-            executable,
-            ["validate", "pilot", objective, "--format", "json"],
-            directory,
-            env,
-          ),
-        );
-        assert.equal(validated.schemaVersion, 1);
+        const objective = "git+https://example.test/definitions.git#objective/";
+        for (const command of ["probe", "check", "validate", "scaffold"]) {
+          const retired = JSON.parse(
+            await run(executable, [command, "--format", "json"], directory, env, 2),
+          );
+          assert.match(retired.error, new RegExp(`Unknown command.*${command}`));
+          assert.doesNotMatch(retired.error, /Install/);
+        }
         const declaration = join(directory, "declaration.json");
         await writeFile(
           declaration,
@@ -750,16 +734,7 @@ assert.equal(count,16);
         await run(executable, ["--help", "--format", "json"], directory, env),
       );
       assert.deepEqual(result.conflicts, {});
-      for (const name of [
-        "agents",
-        "objectives",
-        "probe",
-        "regulate",
-        "continue",
-        "scaffold",
-        "validate",
-        "config",
-      ]) {
+      for (const name of ["agents", "objectives", "regulate", "continue", "config"]) {
         assert.ok(
           result.commands.some((entry) => entry.command === name && entry.compatible),
           name,
