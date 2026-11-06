@@ -1,9 +1,10 @@
 {
-  "observedAt": "2026-11-06T15:00:00.675Z",
+  "observedAt": "2026-11-06T15:50:08.058Z",
   "platform": "win32",
   "node": "v24.12.0",
   "source": "Pinned published npm packages, outside repository; public Gateway only",
   "gateway": "https://pinboard.shazhou.work",
+  "deploymentRevisionAtExecution": "957cef126b53d976624f7ea10b0fc4f081c7951b",
   "ubuntuVerified": false,
   "bundles": [
     {
@@ -389,7 +390,7 @@
     {
       "label": "tools-pass",
       "request": {
-        "requestId": "01M6RP1A2TVAY43VH3XPP8TEYP",
+        "requestId": "01M6RRX75KVR9JGF3JVBSK76WQ",
         "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
         "timeoutMs": 30000,
         "tools": [
@@ -402,8 +403,8 @@
           }
         ]
       },
-      "taskId": "01M6RP1MSX0D66999Z2AHWZKAR",
-      "runId": "01M6RP1MTFPPXR8N12DBT6R70S",
+      "taskId": "01M6RRXJCETYK80TXTE7PGYS1X",
+      "runId": "01M6RRXJCRR7F7EZKFQCA8GSRZ",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -415,14 +416,14 @@
         "code": 0,
         "forced": false,
         "sequence": 9,
-        "occurredAt": "2026-11-06T15:01:15.350Z"
+        "occurredAt": "2026-11-06T15:51:27.502Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:15.352Z"
+      "reclaimedAt": "2026-11-06T15:51:27.504Z"
     },
     {
       "label": "tools-gap",
       "request": {
-        "requestId": "01M6RP1MYY33SFT4JGBF8RZFKH",
+        "requestId": "01M6RRXJGM5R4JE2S3W9BCEG9Z",
         "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
         "timeoutMs": 30000,
         "tools": [
@@ -436,8 +437,8 @@
           }
         ]
       },
-      "taskId": "01M6RP1MZ50BRGNKG8G3TS5Q2K",
-      "runId": "01M6RP1MZ9GWX93RD82MMP9CYN",
+      "taskId": "01M6RRXJGRT854ZBDNQ2YZW89J",
+      "runId": "01M6RRXJGVNN8ECWQRH9B9RBB5",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -456,14 +457,14 @@
         "code": 0,
         "forced": false,
         "sequence": 18,
-        "occurredAt": "2026-11-06T15:01:15.510Z"
+        "occurredAt": "2026-11-06T15:51:27.620Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:15.512Z"
+      "reclaimedAt": "2026-11-06T15:51:27.622Z"
     },
     {
       "label": "tools-fault",
       "request": {
-        "requestId": "01M6RP1N4SN518NVSXKEVCK2VC",
+        "requestId": "01M6RRXJNGAR007MSPM3B24G9R",
         "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
         "timeoutMs": 30000,
         "tools": [
@@ -471,15 +472,15 @@
             "command": "C:\\Program Files\\nodejs\\node.exe",
             "args": [
               "-e",
-              "require('node:fs').writeFileSync(\"C:\\\\Users\\\\Wei\\\\AppData\\\\Local\\\\Temp\\\\check-delivery-Xxi7uC\\\\tool.pid\", String(process.pid)); setInterval(() => {}, 1000)"
+              "require('node:fs').writeFileSync(\"C:\\\\Users\\\\Wei\\\\AppData\\\\Local\\\\Temp\\\\check-delivery-UtlZPA\\\\tool.pid\", String(process.pid)); setInterval(() => {}, 1000)"
             ],
             "minimumVersion": "1.0.0"
           }
         ],
         "checkTimeoutMs": 1000
       },
-      "taskId": "01M6RP1N50P8H3QWXW7PZRM4ZF",
-      "runId": "01M6RP1N55MQMV0RG44XAKXK5N",
+      "taskId": "01M6RRXJNPY1EYW2ZW8QBGBH1F",
+      "runId": "01M6RRXJNRT3XCM0EKACYTHAKC",
       "taskStage": "failed",
       "runStage": "failed",
       "canceled": false,
@@ -492,19 +493,19 @@
         "code": 0,
         "forced": false,
         "sequence": 27,
-        "occurredAt": "2026-11-06T15:01:16.953Z"
+        "occurredAt": "2026-11-06T15:51:29.082Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:16.956Z"
+      "reclaimedAt": "2026-11-06T15:51:29.085Z"
     },
     {
       "label": "directories-pass",
       "request": {
-        "requestId": "01M6RP1PH4P8X8QK56BEMVTW6X",
+        "requestId": "01M6RRXM210W7686QQYEAQ1D52",
         "bundle": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
         "timeoutMs": 30000,
         "directories": [
           {
-            "path": "C:\\Users\\Wei\\AppData\\Local\\Temp\\check-delivery-Xxi7uC\\directory",
+            "path": "C:\\Users\\Wei\\AppData\\Local\\Temp\\check-delivery-UtlZPA\\directory",
             "requirements": [
               "exists",
               "read",
@@ -513,8 +514,8 @@
           }
         ]
       },
-      "taskId": "01M6RP20ZPSRSJGJTW62V12CRA",
-      "runId": "01M6RP2106GAYZRN2Y7B3BYRPM",
+      "taskId": "01M6RRXTV226A8N188W5VXMEV5",
+      "runId": "01M6RRXTVDA0FXXJ38N8G33A2C",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -526,27 +527,27 @@
         "code": 0,
         "forced": false,
         "sequence": 36,
-        "occurredAt": "2026-11-06T15:01:27.833Z"
+        "occurredAt": "2026-11-06T15:51:36.127Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:27.837Z"
+      "reclaimedAt": "2026-11-06T15:51:36.130Z"
     },
     {
       "label": "directories-gap",
       "request": {
-        "requestId": "01M6RP21559H47K5C168NQHV84",
+        "requestId": "01M6RRXTY8CRWQ6QERKBP89SWA",
         "bundle": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
         "timeoutMs": 30000,
         "directories": [
           {
-            "path": "C:\\Users\\Wei\\AppData\\Local\\Temp\\check-delivery-Xxi7uC\\absent",
+            "path": "C:\\Users\\Wei\\AppData\\Local\\Temp\\check-delivery-UtlZPA\\absent",
             "requirements": [
               "exists"
             ]
           }
         ]
       },
-      "taskId": "01M6RP215DFVH94V6TRMPVTDT0",
-      "runId": "01M6RP215JV089RJNMN8DF4VFA",
+      "taskId": "01M6RRXTYF021487DZAPRE5DSK",
+      "runId": "01M6RRXTYMC36DQZT1VQX64W6X",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -554,7 +555,7 @@
         "pass": false,
         "problems": [
           {
-            "target": "C:\\Users\\Wei\\AppData\\Local\\Temp\\check-delivery-Xxi7uC\\absent",
+            "target": "C:\\Users\\Wei\\AppData\\Local\\Temp\\check-delivery-UtlZPA\\absent",
             "code": "directory-unusable",
             "actual": "ENOENT"
           }
@@ -565,20 +566,20 @@
         "code": 0,
         "forced": false,
         "sequence": 45,
-        "occurredAt": "2026-11-06T15:01:27.949Z"
+        "occurredAt": "2026-11-06T15:51:36.211Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:27.954Z"
+      "reclaimedAt": "2026-11-06T15:51:36.214Z"
     },
     {
       "label": "network-pass",
       "request": {
-        "requestId": "01M6RP218WE7D81D1B94QGFPNE",
+        "requestId": "01M6RRXV0VXSWC25W7YG62B2NT",
         "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
         "timeoutMs": 30000,
         "dns": [],
         "http": [
           {
-            "url": "http://127.0.0.1:55922/pass",
+            "url": "http://127.0.0.1:53407/pass",
             "expectedStatus": [
               200
             ],
@@ -587,8 +588,8 @@
         ],
         "checkTimeoutMs": 5000
       },
-      "taskId": "01M6RP2JEQP5XDSDVTNF19D8KF",
-      "runId": "01M6RP2JF3SNB5BMY33FW69GM0",
+      "taskId": "01M6RRY4AERSD0WS7KHR82KSHR",
+      "runId": "01M6RRY4AWC3C3M5NJ6NVBSBM8",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -600,20 +601,20 @@
         "code": 0,
         "forced": false,
         "sequence": 54,
-        "occurredAt": "2026-11-06T15:01:45.667Z"
+        "occurredAt": "2026-11-06T15:51:45.870Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:45.670Z"
+      "reclaimedAt": "2026-11-06T15:51:45.873Z"
     },
     {
       "label": "network-gap",
       "request": {
-        "requestId": "01M6RP2JJCM0N7GQJD5NA7PZDX",
+        "requestId": "01M6RRY4ER9E3T7YCY0ZJ5KDCS",
         "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
         "timeoutMs": 30000,
         "dns": [],
         "http": [
           {
-            "url": "http://127.0.0.1:55922/gap",
+            "url": "http://127.0.0.1:53407/gap",
             "expectedStatus": [
               200
             ],
@@ -622,8 +623,8 @@
         ],
         "checkTimeoutMs": 5000
       },
-      "taskId": "01M6RP2JJKFEWHKVVXANDAV07G",
-      "runId": "01M6RP2JJSDS19WGGHYCZ295F7",
+      "taskId": "01M6RRY4F022X1A0DP72H2EH24",
+      "runId": "01M6RRY4F792T7XYBT6JEWTDTP",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -631,7 +632,7 @@
         "pass": false,
         "problems": [
           {
-            "target": "http://127.0.0.1:55922/gap",
+            "target": "http://127.0.0.1:53407/gap",
             "code": "http-status",
             "actual": "503"
           }
@@ -642,20 +643,20 @@
         "code": 0,
         "forced": false,
         "sequence": 63,
-        "occurredAt": "2026-11-06T15:01:45.809Z"
+        "occurredAt": "2026-11-06T15:51:45.984Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:45.813Z"
+      "reclaimedAt": "2026-11-06T15:51:45.987Z"
     },
     {
       "label": "network-fault",
       "request": {
-        "requestId": "01M6RP2JR1RV8JJ9JTYE3CMYZN",
+        "requestId": "01M6RRY4JA47E33R6SSMZMK2TN",
         "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
         "timeoutMs": 30000,
         "dns": [],
         "http": [
           {
-            "url": "http://127.0.0.1:55922/hang",
+            "url": "http://127.0.0.1:53407/hang",
             "expectedStatus": [
               200
             ],
@@ -664,8 +665,8 @@
         ],
         "checkTimeoutMs": 100
       },
-      "taskId": "01M6RP2JR9X39NVV070S4BTSEF",
-      "runId": "01M6RP2JRF833MD95HY6QRSF4B",
+      "taskId": "01M6RRY4JJQRFMJMXRTWE513QX",
+      "runId": "01M6RRY4JQ14D1MJ6A40F7WH0M",
       "taskStage": "failed",
       "runStage": "failed",
       "canceled": false,
@@ -678,20 +679,20 @@
         "code": 0,
         "forced": false,
         "sequence": 72,
-        "occurredAt": "2026-11-06T15:01:46.045Z"
+        "occurredAt": "2026-11-06T15:51:46.189Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:46.050Z"
+      "reclaimedAt": "2026-11-06T15:51:46.193Z"
     },
     {
       "label": "network-cancel",
       "request": {
-        "requestId": "01M6RP2JY9AWPH14XV5TN1PND7",
+        "requestId": "01M6RRY4RR755D9TZMKY8ZFRBY",
         "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
         "timeoutMs": 30000,
         "dns": [],
         "http": [
           {
-            "url": "http://127.0.0.1:55922/hang",
+            "url": "http://127.0.0.1:53407/hang",
             "expectedStatus": [
               200
             ],
@@ -700,8 +701,8 @@
         ],
         "checkTimeoutMs": 10000
       },
-      "taskId": "01M6RP2JYJV6GCSK464PWRW31R",
-      "runId": "01M6RP2JYRRKNA389NFVQP3P3E",
+      "taskId": "01M6RRY4S1SZAT87453E727G8Q",
+      "runId": "01M6RRY4S70Z9K2Y4WSB4PR5VD",
       "taskStage": "stopped",
       "runStage": "stopped",
       "canceled": true,
@@ -710,20 +711,20 @@
         "code": 0,
         "forced": false,
         "sequence": 83,
-        "occurredAt": "2026-11-06T15:01:46.198Z"
+        "occurredAt": "2026-11-06T15:51:46.337Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:46.204Z"
+      "reclaimedAt": "2026-11-06T15:51:46.342Z"
     },
     {
       "label": "author-pass",
       "request": {
-        "requestId": "01M6RP2K3VNCQ2QPG3KJQMSNCP",
+        "requestId": "01M6RRY4Y25KHNDNZWMMZJ1KTX",
         "bundle": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
         "timeoutMs": 30000,
         "text": "independent published Check SDK"
       },
-      "taskId": "01M6RP2K71349J34VHTSGPQAGE",
-      "runId": "01M6RP2K77YHVRNZ7G1VVZAV3M",
+      "taskId": "01M6RRY51FTXDJ0VC1EVDSWPVM",
+      "runId": "01M6RRY51QN2CFBYKY864ZEE4H",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -735,20 +736,20 @@
         "code": 0,
         "forced": false,
         "sequence": 9,
-        "occurredAt": "2026-11-06T15:01:46.408Z"
+        "occurredAt": "2026-11-06T15:51:46.566Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:46.409Z"
+      "reclaimedAt": "2026-11-06T15:51:46.568Z"
     },
     {
       "label": "author-gap",
       "request": {
-        "requestId": "01M6RP2KA7FHFBF34HFYZ3052Q",
+        "requestId": "01M6RRY552C05FJHCVCPV5WEQK",
         "bundle": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
         "timeoutMs": 30000,
         "text": " "
       },
-      "taskId": "01M6RP2KAASFJTJE9T0XNXV26X",
-      "runId": "01M6RP2KAM99K9ADQK9N0C3RPE",
+      "taskId": "01M6RRY556CVBVGFMFSMNYHD2G",
+      "runId": "01M6RRY55FQDN2ANQRYSKXS3RN",
       "taskStage": "completed",
       "runStage": "completed",
       "canceled": false,
@@ -767,13 +768,26 @@
         "code": 0,
         "forced": false,
         "sequence": 18,
-        "occurredAt": "2026-11-06T15:01:46.505Z"
+        "occurredAt": "2026-11-06T15:51:46.665Z"
       },
-      "reclaimedAt": "2026-11-06T15:01:46.507Z"
+      "reclaimedAt": "2026-11-06T15:51:46.668Z"
     }
   ],
-  "engineUrl": "http://127.0.0.1:55923",
-  "releasedToolPid": 3524,
+  "installed": {
+    "@potential-guide/check-environment": "0.1.0",
+    "@potential-guide/check-sdk": "0.1.0",
+    "@potential-guide/task-sdk": "0.1.0-rc.0",
+    "@sinclair/typebox": "0.34.52",
+    "@potential-guide/task-engine": "0.1.0-rc.0",
+    "@potential-guide/task-engine-server": "0.1.0-rc.1",
+    "@potential-guide/task-engine-http": "0.1.0-rc.0",
+    "@potential-guide/pguide-task-bundle": "0.1.0-rc.0",
+    "@ipld/car": "5.4.6",
+    "ipfs-unixfs-exporter": "16.2.3",
+    "multiformats": "14.0.5"
+  },
+  "engineUrl": "http://127.0.0.1:53408",
+  "releasedToolPid": 16124,
   "directoryProbeRestored": true,
   "activeHttpRequestsAfterRelease": 0,
   "windowsPublicConsumptionPassed": true,
@@ -786,5 +800,5 @@
     "actualConsumerPassed": true
   },
   "ownedResourcesReleased": true,
-  "finishedAt": "2026-11-06T15:01:46.515Z"
+  "finishedAt": "2026-11-06T15:51:46.677Z"
 }

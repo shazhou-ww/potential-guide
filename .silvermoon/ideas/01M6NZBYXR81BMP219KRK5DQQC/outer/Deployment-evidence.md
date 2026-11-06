@@ -6,7 +6,30 @@
 
 用户于 2026-11-06 明确要求“那可以提交了，ubuntu 先不验了”。本轮据此调整 Deployment，将 Ubuntu 全套安装、CLI 入口和运行验证延期，保留 npm 发布回执、Windows 独立公共 CID/Reference 消费、独立作者新检查及业务/物理释放要求。Ubuntu 不标记已验证；此要求是提交授权，不是对尚未提交的准确 revision 的 acceptOuter 授权。
 
-调整后的契约及验收脚本先同步 primary，再观察稳定 deploymentRevision，随后完整复跑保留的交付证明。现有 ledger 的 D-S02、D-AC01、D-AC02 保持未勾选，直到新修订下的实际验证完成。历史 HTTP 路径 404 和仓库 Windows symlink EPERM 不抹去、不伪称通过。
+调整后的契约及验收脚本先同步 primary `498834b13250d16038ada90fc2fb927f3b860dee`，观察稳定 deploymentRevision `957cef126b53d976624f7ea10b0fc4f081c7951b` 后完整复跑保留的交付证明。Deployment 文件 Git blob 为 `86276ccf38c60f607d3a7af4177cac3252847fb4`，本轮结果记录及 ledger 更新没有进一步改变要求。机器证据中的 `deploymentRevisionAtExecution` 保留该准确执行基线；新增证明文件使最终待提交的 Outer 修订改变，按同步后的 CLI 观察提交，不猜测或沿用旧修订。
+
+### 当前标准的逐项结果
+
+| ID | 实测结论 |
+| --- | --- |
+| D-S01 | 原 MCP 上传回执的三个 CID 与本轮已发布 CAR 根一致；指定公共 Gateway 的全部 48 个块经 CID 校验且逐字节匹配原 CAR。发布是已有事实，没有重上传或声称获得新账户 pin 回执。 |
+| D-S02 | 调整后的范围下重新构建独立作者检查，实际执行九个公共环境 CID 用例和两个独立作者用例；11 个 Run 均有实际 exit/reclaimedAt，资源释放断言通过。 |
+| D-AC01 | 三个公共 CID 由已发布 Engine 实际消费；通过标准 UnixFS/block Gateway 读取三份 check.json 和全部 12 篇 Reference，逐字节/SHA-256 匹配已发布资源。 |
+| D-AC02 | 两个发布/provenance Action 回执重新查询成功；独立项目的每个固定依赖均核查实际版本。通过、非空问题、异常失败及取消结果符合契约，独立作者新检查实际运行通过/问题用例，工具 PID、目录探针与 HTTP 请求物理释放均通过。 |
+
+最新完整结果见 [Delivery-verification-results.json](./Delivery-verification-results.json)：Windows Node `v24.12.0`，实际安装 check-sdk/check-environment `0.1.0`，Task SDK/Engine/HTTP/Bundle `0.1.0-rc.0`，Task Server `0.1.0-rc.1`，TypeBox `0.34.52`，CAR `5.4.6`，UnixFS exporter `16.2.3`，multiformats `14.0.5`。依赖均来自仓库外独立项目的已发布包，脚本逐项断言版本与项目固定依赖相同，没有从仓库内部源码执行。公共环境请求不使用本地 CAR fallback；独立作者请求明确使用新作者 CAR，不冒称公开发布。
+
+最新构建回执见 [Delivery-author-receipt.json](./Delivery-author-receipt.json)，发布回执见 [Delivery-release-receipts.json](./Delivery-release-receipts.json)，可复跑脚本见 [Delivery-verification.mjs](./Delivery-verification.mjs)。原 11 项验证证据被新修订下的完整复跑更新，不是把旧时点的结果标记为重新验证；上一轮阻塞时点的原文件可在 [原 primary 固定版本](https://github.com/shazhou-ww/potential-guide/tree/1d737b0a29ff2ee979f8df3b5c616ece7e20d550/.silvermoon/ideas/01M6NZBYXR81BMP219KRK5DQQC/outer) 查阅。
+
+### 延期事项与已知限制
+
+Ubuntu 全套安装、CLI 入口和运行验证仍没有开展，保留 `ubuntuVerified:false`，本轮依用户范围调整延期，而不是标记通过。当前 MCP pin metadata 的重新查询需要认证，旧上传回执与当前公共内容匹配分别记录；没有复制凭据、重 pin 或再次 npm 发布。
+
+三个 HTTP UnixFS 资源路径仍返回 404，原样保留；实际通过的是标准按 CID 解码公开块的完整资源读取，不伪称 HTTP 路径成功。当前范围要求并不依赖 HTTP UnixFS 路由。
+
+修改范围后的 `pnpm check` 已再次运行：sources/layers/format/lint/typecheck 通过，test 在既有 `pguide-task-bundle` Windows symlink 用例报 `EPERM`，pack:check 未执行。没有修改产品源码、测试或宿主权限，也不声称完整仓库检查通过。该宿主测试限制与部署外部消费验证分别记录；本轮外部消费脚本完整退出 0。完整检查日志保留在验收会话文件 `pnpm-check-current-scope.log`，可在支持符号链接的获授权环境另行复跑。
+
+本轮四个 D-* 在调整后的要求下均有对应证明，ledger 记录 Agent 工作完成。证据同步 primary 后，仅对 CLI 观察到的准确最终 deploymentRevision 记录 submitOuter，等待明确 acceptOuter；不将“可以提交”或延期 Ubuntu 当作生命周期接受。
 
 ## 历史独立复验：公共 CID 与 Reference 已验证，Ubuntu 入口未确认
 

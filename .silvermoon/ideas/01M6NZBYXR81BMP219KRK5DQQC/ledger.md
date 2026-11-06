@@ -19,9 +19,9 @@
 ### Deployment steps
 
 - [x] **D-S01:** 通过 Pinboard 发布检查 CAR
-- [ ] **D-S02:** 验证实际结果与结束状态
+- [x] **D-S02:** 验证实际结果与结束状态
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** Pinboard 制品可按原 CID 独立执行
-- [ ] **D-AC02:** 消费者结果与资源行为符合契约
+- [x] **D-AC01:** Pinboard 制品可按原 CID 独立执行
+- [x] **D-AC02:** 消费者结果与资源行为符合契约
