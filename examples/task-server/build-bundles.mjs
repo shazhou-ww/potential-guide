@@ -12,6 +12,7 @@ export async function buildExampleBundle({
   sourceOptions = {},
   downloadResources,
   resources = {},
+  binary = [],
   serviceUrl,
   token,
   checkBundle,
@@ -88,6 +89,7 @@ children(scope){return{service:client,caller:{scope,subject:"example"},waitForTa
     declaration,
     entry,
     resources,
+    binary,
     outDirectory: join(directory, `${kind}-bundle`),
   });
   if (ipfsClient) {

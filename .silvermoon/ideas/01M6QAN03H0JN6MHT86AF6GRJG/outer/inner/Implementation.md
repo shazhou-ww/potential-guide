@@ -14,6 +14,10 @@
 
 覆盖规范化、binary、旧缓存、同根不同容器、错根和替换竞态，更新直接相关公开文档与生成 Schema，运行定向验证及 pnpm check。
 
+首次跨平台 CI 暴露打包消费者的 tarball binary 声明遗漏及缓存回归依赖终端日志格式，
+本实施修订必须补齐完整 Task 消费场景，并在 CI 分组输出环境证明实际 build 缓存状态。
+先修复并重新审查准确 Inner World，不沿用此前接受决定批准尚未验证的修改。
+
 ## Acceptance criteria
 
 ### I-AC01: 规范内容与声明一致

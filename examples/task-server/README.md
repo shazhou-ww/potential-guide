@@ -41,14 +41,19 @@ credentials in source control or publicly distributed Bundles. Run callbacks
 do not inherit general host credentials.
 
 The SDK produces a self-contained `worker.cjs`, declaration, locked Schema
-closure and opaque resources. Import/upload and pin the resulting CAR using an
+closure and selected resources. `buildExampleBundle` forwards explicit final-path
+`binary` patterns to the ordinary builder; embedding an archive requires, for example,
+`binary: ["resources/checker.tgz"]`. `resources` alone does not declare binary, and
+neither this helper nor the compiler guesses from an extension. Other resources use
+the default strict UTF-8/LF rules. Import/upload and pin the resulting CAR using an
 external tool and destination of your choice, not author source or `node_modules`. The returned root
 CID is standard UnixFS content identity; name is display-only, not a selector.
 Callbacks read bundled resources via `context.bundle.read(path)` byte streams,
 not `import.meta.url` or physical host paths. Existing business Checker/Objective
 archives and their URL/Digest inputs are unchanged.
-Gateway URLs must be root origins without path prefixes. Resource data is fetched on demand
-by default, so a later Gateway failure can fail a Run; `bundlePrefetch: true` restores
+Gateway URLs must be root origins without path prefixes. Explicit binary data is fetched on demand
+by default, so a later Gateway failure can fail a Run; default text is validated before admission.
+`bundlePrefetch: true` restores
 complete prefetch when composing an Engine/Server programmatically.
 
 POST `/tasks` with JSON and a fresh ULID `Idempotency-Key` (add a bearer token

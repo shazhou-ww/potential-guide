@@ -124,6 +124,7 @@ try {
       "resources/checker.tgz": join(directory, "checker.tgz"),
       "resources/objective.tgz": join(directory, "objective.tgz"),
     },
+    binary: ["resources/checker.tgz", "resources/objective.tgz"],
   };
   const checkBundle = await buildExampleBundle({ ...authorOptions, kind: "check" });
   const probeBundle = await buildExampleBundle({

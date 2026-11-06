@@ -131,9 +131,11 @@ test("real environment build: normalized Git/Turbo hit, binary/rule invalidation
     await writeFile(
       join(environment, "poison.mjs"),
       `
+import assert from "node:assert/strict";
 import {readFile,writeFile} from "node:fs/promises";
 import {encodeContentCar} from "@potential-guide/pguide-task-bundle/car";
 import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
+assert.equal(process.versions.node,${JSON.stringify(process.versions.node)},"Turbo build must use the test's Node runtime");
 if(process.env.IDENTITY_POISON==="1") {
  const path="dist/candidate/tools";
  const snapshot=await readTaskArtifact(path);
@@ -160,37 +162,64 @@ if(process.env.IDENTITY_POISON==="1") {
     const hash = () =>
       git("hash-object", "--path=packages/check-environment/references/tools/en/check.md", page);
     const crlfHash = (await hash()).stdout;
-    const turbo = async (cache, poison = false) =>
-      execute(
-        process.execPath,
-        [
-          join(root, "node_modules", "turbo", "bin", "turbo"),
-          "run",
-          "verify",
-          "--filter=@potential-guide/check-environment",
-          "--cache=local:rw",
-          `--cache-dir=${cache}`,
-          "--output-logs=full",
-        ],
-        {
-          cwd: sandbox,
-          env: {
-            ...process.env,
-            IDENTITY_POISON: poison ? "1" : "0",
-            PGUIDE_ENVIRONMENT_BINARY_INPUTS: await environmentCacheInputs(sandbox),
+    const summaries = join(sandbox, ".turbo", "runs");
+    await mkdir(summaries, { recursive: true });
+    const turbo = async (cache, expectedCache, poison = false) => {
+      const before = new Set(await readdir(summaries));
+      let result;
+      let failure;
+      try {
+        result = await execute(
+          process.execPath,
+          [
+            join(root, "node_modules", "turbo", "bin", "turbo"),
+            "run",
+            "verify",
+            "--filter=@potential-guide/check-environment",
+            "--cache=local:rw",
+            `--cache-dir=${cache}`,
+            "--output-logs=full",
+            "--summarize",
+          ],
+          {
+            cwd: sandbox,
+            env: {
+              ...process.env,
+              GITHUB_ACTIONS: "true",
+              IDENTITY_POISON: poison ? "1" : "0",
+              PGUIDE_ENVIRONMENT_BINARY_INPUTS: await environmentCacheInputs(sandbox),
+            },
+            maxBuffer: 8 * 1024 * 1024,
           },
-          maxBuffer: 8 * 1024 * 1024,
-        },
+        );
+      } catch (error) {
+        failure = error;
+      }
+      const created = (await readdir(summaries)).filter(
+        (name) => name.endsWith(".json") && !before.has(name),
       );
+      assert.equal(created.length, 1, "Each Turbo run must produce one new structured summary.");
+      const summary = JSON.parse(await readFile(join(summaries, created[0]), "utf8"));
+      const builds = summary.tasks.filter(
+        ({ taskId }) => taskId === "@potential-guide/check-environment#build",
+      );
+      assert.equal(builds.length, 1, "Inspect the build task, never the uncached verify task.");
+      assert.equal(builds[0].cache.status, expectedCache);
+      assert.equal(builds[0].execution.exitCode, 0);
+      assert.equal(summary.execution.exitCode, failure ? 1 : 0);
+      console.log(
+        `Turbo GITHUB_ACTIONS summary (Node ${process.versions.node}): ${builds[0].taskId} ${builds[0].cache.status}; run exit=${summary.execution.exitCode}`,
+      );
+      if (failure) throw failure;
+      return result;
+    };
     const cache = join(sandbox, ".cache", "good");
-    const cold = await turbo(cache);
-    assert.match(cold.stdout, /cache miss/);
+    await turbo(cache, "MISS");
     const refs = await readFile(join(environment, "dist/bundles/references.json"), "utf8");
     await writeFile(page, lf);
     assert.equal((await hash()).stdout, crlfHash);
     await rm(join(environment, "dist"), { recursive: true, force: true });
-    const hit = await turbo(cache);
-    assert.match(hit.stdout, /cache hit/);
+    await turbo(cache, "HIT");
     assert.equal(await readFile(join(environment, "dist/bundles/references.json"), "utf8"), refs);
     const missingIdentity = JSON.parse(refs);
     delete missingIdentity.tools.cid;
@@ -208,8 +237,7 @@ if(process.env.IDENTITY_POISON==="1") {
       buildFile,
       `${await readFile(buildFile, "utf8")}\nbinary: [resources/references/en/check.md]\n`,
     );
-    const binary = await turbo(cache);
-    assert.match(binary.stdout, /build: cache miss/);
+    await turbo(cache, "MISS");
     assert.notEqual(
       await readFile(join(environment, "dist/bundles/references.json"), "utf8"),
       refs,
@@ -217,19 +245,19 @@ if(process.env.IDENTITY_POISON==="1") {
     const binaryRefs = await readFile(join(environment, "dist/bundles/references.json"), "utf8");
     await writeFile(page, lf.replaceAll("\n", "\r\n"));
     assert.equal((await hash()).stdout, crlfHash);
-    assert.match((await turbo(cache)).stdout, /build: cache miss/);
+    await turbo(cache, "MISS");
     assert.notEqual(
       await readFile(join(environment, "dist/bundles/references.json"), "utf8"),
       binaryRefs,
     );
-    assert.match((await turbo(cache)).stdout, /build: cache hit/);
+    await turbo(cache, "HIT");
     const rule = join(sandbox, "packages/task-protocol/src/bundle-content.ts");
     await writeFile(rule, `${await readFile(rule, "utf8")}\n// Cache rule revision probe.\n`);
-    assert.match((await turbo(cache)).stdout, /build: cache miss/);
+    await turbo(cache, "MISS");
     const oldCache = join(sandbox, ".cache", "old");
     const accepted = await snapshot(join(environment, "dist/bundles"));
     await writeFile(page, lf);
-    await assert.rejects(turbo(oldCache, true), (error) =>
+    await assert.rejects(turbo(oldCache, "MISS", true), (error) =>
       /binary.*Rebuild/.test(error.stdout + error.stderr),
     );
     assert.deepEqual(await snapshot(join(environment, "dist/bundles")), accepted);
@@ -238,8 +266,7 @@ if(process.env.IDENTITY_POISON==="1") {
       /resource bytes differ/,
     );
     await rm(join(environment, "dist/candidate"), { recursive: true, force: true });
-    await assert.rejects(turbo(oldCache), (error) => {
-      assert.match(error.stdout, /build: cache hit/);
+    await assert.rejects(turbo(oldCache, "HIT"), (error) => {
       assert.match(error.stdout + error.stderr, /binary.*Rebuild/);
       return true;
     });

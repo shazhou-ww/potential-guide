@@ -191,3 +191,68 @@ node scripts\check-packages.mjs --bundle-authoring
 
 完整跨平台入口仍为既有 `pnpm consumers:check` / `pnpm deployment:verify`；
 两者也识别该独立根选项。固定 CID 同上；未运行外部/跨平台场景前不勾 D-*。
+
+## 首次准确 CI 失败后的 Inner 修订
+
+首次准确 CI `42197402285` 已结束，不能用此前本机成功覆盖其失败事实：
+
+- 全量 isolated consumers 及三平台 packed 路径首先在 `resources/checker.tgz` 失败。
+  `check-task-bundle-consumer.mjs` 使用低层 builder 时漏传作者 `binary` 选项；
+  生成声明中的占位 `binary: []` 不能替代 builder 选项。
+- Node 22、24 的真实 environment 缓存测试都在 `/build: cache miss/` 断言失败。
+  GitHub Actions 将 task 名与日志正文拆入 `::group::`，不是实际 build 缓存状态错误。
+  该失败暴露的是此前测试把人类日志格式当作机器证据。
+
+本轮基于 `95cefa2cdedeb7edb6e1a8eed3ab223e3a5da848` 修订 Inner，不改 ideal、Deployment、
+events 或授权；此前 `da888f74` 候选及后续接受不能自动覆盖本次修订。
+I-S03/I-AC03 已重新置为未完成，监督者在 Implementation.md 补充的要求保留。
+
+修订限于这两个阻塞及紧耦合遗漏：
+
+1. Check/Probe packed 作者显式选择 checker/objective tarball 路径为 binary，并在真实
+   packed 流程校验最终精确清单、目录/CAR 一致及每个归档的逐字节保真。
+2. 同类审计发现 MVP consumer 和 probe-integration 通过 `buildExampleBundle` 嵌入 tarball，
+   helper 没有转发 binary；增加默认空列表的显式选项，并迁移这两个已知归档调用者。
+   packed task-bundles 另实际调用该 helper，证明归档原样保留、未标 binary 的文本仍规范化。
+   已核对 service/Gateway 任意字节夹具，它们已有显式 binary，不按扩展名增加自动判断。
+3. 每次真实 Turbo 调用开启 `--summarize`，只读取该次新生成的 summary，
+   精确要求唯一 `@potential-guide/check-environment#build` 的 `cache.status` 为预期
+   `MISS`/`HIT` 且 build exitCode=0；同时核对整个 run 成败。失败后的旧候选恢复也照此核对。
+   不再从 stdout 推断缓存；测试子进程始终设置 `GITHUB_ACTIONS=true`。
+
+本轮 Windows 实际复验（均退出 0）：
+
+| 入口 | Node 22.13.0 | Node 24.11.1 |
+| --- | --- | --- |
+| `node --test scripts/environment-cache.test.mjs` | 1/1 | 1/1 |
+| `node scripts/check-packages.mjs --task-bundles` | 完整通过 | 完整通过 |
+
+- 缓存回归的子进程设置 `GITHUB_ACTIONS=true`；两版本都以真实 summary 证明
+  8 次精确 build 状态：MISS、HIT、MISS、MISS、HIT、MISS、MISS、HIT。
+  前六次 run exit=0，旧候选生成/恢复的末两次 run exit=1；build 本身均 exit=0。
+  fixture 的生产子进程另断言 Node 版本与测试驱动一致，未通过全局 `nvm use` 改共享版本。
+- 两版本 packed 均经过实际 tarball 安装、example helper 默认文本/显式归档校验、
+  Check/Probe 最终 binary 清单与原始归档字节校验，再移走作者 node_modules/source，
+  在独立 production host 完成实际负面业务结果、evidence 及 HTTP history/realtime 回放。
+  不是只运行 `--bundle-authoring`，也不是用源码模块替代安装包。
+- 最终 `pnpm check` 通过：76/76 Turbo tasks、root scripts 71/71、
+  全部结构打包验证通过；使用监督者原有 `--test-concurrency=2`，未修改时限、断言或包清单授权。
+- 本轮定向 lint 和 `git diff --check` 通过。当前 HEAD 仍为 `95cefa2c`，无提交/推送。
+
+日志：`.cache/identity-ci-cache-node22.log`、`.cache/identity-ci-cache-node24-final.log`、
+`.cache/identity-ci-task-bundles-node22.log`、`.cache/identity-ci-task-bundles-node24-final.log`、
+`.cache/identity-ci-followup-check.log`。
+
+### 本轮监督者复验
+
+监督者直接审阅归档 binary 选项、example helper 转发及精确文件保真断言，
+确认未按扩展名引入隐式分类；缓存测试读取每次唯一新 summary，并精确核对 build
+taskId、缓存状态及 run/build 退出状态，没有用 verify 的 bypass 日志替代命中证据。
+独立重跑 CI 分组环境缓存测试 1/1 通过，完整 `--task-bundles` 打包消费退出 0，
+包括实际 Check/Probe、HTTP history/realtime、负面业务结果及作者依赖不可用的生产宿主。
+结合实施者 Node 22/24 回归和本轮完整 pnpm check 结果，当前修订可重新 submitInner
+并由监督者授权接受；首次 CI 的失败事实保留，新的跨平台结果仍待准确提交 CI。
+
+上述本机回归完成后才重新勾 I-S03/I-AC03，表示实施验证完成，不是重新接受 Inner。
+首次 CI 的失败事实保留；新准确 Inner 仍须监督者重新审批。未写 Deployment/Outer/events，
+未把 Windows 两个 Node 版本的结果冒充 Linux/macOS 的后续 CI。

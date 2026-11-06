@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
@@ -18,6 +18,7 @@ export async function checkTaskBundleConsumer(scratch, tarballs, manifests, run)
       "@potential-guide/pguide-task-bundle",
       "@potential-guide/task-engine",
       "@potential-guide/task-sdk",
+      "@potential-guide/task-protocol",
       "@potential-guide/check-task",
       "@potential-guide/probe-task",
       "@potential-guide/check-artifacts",
@@ -129,6 +130,14 @@ process.on("message",async message=>{if(message==="close"){try{await server.clos
     });
   });
   try {
+    for (const [source, target] of [
+      ["build-bundles.mjs", "example-builder.mjs"],
+      ["echo-type.mjs", "echo-type.mjs"],
+    ])
+      await writeFile(
+        join(author, target),
+        await readFile(new URL(`../examples/task-server/${source}`, import.meta.url)),
+      );
     await writeFile(
       join(author, "build.mjs"),
       `
@@ -136,12 +145,13 @@ import assert from "node:assert/strict";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {join,resolve} from "node:path";
 import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
-import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
+import {checkTaskArtifact,readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
 import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
 import {writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
 import {checkerSchemaUri,objectiveSchemaUri} from "@potential-guide/check-artifacts/contracts";
 import {checkInputSchema,createCheckTaskType} from "@potential-guide/check-task";
 import {probeInputSchema,createProbeTaskType} from "@potential-guide/probe-task";
+import {buildExampleBundle} from "./example-builder.mjs";
 const root=${JSON.stringify(artifacts)};
 const page=Buffer.from(${JSON.stringify("---\ntitle: Packed\ndescription: Independent Bundle\n---\nBody\n")});
 const checker=await writeContractArtifact(new Map([
@@ -153,35 +163,55 @@ const objective=await writeContractArtifact(new Map([
 ["references/en/objective.md",page],["references/en/levels/ready.md",page]]),join(root,"objective"));
 await packContractArtifact(checker.directory,join(root,"checker.tgz"));
 await packContractArtifact(objective.directory,join(root,"objective.tgz"));
+await writeFile(join(root,"notes.txt"),"default text\\r\\n");
+const example=await buildExampleBundle({kind:"echo",directory:join(root,"example"),
+resources:{"resources/checker.tgz":join(root,"checker.tgz"),"resources/notes.txt":join(root,"notes.txt")},
+binary:["resources/checker.tgz"]});
+const exampleSnapshot=await readTaskArtifact(example.car,example.cid);
+assert.deepEqual((await checkTaskArtifact(example.car)).declaration.binary,["resources/checker.tgz"]);
+assert.deepEqual(exampleSnapshot.files.get("resources/checker.tgz"),await readFile(join(root,"checker.tgz")));
+assert.equal(exampleSnapshot.files.get("resources/notes.txt").toString(),"default text\\n");
 const sourceCode=\`import {createArtifactSource} from "@potential-guide/check-task";
 const createSource=context=>createArtifactSource({allowedOrigins:["https://example.test"],authorize(_reference,scope){if(scope!=="consumer")throw new Error("Scope mismatch.")},async download(url){const path=new URL(url).pathname;if(!["/checker.tgz","/objective.tgz"].includes(path))throw new Error("Unknown controlled resource.");const chunks=[];for await(const chunk of context.bundle.read("resources"+path))chunks.push(chunk);return Buffer.concat(chunks);}});\`;
 const nullSource={authorize(){},async resolve(){throw Error("Author schema extraction performs no business IO.")}};
 const check=createCheckTaskType({source:nullSource,directory:"unused"});
 const ipfsClient=new MemoryIpfsClient();
-async function bundle(kind,inputSchema,resultSchema,callback,resources){
+async function bundle(kind,inputSchema,resultSchema,callback,resources,binary){
  const yaml=resolve(kind+".yaml"),entry=resolve(kind+".ts");
  await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",binary:[],inputSchema,resultSchema,messageSchema:false}));
  await writeFile(entry,callback);
- const built=await buildTaskBundle({declaration:yaml,entry,resources,outDirectory:join(root,kind)});
- return await ipfsClient.import((await readTaskArtifact(built.car)).files);
+ const built=await buildTaskBundle({declaration:yaml,entry,resources,binary,outDirectory:join(root,kind)});
+ const snapshot=await readTaskArtifact(built.car,built.cid);
+ assert.deepEqual((await checkTaskArtifact(built.car,built.cid)).declaration.binary,[...binary].sort());
+ assert.deepEqual((await readTaskArtifact(built.directory,built.cid)).files,snapshot.files);
+ for(const path of binary)assert.deepEqual(snapshot.files.get(path),await readFile(resources[path]),path+" must retain its exact archive bytes");
+ return await ipfsClient.import(snapshot.files);
 }
 const checkBundle=await bundle("check-task",checkInputSchema,check.resultSchema,sourceCode+\`
 import {resolve} from "node:path";
 import {createCheckTaskType} from "@potential-guide/check-task";
-export default (input,context)=>createCheckTaskType({source:createSource(context),directory:resolve("business-workers"),wallMs:10000}).run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz")});
+export default (input,context)=>createCheckTaskType({source:createSource(context),directory:resolve("business-workers"),wallMs:10000}).run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz")},["resources/checker.tgz"]);
 const probe=createProbeTaskType({source:nullSource,checkEnvironment:checkBundle,checkBundle,children(){throw Error("Authoring does not create child tasks.")}});
 const probeBundle=await bundle("probe-task",probeInputSchema,probe.resultSchema,sourceCode+\`
 import {createProbeTaskType} from "@potential-guide/probe-task";
 import {TaskClient} from "@potential-guide/task-engine-http";
 const checkBundle=\`+JSON.stringify(checkBundle)+\`;
 const client=new TaskClient({url:\`+JSON.stringify(${JSON.stringify(ready.url)})+\`,headers:{Authorization:\`+JSON.stringify(${JSON.stringify(`Bearer ${token}`)})+\`}});
-export default (input,context)=>createProbeTaskType({source:createSource(context),checkBundle,checkEnvironment:checkBundle,wallMs:20000,children(scope){return {service:client,caller:{scope,subject:"consumer"},waitForTaskRelease:(id)=>client.waitForTaskRelease(id)}}}).run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz"),"resources/objective.tgz":join(root,"objective.tgz")});
+export default (input,context)=>createProbeTaskType({source:createSource(context),checkBundle,checkEnvironment:checkBundle,wallMs:20000,children(scope){return {service:client,caller:{scope,subject:"consumer"},waitForTaskRelease:(id)=>client.waitForTaskRelease(id)}}}).run(input,context);\`,{"resources/checker.tgz":join(root,"checker.tgz"),"resources/objective.tgz":join(root,"objective.tgz")},["resources/checker.tgz","resources/objective.tgz"]);
+console.log("Packed binary Task Bundles: exact tarball bytes, binary manifests and directory/CAR identity verified.");
 await writeFile(join(root,"references.json"),JSON.stringify({checkBundle,probeBundle,checkerDigest:checker.digest,objectiveDigest:objective.digest}));
 await writeFile(join(root,"blocks.json"),JSON.stringify([...ipfsClient.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("hex")])));
 `,
     );
     console.log(await run(process.execPath, [join(author, "build.mjs")], author));
-    for (const name of ["check-task.ts", "probe-task.ts", "check-task.yaml", "probe-task.yaml"])
+    for (const name of [
+      "check-task.ts",
+      "probe-task.ts",
+      "check-task.yaml",
+      "probe-task.yaml",
+      "example-builder.mjs",
+      "echo-type.mjs",
+    ])
       await rm(join(author, name));
     // Windows may briefly retain directory handles after the author process exits.
     for (let attempt = 0; ; attempt++) {

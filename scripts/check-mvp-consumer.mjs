@@ -170,7 +170,7 @@ const built=await writeContractArtifact(new Map([
 ]),"artifact");
 await packContractArtifact(built.directory,"checker.tgz");
 await mkdir("imports");await copyFile("checker.tgz",resolve("imports","checker.tgz"));
-const bundle=await buildExampleBundle({ipfsClient,kind:"check",directory:resolve("author"),sourceOptions:{allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")]},downloadResources:{"https://example.test/checker.tgz":"resources/checker.tgz"},resources:{"resources/checker.tgz":resolve("checker.tgz")}});
+const bundle=await buildExampleBundle({ipfsClient,kind:"check",directory:resolve("author"),sourceOptions:{allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")]},downloadResources:{"https://example.test/checker.tgz":"resources/checker.tgz"},resources:{"resources/checker.tgz":resolve("checker.tgz")},binary:["resources/checker.tgz"]});
 const body={bundle,checker:{kind:"checker",url:"https://example.test/checker.tgz",digest:built.digest},subject:{},timeoutMs:10000};
 const fileBody={...body,checker:{...body.checker,url:pathToFileURL(resolve("imports","checker.tgz")).href}};
 `
