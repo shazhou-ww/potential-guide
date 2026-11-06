@@ -32,7 +32,7 @@ test("local verification covers the internal runtime dependency closure without 
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
   }
-  for (const id of ["check-runtime-files", "check-artifacts", "check-task"]) {
+  for (const id of ["check-runtime-files", "check-artifacts"]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
   }
@@ -75,15 +75,21 @@ test("release inventory contains the new packages and excludes retired Guide and
   }
 });
 
-test("retired Probe has no workspace, consumer dependency, pack or authoring scenario", async () => {
+test("retired Check and Probe adapters have no workspace, consumer dependency, pack or authoring scenario", async () => {
   for (const path of [
     "../packages/probe-task",
     "../examples/task-server/probe-config.mjs",
     "../examples/task-server/probe-integration.mjs",
+    "../packages/check-task",
+    "../examples/task-server/check-config.mjs",
+    "../examples/task-server/check-in-process.mjs",
+    "./check-task-bundle-consumer.mjs",
   ])
     await assert.rejects(access(new URL(path, import.meta.url)), { code: "ENOENT" });
   assert.ok(!verificationPackages.some(({ id }) => id === "probe-task"));
   assert.throws(() => parseReleaseTag("probe-task-v0.1.0-rc.0"), /Unsupported package/);
+  assert.ok(!verificationPackages.some(({ id }) => id === "check-task"));
+  assert.throws(() => parseReleaseTag("check-task-v0.1.0-rc.0"), /Unsupported package/);
   for (const workspace of ["packages", "apps"])
     for (const entry of await readdir(new URL(`../${workspace}/`, import.meta.url), {
       withFileTypes: true,
@@ -109,6 +115,17 @@ test("retired Probe has no workspace, consumer dependency, pack or authoring sce
           undefined,
           `${manifest.name} ${field}`,
         );
+      for (const field of [
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+      ])
+        assert.equal(
+          manifest[field]?.["@potential-guide/check-task"],
+          undefined,
+          `${manifest.name} ${field}`,
+        );
     }
   for (const path of [
     "../package.json",
@@ -123,6 +140,23 @@ test("retired Probe has no workspace, consumer dependency, pack or authoring sce
   ])
     assert.ok(
       !(await readFile(new URL(path, import.meta.url), "utf8")).includes("probe-task"),
+      path,
+    );
+  for (const path of [
+    "../package.json",
+    "../turbo.json",
+    "../objectives.yaml",
+    "../package-layers.yaml",
+    "./check-generated-sources.mjs",
+    "./embed-task-workers.mjs",
+    "./check-package-consumers.mjs",
+    "./check-packages.mjs",
+    "../examples/task-server/build-bundles.mjs",
+  ])
+    assert.ok(
+      !/(?:@potential-guide\/|packages\/|["'])check-task(?:["'/]|$)/m.test(
+        await readFile(new URL(path, import.meta.url), "utf8"),
+      ),
       path,
     );
 });

@@ -303,14 +303,6 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
-    id: "check-task",
-    directory: "check-task",
-    name: "@potential-guide/check-task",
-    requiredExports: ["createCheckTaskType", "createArtifactSource", "validateCheckInput"],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/checker-host", "@potential-guide/objective-host"],
-  },
-  {
     id: "check-runtime-files",
     directory: "check-runtime-files",
     name: "@potential-guide/check-runtime-files",

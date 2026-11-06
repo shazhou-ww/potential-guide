@@ -272,8 +272,8 @@ and the standalone binary:
 node scripts/check-packages.mjs --bundle-authoring
 ```
 
-`node scripts/check-packages.mjs --task-bundles` separately tests packed
-SDK/Engine consumption by CID on a business-free host. Both commands own and
+`node scripts/check-packages.mjs --task-sdk` separately tests packed SDK Worker
+consumption with author dependencies unavailable. Both commands own and
 clean their `.cache` fixtures; `PGUIDE_KEEP_PACK_CONSUMERS=1` retains them for
 inspection. They do not use an existing Kubo or publish any package to npm.
 

@@ -219,22 +219,23 @@ All commands below run from this checkout; create owned directories under
 required. Only third-party production dependencies may be downloaded.
 
 ```powershell
-pnpm exec turbo run build --filter=@potential-guide/task-engine-server --filter=@potential-guide/task-sdk --filter=@potential-guide/task-engine-webui --filter=@potential-guide/check-task
+pnpm exec turbo run build --filter=@potential-guide/task-engine-server --filter=@potential-guide/task-sdk --filter=@potential-guide/task-engine-webui --filter=@potential-guide/pguide-task-engine
 $env:PGUIDE_KEEP_PACK_CONSUMERS = "1"
-node scripts\check-packages.mjs --task-bundles
+node scripts\check-packages.mjs --task-service
 Remove-Item Env:\PGUIDE_KEEP_PACK_CONSUMERS
 ```
 
-The script packs local tarballs, installs two independent production graphs with
-local tarball overrides, removes author sources/dependency access, and starts a
-business-free Engine/HTTP/SQLite process. It verifies real v1 Check diagnostics
-through history/SSE with unchanged Result/evidence. It prints the exact retained
-`.cache\potential-guide-packs-*` directory; that directory contains tarballs,
-`bundle-author`, `bundle-runtime`, and `task-bundles`. Nothing is published.
-The SDK-only variant is `node scripts\check-packages.mjs --task-sdk`.
+The script packs local tarballs and verifies an independent installed
+service/CLI consumer against a business-free Engine/HTTP/SQLite process.
+It prints the exact retained `.cache\potential-guide-packs-*` directory for
+inspection. Nothing is published. The SDK-only variant
+`node scripts\check-packages.mjs --task-sdk` checks Worker logging and acknowledgments
+with author dependencies unavailable. The old Check-specific diagnostic consumer
+and its `--task-bundles` option are retired; those historical results are not
+proof that a current Check adapter exists.
 
 For an operator-controlled long-lived candidate, reuse the retained
-`bundle-runtime` installation, **not** the script's random-token fixture server.
+production service installation, **not** a script-owned fixture server.
 For the token-free loopback service, install the locally packed
 `@potential-guide/pguide-task-engine` and UI dependency graph instead and follow
 [the declarative service guide](task-server.md#declarative-local-service).

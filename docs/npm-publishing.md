@@ -49,10 +49,10 @@ are protocol; `objective-pilot` consumes both protocols, then
 packages and their release tags are retired.
 The generic Task Engine release scope is documented below. Its release routes
 prepare configuration only: they do not prove external publishing authorization
-or a successful npm release. `check-task`,
-`check-artifacts`, and `check-runtime-files` remain local-verification-only.
+or a successful npm release. `check-artifacts` and `check-runtime-files`
+remain local-verification-only.
 Their pack/install checks do not authorize bootstrap or product publication.
-`probe-task` is retired from the repository, verification packs and author
+`check-task` and `probe-task` are retired from the repository, verification packs and author
 examples. This does not deprecate or unpublish any historical npm version.
 Publish `check-sdk` before `check-environment`, which consumes it. Both Check
 packages use independent stable or RC tags and the same trusted publishing

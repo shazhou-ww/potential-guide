@@ -21,8 +21,8 @@ POSIX uses pinned descriptor-relative opens with no-follow flags. Unsupported
 host facilities fail closed. It does not interpret artifact schemas or URLs.
 See the exact [file-source boundaries](../../docs/task-server.md#local-file-source-boundaries).
 
-The `/worker` entry is the extracted Node CommonJS worker runner used by the
-generic `check-task` adapter. It is an executable worker
+The `/worker` entry is the legacy Node CommonJS worker runner retained for
+existing runtime consumers, not a generic Check task adapter. It is an executable worker
 entry, not a module to import on the main thread. `/worker-json` exposes the
 unchanged legacy worker finite-JSON guard. Neither adds a scheduler/state machine.
 

@@ -6,12 +6,7 @@ import spawn from "cross-spawn";
 
 export const generatedSources = [
   "pguide-cli-core/src/built-in-settings.ts",
-  ...["check-runtime-files", "check-task"].flatMap((name) =>
-    (name === "check-task"
-      ? ["runtime-identity.ts"]
-      : ["worker-source.ts", "runtime-identity.ts"]
-    ).map((file) => `${name}/src/${file}`),
-  ),
+  ...["worker-source.ts", "runtime-identity.ts"].map((file) => `check-runtime-files/src/${file}`),
 ];
 
 export async function guardGeneratedSources(root, build) {

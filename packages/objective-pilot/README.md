@@ -9,9 +9,8 @@ dependency handling, evidence, and explicit memory/process probes; it does not
 provide a replacement Task scheduler or translate old Host requests.
 CLI `probe`, `regulate` and `continue` explicitly reject execution until migrated.
 Use [Task Bundles](../../docs/axis/task-engine-contracts/task-bundle.md) for
-generic Engine execution. [`check-task`](../check-task/README.md) still supports
-legacy Checker callbacks; the old `probe-task` Objective observation adapter
-is retired without a direct replacement. New checks use
+generic Engine execution. The old `check-task` Checker adapter and `probe-task`
+Objective observation adapter are retired without direct replacements. New checks use
 [`check-sdk`](../check-sdk/README.md), as shown by
 [`check-environment`](../check-environment/README.md).
 

@@ -5,7 +5,6 @@ import { delimiter, isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
-import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
 import { checkTaskServiceConsumer } from "./check-task-service-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
@@ -37,18 +36,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         "@potential-guide/task-engine-server",
         "@potential-guide/task-engine",
         "@potential-guide/task-protocol",
-      ],
-    ],
-    [
-      "mvp-check",
-      [
-        "@potential-guide/pguide-task-bundle",
-        "@potential-guide/task-sdk",
-        "@potential-guide/check-task",
-        "@potential-guide/task-engine-server",
-        "@potential-guide/task-engine",
-        "@potential-guide/task-protocol",
-        "@potential-guide/check-artifacts",
       ],
     ],
     ["task-protocol", ["@potential-guide/task-protocol"]],
@@ -110,7 +97,6 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       ],
     ],
   ];
-  if (!only) await checkTaskBundleConsumer(scratch, tarballs, manifests, run);
   for (const [label, entries] of scenarios) {
     if (only && label !== only) continue;
     const directory = join(scratch, label);

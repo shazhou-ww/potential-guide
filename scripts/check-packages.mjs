@@ -4,17 +4,20 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import spawn from "cross-spawn";
 import { checkPackageConsumers } from "./check-package-consumers.mjs";
-import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { verificationPackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
-const bundlesOnly = process.argv.includes("--task-bundles");
 const sdkOnly = process.argv.includes("--task-sdk");
 const serviceOnly = process.argv.includes("--task-service");
 const authoringOnly = process.argv.includes("--bundle-authoring");
 const structureOnly = process.argv.includes("--structure");
-if ([sdkOnly, bundlesOnly, serviceOnly, authoringOnly, structureOnly].filter(Boolean).length > 1)
+for (const argument of process.argv.slice(2))
+  if (!["--task-sdk", "--task-service", "--bundle-authoring", "--structure"].includes(argument))
+    throw new Error(
+      `Unsupported consumer scope ${argument}; use --task-sdk for generic Worker isolation.`,
+    );
+if ([sdkOnly, serviceOnly, authoringOnly, structureOnly].filter(Boolean).length > 1)
   throw new Error("Select only one consumer scope.");
 const authoringPackages = new Set([
   "pguide",
@@ -43,33 +46,16 @@ if (authoringOnly) {
   }
 }
 const sdkPackages = new Set([
-  "check-artifacts",
-  "check-runtime-files",
   "pguide-cli-core",
   "pguide-task-bundle",
   "task-engine",
   "task-protocol",
   "task-sdk",
-]);
-const bundlePackages = new Set([
-  "pguide-cli-core",
-  "pguide-task-bundle",
-  "check-runtime-files",
-  "check-artifacts",
-  "task-protocol",
-  "task-sdk",
-  "task-engine",
-  "task-engine-http",
-  "task-engine-storage",
-  "task-engine-server",
-  "check-task",
 ]);
 const packages =
-  bundlesOnly || sdkOnly || authoringOnly
+  sdkOnly || authoringOnly
     ? verificationPackages.filter((entry) =>
-        authoringOnly
-          ? authoringPackages.has(entry.name)
-          : (sdkOnly ? sdkPackages : bundlePackages).has(entry.directory),
+        authoringOnly ? authoringPackages.has(entry.name) : sdkPackages.has(entry.directory),
       )
     : verificationPackages;
 const manifests = new Map();
@@ -202,7 +188,6 @@ try {
   }
   if (structureOnly)
     console.log("Package structure verified; run pnpm consumers:check for isolated consumers.");
-  else if (bundlesOnly) await checkTaskBundleConsumer(destination, tarballs, manifests, run);
   else
     await checkPackageConsumers(
       root,

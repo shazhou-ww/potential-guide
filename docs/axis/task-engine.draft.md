@@ -307,7 +307,7 @@ UI 不硬编码业务类型，不解析业务 URL 补齐 subject 契约，不承
 | [UI 回执模型](../../apps/task-engine-webui/src/model.ts)、[当前生命周期展示](../../apps/task-engine-webui/src/lifecycle.ts) | validSnapshot 仍接受旧 Task 阶段，偏离 AX-10；连接、业务和物理回收区分仍符合 AX-22 |
 | [SQLite 格式检查](../../packages/task-engine-storage/src/index.ts) | 只接受当前格式并拒绝旧格式，符合 AX-23，不是双格式桥接 |
 | [类型守护](../../packages/task-engine/src/type-supervisor.ts)、[类型 Worker](../../packages/task-engine/src/type-worker.ts) | 当前结果复验、代际隔离、释放证明对应 AX-15、AX-17、AX-19、AX-20，不按 historical/old generation 命名删除 |
-| [Check 内部实现](../../packages/check-task/src/implementation.ts)、[业务 pool](../../packages/task-engine/src/pool.ts) | 真实业务内部 prepare/execute/pool 符合 AX-04、AX-14；只有为旧 Engine 类型接口保留的桥接才属于 AX-23；旧 Probe 适配包已退役 |
+| [业务 pool](../../packages/task-engine/src/pool.ts) | 通用执行池仍保留；旧 Check/Probe 业务适配包已分别获授权退役，不再作为当前运行实现 |
 | [UI 收藏服务](../../apps/task-engine-webui/src/server.ts) | 仍有 Task 星标与无来源模板路径；由收藏负责 session 收敛，不用本整理替代其决定 |
 
 ## 审阅范围
@@ -316,9 +316,9 @@ UI 不硬编码业务类型，不解析业务 URL 补齐 subject 契约，不承
 通过审阅的不动点才作为后续清理基准；代码差异和桥接清单随后按编号逐项建立，
 不将本文或现有清理候选当作代码删除授权。
 
-当前剩余 7 个相关 workspace：task-protocol、task-engine、task-engine-storage、task-engine-http、
-task-engine-server、check-task、task-engine-webui，及直接相关测试、文档、脚本。
-原范围中的 probe-task 已单独获授权退役；下方来源索引保留其历史记录，不代表仍有该运行包。
+当前剩余 6 个相关 workspace：task-protocol、task-engine、task-engine-storage、task-engine-http、
+task-engine-server、task-engine-webui，及直接相关测试、文档、脚本。
+原范围中的 check-task/probe-task 已分别获授权退役；下方来源索引保留历史记录，不代表仍有这些运行包。
 旧 check-host/objective-host 和独立 objective-pilot/objective-regulator/regulation-coordinator 不在清理范围。
 
 ## 来源索引

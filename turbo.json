@@ -10,11 +10,6 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/embed-task-workers.mjs"],
       "outputs": ["dist/**"]
     },
-    "@potential-guide/check-task#build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/embed-task-workers.mjs"],
-      "outputs": ["dist/**"]
-    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
