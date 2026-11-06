@@ -58,6 +58,7 @@ test("V03/V05/V10: HTTP client observes Request preparation separately; disconne
       name: "HTTP display",
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema: {
         type: "object",
         properties: { value: { type: "number" } },

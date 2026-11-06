@@ -9,8 +9,10 @@ Engine 与 TaskClient 不再提供 `listCachedBundles`、`getCachedBundle`、
 `removeCachedBundle` 或 `evictBundle`，也不再定义 `cache-read` / `cache-remove` 操作。
 Web 工作台只提供 Task 和 Run 工作区，不提供缓存页或缓存管理代理。
 
-准备时验证目录、精确清单、声明、Schema、入口和文件尺寸，但默认不预取资源的全部后继块。
-资源按 Worker 拉取读取；因此 accepted 不再承诺全部资源已离线可用，后续 Gateway 故障可能使 Run 失败。
+准备时验证目录、精确 include/binary 清单、声明、Schema、入口和文件尺寸。
+默认文本资源必须在准入前有界读取并验证合法 UTF-8/LF；旧清单或非规范文本不能用空占位符通过。
+显式 binary 资源的后继块仍按 Worker 拉取读取；因此 accepted 不承诺全部 binary 资源已离线可用，
+后续 Gateway 故障可能使 Run 失败。
 `bundlePrefetch: true` 可在准入前读取全部文件，恢复完整预取的故障时点和离线读取能力。
 小型 raw 资源自身就是文件节点，解析它时不可避免会读取全部字节。
 准备与运行复用已验证块，并受内部租约、块数和总内存上限约束；未读取块没有保留保证。

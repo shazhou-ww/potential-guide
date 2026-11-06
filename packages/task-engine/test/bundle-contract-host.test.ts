@@ -23,6 +23,7 @@ const declaration = {
   name: "Engine contracts",
   runtime: { type: "node", minVersion: "22.13.0" },
   entry: "worker.cjs",
+  binary: [],
   inputSchema: object,
   resultSchema: text,
   messageSchema: false,

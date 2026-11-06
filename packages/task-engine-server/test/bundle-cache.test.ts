@@ -27,6 +27,7 @@ test("retired cache routes return 404 without changing IPFS content or Task admi
         name: "Internal content reuse",
         runtime: { type: "node", minVersion: "22.13.0" },
         entry: "worker.cjs",
+        binary: [],
         inputSchema: { type: "object" },
         resultSchema: true,
         messageSchema: false,

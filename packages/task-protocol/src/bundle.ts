@@ -23,6 +23,7 @@ export const taskBundleSchema = {
     "runtime",
     "entry",
     "include",
+    "binary",
     "inputSchema",
     "resultSchema",
     "messageSchema",
@@ -60,6 +61,12 @@ export const taskBundleSchema = {
       },
     },
     inputSchema: { type: "object" },
+    binary: {
+      type: "array",
+      maxItems: taskBundleLimits.files,
+      uniqueItems: true,
+      items: { type: "string", pattern: "^resources/[^\\\\:*?<>|\\u0000-\\u001f]+$" },
+    },
     resultSchema: { type: ["object", "boolean"] },
     messageSchema: { type: ["object", "boolean"] },
   },
@@ -71,6 +78,7 @@ export interface TaskBundleDeclaration {
   runtime: { type: "node"; minVersion: string };
   entry: "worker.cjs";
   include: string[];
+  binary: string[];
   inputSchema: JsonObject;
   resultSchema: JsonSchema;
   messageSchema: JsonSchema;
@@ -124,6 +132,16 @@ export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
       "invalid_bundle",
       "Task Bundle has no exact include manifest. Rebuild with the current Task Bundle authoring tools and use the new CID.",
     );
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    !Object.hasOwn(parsed, "binary")
+  )
+    fail(
+      "invalid_bundle",
+      "Task Bundle has no exact binary manifest. Rebuild with the current Task Bundle authoring tools and use the new CID.",
+    );
   if (!validator(parsed)) fail("invalid_bundle", "Invalid task.yaml declaration.");
   const declaration = parsed as unknown as TaskBundleDeclaration;
   const folded = new Set<string>();
@@ -146,6 +164,16 @@ export function validateTaskBundle(value: unknown): TaskBundleDeclaration {
       fail("invalid_bundle", "Task Bundle include has a file/directory collision.");
   if (!folded.has("task.yaml") || !folded.has("worker.cjs"))
     fail("invalid_bundle", "Task Bundle include must contain task.yaml and worker.cjs.");
+  for (const [index, path] of declaration.binary.entries())
+    if (
+      !isTaskBundlePath(path) ||
+      !declaration.include.includes(path) ||
+      (index > 0 && declaration.binary[index - 1]! >= path)
+    )
+      fail(
+        "invalid_bundle",
+        "Task Bundle binary requires sorted, unique exact resource file paths from include.",
+      );
   return declaration;
 }
 export function validateTaskBundleFiles(

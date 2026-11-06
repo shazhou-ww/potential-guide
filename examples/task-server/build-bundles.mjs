@@ -78,6 +78,7 @@ children(scope){return{service:client,caller:{scope,subject:"example"},waitForTa
       name: kind,
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema,
       resultSchema,
       messageSchema: false,

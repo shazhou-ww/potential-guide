@@ -10,6 +10,7 @@ import {
   taskBundleLimits,
   TaskError,
   validateBundleReference,
+  validateTaskText,
 } from "@potential-guide/task-protocol";
 import { createIpfsGatewayClient, type IpfsClient, openContent } from "./content.js";
 
@@ -265,6 +266,26 @@ export class BundleCache {
         throw new TaskError("invalid_bundle", "Bundle CID must identify a directory.");
       await walk(root, "");
       const inspected = inspectTaskBundle(files, this.limits);
+      if (!this.options.prefetch) {
+        const binary = new Set(inspected.declaration.binary);
+        for (const path of files.keys()) {
+          if (!path.startsWith("resources/") || binary.has(path)) continue;
+          const entry = await openContent(client, `${cid}/${path}`, access(this.lifetime.signal));
+          if (entry.type !== "file" && entry.type !== "raw")
+            throw new TaskError("invalid_bundle", "Bundle text is not a regular file.");
+          const chunks: Buffer[] = [];
+          let size = 0;
+          for await (const chunk of entry.content({ signal: this.lifetime.signal })) {
+            size += chunk.byteLength;
+            if (size > this.limits.fileBytes || BigInt(size) > entry.size)
+              throw new TaskError("capacity_exceeded", "Bundle text capacity exceeded.");
+            chunks.push(Buffer.from(chunk));
+          }
+          if (BigInt(size) !== entry.size)
+            throw new TaskError("invalid_bundle", "Bundle text size differs from its DAG.");
+          validateTaskText(Buffer.concat(chunks, size), path);
+        }
+      }
       const allowed = new Set(files.keys());
       return {
         ...inspected,

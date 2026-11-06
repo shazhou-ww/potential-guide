@@ -27,6 +27,7 @@ function tree() {
           name: "On demand",
           runtime: { type: "node", minVersion: "22.13.0" },
           entry: "worker.cjs",
+          binary: ["resources/nested/data.bin"],
           include: ["task.yaml", "worker.cjs", "resources/nested/data.bin"],
           inputSchema: { type: "object" },
           resultSchema: true,
@@ -245,6 +246,7 @@ test("a real self-contained Worker reads a nested resource through only the conf
       name: "Gateway Worker",
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema: { type: "object" },
       resultSchema: true,
       messageSchema: false,
@@ -265,6 +267,7 @@ test("a real self-contained Worker reads a nested resource through only the conf
     declaration,
     entry,
     resources: { "resources/nested/data.bin": resolve(directory, "resource.bin") },
+    binary: ["resources/nested/data.bin"],
     outDirectory: resolve(directory, "bundle"),
   });
   const memory = new MemoryIpfsClient();

@@ -1,11 +1,20 @@
 import assert from "node:assert/strict";
-import { copyFile, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isAbsolute, join, relative, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkBundleAuthoringConsumer(directory, cid, tarballs, manifests, run) {
+  const runtimeRoot = process.env.PGUIDE_PACK_CONSUMER_ROOT ?? tmpdir();
+  await mkdir(runtimeRoot, { recursive: true });
+  const canonicalRoot = await realpath(runtimeRoot);
+  const repository = await realpath(fileURLToPath(new URL("..", import.meta.url)));
+  const distance = relative(repository, canonicalRoot);
+  assert.ok(
+    isAbsolute(distance) || distance === ".." || distance.startsWith(`..${sep}`),
+    "Bundle runtime root must be outside the repository dependency ancestry.",
+  );
   await writeFile(
     join(directory, "publish.mjs"),
     `
@@ -20,7 +29,7 @@ await writeFile("blocks.json",JSON.stringify([...client.blocks].map(([key,bytes]
   );
   for (const file of ["main.ts", "contract.ts", "task.build.yaml"]) await rm(join(directory, file));
   await run(process.execPath, ["publish.mjs"], directory);
-  const host = await realpath(await mkdtemp(join(tmpdir(), "pguide-bundle-runtime-")));
+  const host = await realpath(await mkdtemp(join(canonicalRoot, "pguide-bundle-runtime-")));
   try {
     await copyFile(join(directory, "blocks.json"), join(host, "blocks.json"));
     const entries = ["@potential-guide/task-engine"];
@@ -64,7 +73,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {createTaskEngine,newId} from "@potential-guide/task-engine";
 import {MemoryIpfsClient,MemoryStore} from "@potential-guide/task-engine/testing";
-for(const name of ["@potential-guide/task-sdk","@potential-guide/pguide-task-bundle","@sinclair/typebox"])
+for(const name of ["@potential-guide/task-sdk","@potential-guide/pguide-task-bundle","@sinclair/typebox","@potential-guide/ipfs-content"])
  await assert.rejects(import(name),error=>error.code==="ERR_MODULE_NOT_FOUND");
 const client=new MemoryIpfsClient();
 for(const [key,hex] of JSON.parse(await readFile("./blocks.json","utf8")))

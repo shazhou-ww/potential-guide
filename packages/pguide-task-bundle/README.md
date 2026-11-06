@@ -23,7 +23,7 @@ With `--format json`, successful operations return
 Check results contain `declaration`, `resolved`, `cid` and exact `files`;
 build returns `directory`, `car`, `cid` and `declaration`. Upload and pin are not provided.
 The final distribution artifact is `<outDirectory>.car`; the directory remains
-available for local Worker execution and backwards-compatible directory inputs.
+available for local Worker execution and current-contract directory inputs.
 Help and discovery use the existing CLI metadata contracts. Errors and exit
 statuses use the shared pguide CLI handling, not a second diagnostics protocol.
 
@@ -118,6 +118,36 @@ outDirectory: dist
 Paths are relative to the build file, use portable `/` separators, and cannot
 escape its directory or traverse links. There is no second author-maintained
 `task.yaml`. `include`, `source.mode` and `source.exportName` are optional; unknown fields fail.
+`binary` is an optional array of portable globs (`*`, `?`, whole-segment `**`).
+It matches case-sensitive **final Bundle paths after include mapping**, not source paths:
+for example `binary: ["resources/images/**"]`. Unmatched patterns add no files.
+The low-level `buildTaskBundle` API accepts the same `binary` option.
+
+Every other final file must be valid UTF-8. Building changes only CRLF and lone CR
+to LF, retaining BOM, Unicode representation, spaces and trailing newline counts.
+Invalid UTF-8 fails with the file path; there is no extension/NUL detection or
+automatic binary fallback. Binary bytes are preserved exactly. Author files are
+never rewritten. Manifest, Worker and Schema files cannot be declared binary.
+
+The generated `task.yaml` requires `binary`, a sorted, unique list of actual exact
+resource paths (explicit `[]` when empty). Directory and CAR use the same normalized
+snapshot. Existing artifacts are **validated, never normalized on read**; missing
+`binary` or non-LF default text requires rebuilding, with no legacy compatibility.
+
+`readTaskArtifact(path, expectedCid?)` from the public `/artifact` entry validates
+the complete CAR/DAG and Bundle, returning checked `files`, `cid` and (for a CAR)
+`archive`. Copy these returned bytes, not a reopened source path. An expected CID
+is optional; without one any valid content root is accepted. Same-root CAR block
+reordering is legal: container hashes, byte size and age are not content identity.
+The `/car` helpers operate on arbitrary content trees and do not replace Bundle validation.
+
+Repository regression entry: `node scripts/check-packages.mjs --bundle-authoring`
+after `pnpm build`. The existing `pnpm consumers:check` and packed
+`pnpm deployment:verify` harnesses include the same standalone public API/CLI
+scenario. It asserts LF/CRLF/CR equivalence, binary preservation, same-root CAR
+reordering and wrong-root rejection. Its compiler-independent fixed input must
+print CID `bafybeibtkmjrucx7wqozzwuewnwtdoyhyucpr3wp2jbmmjr3zjjeugog2m` on every OS.
+
 New templates use `mode: explicit`: the author entry starts the Worker itself.
 Absent `mode` (or `mode: callback`) preserves the old lazy callback-export path,
 including `exportName` (default `default`). Do not combine `exportName` with
@@ -238,7 +268,8 @@ calls `runTask` again. It does not implement `runCheck` or `runProbe`.
   stop the owning process and validate the output or backup
   with `check artifact`, then recover only those owned paths. Do not remove a lock
   automatically or delete a backup before confirming a valid retained artifact.
-- `task.yaml` uses YAML block formatting and contains a required, exact `include` list including itself,
+- `task.yaml` uses YAML block formatting and contains required, exact `include` and `binary` lists.
+  `include` contains `task.yaml`,
   `worker.cjs`, schemas and selected resources. No globs, absent files or extra
   files are accepted. Old no-manifest bundles fail with rebuild/new-CID guidance.
 - Fixed Helia UnixFS import settings and deterministic Worker output produce the root
@@ -257,8 +288,8 @@ Choose an external CAR importer, upload destination and retention/pin policy.
 Build and artifact checks never connect to RPC, upload, pin, start/stop Kubo or create Tasks.
 Remove old `task-bundle.ipfsRpc` configuration and any manually registered settings entry.
 The canonical UnixFS layout (CIDv1, raw leaves, 256 KiB chunks, balanced 174-child nodes)
-is unchanged; existing valid CAR roots remain compatible.
-Engine resource reads are now on demand by default; see
+is unchanged; only artifacts satisfying the current required binary/text contract are accepted.
+Engine validates default text before admission; explicit binary resources remain on demand by default; see
 [cache behavior and migration](../../docs/task-bundle-cache.md).
 
 ## Repository verification (no npm publish)
@@ -271,6 +302,16 @@ and the standalone binary:
 ```text
 node scripts/check-packages.mjs --bundle-authoring
 ```
+
+The runtime host remains outside the repository by default (`os.tmpdir()`), with
+positive author-dependency controls and real missing-module checks for the runtime.
+To place **both** the author consumer and runtime host under an explicitly chosen
+independent root, set `PGUIDE_PACK_CONSUMER_ROOT` before this command (or
+`pnpm consumers:check` / `pnpm deployment:verify`). Use a dedicated directory
+outside every producer checkout, not a sibling worktree. A root inside this
+repository, including a symlink resolving back into it, is rejected.
+The harness owns unique child directories and cleans only those children;
+`PGUIDE_KEEP_PACK_CONSUMERS=1` retains the author consumer for inspection.
 
 `node scripts/check-packages.mjs --task-bundles` separately tests packed
 SDK/Engine consumption by CID on a business-free host. Both commands own and

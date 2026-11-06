@@ -65,7 +65,7 @@ deployment consumer helpers. It never publishes or fetches a replacement
 published pguide/internal package. Consumer third-party resolution and apt
 repositories are not hermetically pinned; the installed npm lock hash is
 recorded, not a claim of byte-identical images. Provenance also records
-`buildMethod: frozen-prod-plus-tsc-and-ui-build`, the exact toolchain
+`buildMethod: frozen-prod-plus-tsc-ui-and-environment-build`, the exact toolchain
 versions and its separate npm lockfile SHA-256. The toolchain is not covered by
 the repository's frozen install. This build is **not** a full repository
 `pnpm check`; the parent/operator runs repository checks independently.

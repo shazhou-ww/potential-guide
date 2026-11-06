@@ -21,7 +21,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node build.mjs",
+    "build": "node build.mjs --candidate",
+    "verify": "node verify.mjs",
+    "prepack": "node verify.mjs --accepted",
     "clean": "node -e \"for (const path of ['dist', '../../.cache/tsbuildinfo/check-environment.tsbuildinfo']) require('node:fs').rmSync(path, { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",

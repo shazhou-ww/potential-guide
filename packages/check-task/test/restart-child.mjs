@@ -63,6 +63,7 @@ if (restarting !== "restart") {
       name: "Restart Check",
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema: type.inputSchema,
       resultSchema: type.resultSchema,
       messageSchema: false,

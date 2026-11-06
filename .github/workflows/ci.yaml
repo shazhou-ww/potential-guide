@@ -85,6 +85,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Validate isolated package consumers
+        env:
+          PGUIDE_PACK_CONSUMER_ROOT: ${{ runner.temp }}
         run: pnpm consumers:check
 
   deployment-cli:

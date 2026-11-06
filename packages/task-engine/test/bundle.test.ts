@@ -14,6 +14,7 @@ function files(extra: Record<string, Buffer> = {}) {
           name: "same name",
           runtime: { type: "node", minVersion: "22.13.0" },
           entry: "worker.cjs",
+          binary: ["resources/data.bin"],
           include: [
             "task.yaml",
             "worker.cjs",
@@ -33,6 +34,32 @@ function files(extra: Record<string, Buffer> = {}) {
     }),
   );
 }
+test("admission validates all default text even without binary prefetch; binary stays opaque", async () => {
+  for (const prefetch of [false, true]) {
+    for (const bytes of [Buffer.from([255]), Buffer.from("a\r\n"), Buffer.from("a\rb")]) {
+      const client = new MemoryIpfsClient();
+      const tree = files({ "resources/data.bin": bytes });
+      const declaration = JSON.parse(tree.get("task.yaml")!.toString());
+      declaration.binary = [];
+      tree.set("task.yaml", Buffer.from(JSON.stringify(declaration)));
+      const cache = new BundleCache({ ipfsClient: client, prefetch });
+      try {
+        await assert.rejects(cache.acquire(await client.import(tree)), /resources\/data.bin/);
+        declaration.binary = ["resources/data.bin"];
+        tree.set("task.yaml", Buffer.from(JSON.stringify(declaration)));
+        const binary = await cache.acquire(await client.import(tree));
+        binary.release();
+        declaration.binary = [];
+        tree.set("task.yaml", Buffer.from(JSON.stringify(declaration)));
+        tree.set("resources/data.bin", Buffer.from("\uFEFFvalid\n"));
+        const text = await cache.acquire(await client.import(tree));
+        text.release();
+      } finally {
+        await cache.close();
+      }
+    }
+  }
+});
 test("neutral artifact primitives preserve strict declarations, portable paths and runtime admission", () => {
   assert.equal(defaultBundleLimits.bytes, 64 * 1024 * 1024);
   assert.equal(defaultBundleLimits.fileBytes, 64 * 1024 * 1024);

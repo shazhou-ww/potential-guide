@@ -14,6 +14,14 @@ declarations before their own schema validation.
 and checks exact file inclusion, capacities, nonempty UTF-8 Worker bytes and
 offline Schema resources. It returns declaration, resolved schemas, bytes and
 file count without evaluating the Worker, reading a directory or fetching data.
+Every declaration requires an exact `binary` array, sorted and unique, containing
+only included `resources/` files; an empty selection is explicitly `[]`.
+All other bytes must be valid UTF-8 with LF-only line endings, including manifest,
+Worker and Schemas. Reading rejects old declarations and non-normalized text,
+without rewriting anything. `normalizeTaskText` preserves all bytes except CRLF
+and lone CR (converted to LF), including a UTF-8 BOM; invalid UTF-8 names its path.
+Author tools share `taskBundlePattern` / `selectTaskBinary` for case-sensitive,
+portable final-path globs. No content/extension sniffing determines binary.
 Both author tooling and Engine use this implementation independently of
 `artifact-files`. Filesystem safety and Node runtime eligibility remain caller
 responsibilities; Engine cache/hint/retention budgets are not protocol limits.

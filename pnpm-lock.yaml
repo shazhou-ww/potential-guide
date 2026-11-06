@@ -383,6 +383,9 @@ importers:
 
   packages/check-sdk:
     dependencies:
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
       '@potential-guide/task-sdk':
         specifier: workspace:^
         version: link:../task-sdk
@@ -399,9 +402,6 @@ importers:
       '@potential-guide/task-engine':
         specifier: workspace:^
         version: link:../task-engine
-      '@potential-guide/task-protocol':
-        specifier: workspace:^
-        version: link:../task-protocol
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2

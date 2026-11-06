@@ -10,6 +10,7 @@
     "runtime",
     "entry",
     "include",
+    "binary",
     "inputSchema",
     "resultSchema",
     "messageSchema"
@@ -47,6 +48,12 @@
       }
     },
     "inputSchema": { "type": "object" },
+    "binary": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^resources/[^\\\\:*?<>|\\u0000-\\u001f]+$" }
+    },
     "resultSchema": { "type": ["object", "boolean"] },
     "messageSchema": { "type": ["object", "boolean"] }
   }

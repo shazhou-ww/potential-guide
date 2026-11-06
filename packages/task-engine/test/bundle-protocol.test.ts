@@ -13,6 +13,7 @@ function files(runtime = "22.13.0") {
           name: "Engine Bundle protocol",
           runtime: { type: "node", minVersion: runtime },
           entry: "worker.cjs",
+          binary: [],
           include: ["task.yaml", "worker.cjs"],
           inputSchema: { type: "object" },
           resultSchema: true,

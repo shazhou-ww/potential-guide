@@ -46,6 +46,7 @@ async function fixture(
         name: "Diagnostic test",
         runtime: { type: "node", minVersion: "22.13.0" },
         entry: "worker.cjs",
+        binary: [],
         inputSchema: { type: "object" },
         resultSchema: {
           type: "object",

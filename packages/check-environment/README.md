@@ -5,7 +5,7 @@ Bundles**: `tools`, `directories`, and `network`. No Objective levels, repair
 agents, package installation or long-running sampling are built into them.
 
 ```powershell
-pnpm --filter @potential-guide/check-environment... build
+node scripts/build.mjs --filter=@potential-guide/check-environment...
 ```
 
 The package contains `dist/bundles/<kind>/task.yaml`, the self-contained
@@ -28,15 +28,40 @@ It reads only those fixed business inputs, not the live source or Reference
 directories. No Check-specific compiler is added.
 
 Before acceptance the orchestration compares CAR and directory CIDs and exact
-resource bytes. All three candidates must succeed before `dist/bundles/` and
+resource bytes under the shared UTF-8/LF rules (explicit binary files remain raw).
+It writes only the reader's verified snapshots, never reopens source paths to copy.
+All three candidates must succeed before `dist/bundles/` and
 its final references.json are replaced together; failures retain accepted
 artifacts and references. Staging and candidate outputs are not release inputs.
+
+Root `pnpm build` runs an uncached `verify` acceptance task after cached builds;
+`pnpm pack` also runs read-only `prepack` verification of accepted outputs.
+Turbo caches `dist/candidate` and compilation/staging outputs, **not** `dist/bundles`.
+The package's `build` task only produces candidates; the root launcher also runs acceptance.
+The acceptance task checks candidate CARs/directories against current normalized
+author resources and the exact binary selection, then writes only verified snapshots
+to a separate accepting directory and atomically replaces `dist/bundles`.
+A bad cache restore cannot overwrite previously accepted files.
+Old manifests or CRLF default text are rejected, not silently rebuilt or accepted. Rule sources and author YAML
+participate in build inputs; normal cold builds/cache hits remain enabled.
+When binary patterns are present, the root build launcher also fingerprints the
+raw resource inputs of those checks into a task-specific Turbo environment key.
+This prevents Git's text normalization from masking changed binary bytes. The
+fingerprint is a cache input only, never a second artifact identity.
+For a narrow build with the same acceptance boundary:
+`node scripts/build.mjs --filter=@potential-guide/check-environment...`.
+The npm publishing workflow uses this same filtered launcher. It inspects Turbo's
+selected task graph and runs acceptance only when environment is in that graph;
+unrelated package releases do not build environment. The Docker packaging harness
+also prepares generated Check types and builds accepted environment Bundles before packing.
+The real Git/Turbo regression is `node --test scripts/environment-cache.test.mjs`;
+it uses an isolated repository-local fixture, never the shared worktree cache.
 
 Each Bundle contains `schemas/`, `resources/check.json`, and only its own
 `resources/references/en/check.md` plus `problems/<code>.md`. Read them through
 `ipfs://<CID>/resources/references/en/check.md` or the resource index. Reference
 frontmatter accepts only title and description (nonempty, description <=200
-Unicode code points). Filename/language/problem coverage and exact bytes are
+Unicode code points). Filename/language/problem coverage and normalized bytes are
 gated; Markdown bodies, sections and links are deliberately not validated.
 Language completeness is declared per Check, with no automatic fallback.
 

@@ -24,7 +24,7 @@
     "workers:check": "node scripts/build-check-workers.mjs --check",
     "task-workers:check": "node scripts/embed-task-workers.mjs check-runtime-files --check && node scripts/embed-task-workers.mjs check-task --check && node scripts/embed-task-workers.mjs probe-task --check",
     "bootstrap:pack": "node scripts/create-npm-bootstrap-packages.mjs",
-    "build": "turbo run build",
+    "build": "node scripts/build.mjs",
     "sources:check": "pnpm run settings:check && node scripts/check-generated-sources.mjs && pnpm run task-workers:check",
     "check": "pnpm run sources:check && pnpm run layers:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check",
     "layers:check": "pnpm run build && node scripts/check-layers.mjs",
@@ -36,7 +36,7 @@
     "lint": "turbo run lint && biome lint scripts config",
     "pack:check": "pnpm run build && node scripts/check-packages.mjs --structure",
     "consumers:check": "pnpm run build && node scripts/check-packages.mjs",
-    "test": "pnpm run sources:check && pnpm run build && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test --concurrency=2 && node --test scripts/*.test.mjs",
+    "test": "pnpm run sources:check && pnpm run build && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test --concurrency=2 && node --test --test-concurrency=2 scripts/*.test.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {

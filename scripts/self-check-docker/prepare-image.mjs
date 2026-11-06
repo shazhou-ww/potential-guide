@@ -105,6 +105,28 @@ for (const name of uiBuildDependencies) {
   await mkdir(join(destination, ".."), { recursive: true });
   await symlink(join("/toolchain/node_modules", name), destination);
 }
+await symlink("/toolchain/node_modules/typescript", "/source/node_modules/typescript");
+await mkdir("/source/packages/check-environment/node_modules/@potential-guide", {
+  recursive: true,
+});
+await symlink(
+  "/source/packages/pguide-task-bundle",
+  "/source/packages/check-environment/node_modules/@potential-guide/pguide-task-bundle",
+);
+run(
+  process.execPath,
+  [
+    "/toolchain/node_modules/typescript/bin/tsc",
+    "-b",
+    "/source/packages/task-protocol/tsconfig.json",
+    "/source/packages/task-sdk/tsconfig.json",
+    "/source/packages/check-sdk/tsconfig.json",
+    "--pretty",
+    "false",
+  ],
+  "/source",
+);
+run(process.execPath, ["/source/packages/check-environment/prepare.mjs"], "/source");
 run(
   process.execPath,
   [
@@ -117,6 +139,7 @@ run(
   "/source",
 );
 run("npm", ["--prefix", uiRoot, "run", "build"], "/source");
+run(process.execPath, ["/source/packages/check-environment/build.mjs"], "/source");
 
 await mkdir("/packs");
 await mkdir("/opt/consumer", { recursive: true });
@@ -194,7 +217,7 @@ run(
   "/opt/objective",
 );
 const provenance = JSON.parse(await readFile("/harness/provenance.json", "utf8"));
-provenance.buildMethod = "frozen-prod-plus-tsc-and-ui-build";
+provenance.buildMethod = "frozen-prod-plus-tsc-ui-and-environment-build";
 provenance.toolchainVersions = toolchainVersions;
 provenance.toolchainLockSha256 = createHash("sha256")
   .update(await readFile("/toolchain/package-lock.json"))

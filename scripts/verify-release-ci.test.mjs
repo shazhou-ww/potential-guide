@@ -270,7 +270,7 @@ test("workflows validate consumers once on main and gate scoped builds but not r
     );
   }
   assert.ok(publish.includes("run: node scripts/verify-release-ci.mjs"));
-  const build = publish.match(/run: pnpm exec turbo run build --filter="\$\{PACKAGE_NAME\}\.\.\."/);
+  const build = publish.match(/run: node scripts\/build\.mjs --filter="\$\{PACKAGE_NAME\}\.\.\."/);
   assert.ok(build);
   assert.ok(publish.indexOf("run: node scripts/verify-release-ci.mjs") < build.index);
 });

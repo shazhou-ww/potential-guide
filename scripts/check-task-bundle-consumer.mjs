@@ -160,7 +160,7 @@ const check=createCheckTaskType({source:nullSource,directory:"unused"});
 const ipfsClient=new MemoryIpfsClient();
 async function bundle(kind,inputSchema,resultSchema,callback,resources){
  const yaml=resolve(kind+".yaml"),entry=resolve(kind+".ts");
- await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",inputSchema,resultSchema,messageSchema:false}));
+ await writeFile(yaml,JSON.stringify({$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",name:"Shared display name",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",binary:[],inputSchema,resultSchema,messageSchema:false}));
  await writeFile(entry,callback);
  const built=await buildTaskBundle({declaration:yaml,entry,resources,outDirectory:join(root,kind)});
  return await ipfsClient.import((await readTaskArtifact(built.car)).files);

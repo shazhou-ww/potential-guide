@@ -443,6 +443,7 @@ test("Check real HTTP/SSE authorization, shared cancellation, pagination and rec
       name: "Check HTTP",
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema: type.inputSchema,
       resultSchema: type.resultSchema,
       messageSchema: false,

@@ -8,6 +8,7 @@ import {
   isTaskBundlePath as safePath,
   parseTaskBundleYaml,
   taskSchemaUri,
+  taskBundlePattern,
 } from "@potential-guide/task-protocol";
 import type { TaskCallback } from "@potential-guide/task-sdk";
 import { Kind, OptionalKind, ReadonlyKind, type Static, type TSchema } from "@sinclair/typebox";
@@ -72,6 +73,7 @@ export const taskBuildSchema = {
       },
     },
     outDirectory: { type: "string", minLength: 1 },
+    binary: { type: "array", maxItems: 256, items: { type: "string", minLength: 1 } },
   },
 };
 interface BuildDefinition {
@@ -81,6 +83,7 @@ interface BuildDefinition {
   source: { entry: string; contract: string; exportName?: string; mode?: "callback" | "explicit" };
   include?: { from: string; to: string }[];
   outDirectory: string;
+  binary?: string[];
 }
 const validator = new Ajv2020({ strict: true }).compile<BuildDefinition>(taskBuildSchema);
 const kinds = new Set([
@@ -200,24 +203,6 @@ async function sourceFile(root: string, path: string): Promise<string> {
     throw new Error("Author inputs must be canonical regular files, without links.");
   return absolute;
 }
-function patternRegex(pattern: string): RegExp {
-  if (!safePath(pattern.replaceAll("*", "x").replaceAll("?", "x")) || /[{}[\]!]/.test(pattern))
-    throw new Error("Include patterns support only portable paths, *, ? and whole-segment **.");
-  const segments = pattern.split("/");
-  const encoded = segments
-    .map((part, index) => {
-      if (part === "**") return index === segments.length - 1 ? ".*" : "(?:[^/]+/)*";
-      if (part.includes("**")) throw new Error("** must occupy a complete path segment.");
-      const token = [...part]
-        .map((char) =>
-          char === "*" ? "[^/]*" : char === "?" ? "[^/]" : char.replace(/[\\^$+().|]/g, "\\$&"),
-        )
-        .join("");
-      return `${token}${index === segments.length - 1 ? "" : "/"}`;
-    })
-    .join("");
-  return new RegExp(`^${encoded}$`, "u");
-}
 async function selectResources(
   root: string,
   rules: NonNullable<BuildDefinition["include"]>,
@@ -227,7 +212,7 @@ async function selectResources(
   const selected = new Set<string>();
   const destinations = new Set<string>();
   for (const rule of rules) {
-    const matcher = patternRegex(rule.from);
+    const matcher = taskBundlePattern(rule.from);
     if (
       !rule.to.endsWith("/") ||
       !safePath(rule.to.slice(0, -1)) ||
@@ -340,6 +325,7 @@ export async function readTaskBuild(file: string): Promise<BuildTaskBundleOption
     ...(definition.source.mode ? { entryMode: definition.source.mode } : {}),
     ...(definition.source.exportName ? { exportName: definition.source.exportName } : {}),
     resources,
+    binary: definition.binary ?? [],
     schemaDocuments: documents,
     outDirectory: output,
     owner: file,

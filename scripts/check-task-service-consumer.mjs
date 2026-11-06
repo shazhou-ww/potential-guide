@@ -37,12 +37,12 @@ await writeFile("signal-wrapper.mjs",'process.on("message",()=>process.emit("SIG
 const bounded=(p,label)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(Error(label)),15000).unref())]);
 await writeFile("task.yaml",JSON.stringify({
  $schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
- name:"Packed Gateway",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",
+ name:"Packed Gateway",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",binary:[],
  inputSchema:{type:"object"},resultSchema:true,messageSchema:false
 }));
 await writeFile("resource.bin",Buffer.alloc(600000,42));
 await writeFile("callback.ts",'export default async(input,context)=>{let bytes=0,sum=0;for await(const chunk of context.bundle.read("resources/nested/value.bin")){bytes+=chunk.length;for(const byte of chunk)sum+=byte}if(bytes!==600000||sum!==25200000)throw Error("Nested Gateway resource mismatch.");return input;}');
-const built=await buildTaskBundle({declaration:resolve("task.yaml"),entry:resolve("callback.ts"),resources:{"resources/nested/value.bin":resolve("resource.bin")},outDirectory:resolve("bundle")});
+const built=await buildTaskBundle({declaration:resolve("task.yaml"),entry:resolve("callback.ts"),binary:["resources/nested/value.bin"],resources:{"resources/nested/value.bin":resolve("resource.bin")},outDirectory:resolve("bundle")});
 const memory=new MemoryIpfsClient();
 assert.equal(await memory.import((await readTaskArtifact(built.car)).files),built.cid);
 delete process.env.IPFS_GATEWAY;

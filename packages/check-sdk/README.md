@@ -21,6 +21,9 @@ BCP 47 languages, stable problemCodes, referenceRoot and explicit per-language
 check/problem mappings. Unknown properties fail; a zero-code list is valid.
 Optional `resources: [{from: "assets/file.json", to: "resources/file.json"}]`
 selects additional exact files, with no glob expansion.
+Optional `binary: ["resources/assets/**"]` uses the ordinary Task final-path
+portable glob rules; it is forwarded into generated `task.build.yaml`.
+It cannot select the generated `resources/check.json` index.
 
 `prepareCheck(file)` validates every declared language's `check.md` and
 `problems/<code>.md`, rejects undeclared files/languages/codes, symlinks,
@@ -36,8 +39,10 @@ Call the ordinary `buildTask(prepared.buildFile)` from
 `@potential-guide/pguide-task-bundle` next. It consumes only the fixed staged
 business inputs. Read its CAR with `readTaskArtifact` and call
 `verifyCheckResources(prepared, artifact.files)` before accepting any output.
-The exact resource set **and bytes**, including `resources/check.json`, must
-match. Accept candidates only after all checks succeed; never replace the
+The exact resource set and binary list must match; default UTF-8 text bytes are
+compared after CRLF/lone-CR to LF normalization, binary bytes exactly. BOM and all
+other bytes remain significant. The complete supplied Bundle is validated first.
+Accept candidates only after all checks succeed; never replace the
 last accepted output/index on failure. The SDK does not invoke the compiler
 or publish artifacts.
 

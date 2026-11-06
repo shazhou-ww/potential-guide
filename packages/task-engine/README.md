@@ -54,7 +54,9 @@ Facts/SQLite v5 明确拒绝 v4 等旧格式；操作者必须显式选择新域
 Node runtime 版本比较直接使用 `semver`；
 生产依赖闭包不包含 `artifact-files`、Check 制品或运行时包，
 缓存保留/hint/DAG 预算仍由 Engine 管理。
-默认按需读取资源后继块，`bundlePrefetch: true` 才在准入时验证完整资源内容。
+默认文本资源在准入前完整验证 UTF-8/LF；最终 manifest 必须包含准确的 `binary` 清单，
+空清单也显式为 `[]`。只有显式 binary 资源的后继块默认按需读取，
+`bundlePrefetch: true` 在准入时同时验证完整 binary 内容。旧声明和不规范文本不被改写或兼容。
 因此 Gateway 后续不可用可使已受理 Run 的首次资源读取失败；已缓存的块仍可复用。
 内部内存复用使用有界 verified blocks 及租约保护在途准备/运行，不提供公开缓存管理 API；
 Engine 不维护额外的 Bundle 文件缓存目录，持久内容、pin 与 GC 由独立 IPFS 节点管理。

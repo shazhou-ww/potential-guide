@@ -30,6 +30,7 @@ test("binding candidate manifests ignore only absence and propagate I/O and JSON
         name: "Manifest probe",
         runtime: { type: "node", minVersion: "22.13.0" },
         entry: "worker.cjs",
+        binary: [],
         inputSchema: { type: "object" },
         resultSchema: true,
         messageSchema: false,

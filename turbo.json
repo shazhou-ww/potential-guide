@@ -1,6 +1,31 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "tasks": {
+    "@potential-guide/check-environment#verify": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "outputs": []
+    },
+    "@potential-guide/check-environment#build": {
+      "dependsOn": ["^build"],
+      "env": ["PGUIDE_ENVIRONMENT_BINARY_INPUTS"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/task-protocol/src/**",
+        "$TURBO_ROOT$/packages/pguide-task-bundle/src/**",
+        "$TURBO_ROOT$/packages/check-sdk/src/authoring.ts",
+        "$TURBO_ROOT$/scripts/environment-cache-inputs.mjs"
+      ],
+      "outputs": [
+        "dist/*.js",
+        "dist/*.d.ts",
+        "dist/*.map",
+        "dist/tasks/**",
+        "dist/definitions/**",
+        "dist/staging/**",
+        "dist/candidate/**"
+      ]
+    },
     "@potential-guide/check-sdk#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "examples/text/dist/**"]
