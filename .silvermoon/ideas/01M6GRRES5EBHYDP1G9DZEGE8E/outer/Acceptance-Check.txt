@@ -1,0 +1,117 @@
+@potential-guide/pguide-task-bundle:test: ℹ tests 118
+@potential-guide/pguide-task-bundle:test: ℹ suites 0
+@potential-guide/pguide-task-bundle:test: ℹ pass 111
+@potential-guide/pguide-task-bundle:test: ℹ fail 7
+@potential-guide/pguide-task-bundle:test: ℹ cancelled 0
+@potential-guide/pguide-task-bundle:test: ℹ skipped 0
+@potential-guide/pguide-task-bundle:test: ℹ todo 0
+@potential-guide/pguide-task-bundle:test: ℹ duration_ms 22851.2957
+@potential-guide/pguide-task-bundle:test:
+@potential-guide/pguide-task-bundle:test: ✖ failing tests:
+@potential-guide/pguide-task-bundle:test:
+@potential-guide/pguide-task-bundle:test: test at test\car-files.test.ts:67:1
+@potential-guide/pguide-task-bundle:test: ✖ CAR input rejects symbolic links without reading their target (9.6141ms)
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\car-file-a7568c33-809d-45a9-9a37-51d1ede06c43\bundle.car' -> 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\car-file-a7568c33-809d-45a9-9a37-51d1ede06c43\alias.car'
+@potential-guide/pguide-task-bundle:test:       at async symlink (node:internal/fs/promises:1009:10)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\car-files.test.ts:70:3)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+@potential-guide/pguide-task-bundle:test:     errno: -4048,
+@potential-guide/pguide-task-bundle:test:     code: 'EPERM',
+@potential-guide/pguide-task-bundle:test:     syscall: 'symlink',
+@potential-guide/pguide-task-bundle:test:     path: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\car-file-a7568c33-809d-45a9-9a37-51d1ede06c43\\bundle.car',
+@potential-guide/pguide-task-bundle:test:     dest: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\car-file-a7568c33-809d-45a9-9a37-51d1ede06c43\\alias.car'
+@potential-guide/pguide-task-bundle:test:   }
+@potential-guide/pguide-task-bundle:test:
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:185:13
+@potential-guide/pguide-task-bundle:test: ✖ link (2.0944ms)
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\76b4a572-2c59-4510-b068-ecfa9bb63247\custom-ignore' -> 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\76b4a572-2c59-4510-b068-ecfa9bb63247\task\.gitignore'
+@potential-guide/pguide-task-bundle:test:       at async symlink (node:internal/fs/promises:1009:10)
+@potential-guide/pguide-task-bundle:test:       at async <anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:194:14)
+@potential-guide/pguide-task-bundle:test:       at async fixture (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:22:5)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:186:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:185:5)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+@potential-guide/pguide-task-bundle:test:     errno: -4048,
+@potential-guide/pguide-task-bundle:test:     code: 'EPERM',
+@potential-guide/pguide-task-bundle:test:     syscall: 'symlink',
+@potential-guide/pguide-task-bundle:test:     path: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\76b4a572-2c59-4510-b068-ecfa9bb63247\\custom-ignore',
+@potential-guide/pguide-task-bundle:test:     dest: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\76b4a572-2c59-4510-b068-ecfa9bb63247\\task\\.gitignore'
+@potential-guide/pguide-task-bundle:test:   }
+@potential-guide/pguide-task-bundle:test:
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:185:13
+@potential-guide/pguide-task-bundle:test: ✖ broken-link (2.2569ms)
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\a28c7af5-06a6-4851-a1cb-e4f7ddc81e46\missing' -> 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\a28c7af5-06a6-4851-a1cb-e4f7ddc81e46\task\.gitignore'
+@potential-guide/pguide-task-bundle:test:       at async symlink (node:internal/fs/promises:1009:10)
+@potential-guide/pguide-task-bundle:test:       at async <anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:194:14)
+@potential-guide/pguide-task-bundle:test:       at async fixture (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:22:5)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:186:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:185:5)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+@potential-guide/pguide-task-bundle:test:     errno: -4048,
+@potential-guide/pguide-task-bundle:test:     code: 'EPERM',
+@potential-guide/pguide-task-bundle:test:     syscall: 'symlink',
+@potential-guide/pguide-task-bundle:test:     path: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\a28c7af5-06a6-4851-a1cb-e4f7ddc81e46\\missing',
+@potential-guide/pguide-task-bundle:test:     dest: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\a28c7af5-06a6-4851-a1cb-e4f7ddc81e46\\task\\.gitignore'
+@potential-guide/pguide-task-bundle:test:   }
+@potential-guide/pguide-task-bundle:test:
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:397:13
+@potential-guide/pguide-task-bundle:test: ✖ manifest (1.7568ms)
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\288ae0ad-0c0a-4f6e-900a-089ed2bab5a8\outside\package.json' -> 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\288ae0ad-0c0a-4f6e-900a-089ed2bab5a8\task\package.json'
+@potential-guide/pguide-task-bundle:test:       at async symlink (node:internal/fs/promises:1009:10)
+@potential-guide/pguide-task-bundle:test:       at async <anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:414:39)
+@potential-guide/pguide-task-bundle:test:       at async fixture (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:22:5)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:398:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:397:5)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+@potential-guide/pguide-task-bundle:test:     errno: -4048,
+@potential-guide/pguide-task-bundle:test:     code: 'EPERM',
+@potential-guide/pguide-task-bundle:test:     syscall: 'symlink',
+@potential-guide/pguide-task-bundle:test:     path: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\288ae0ad-0c0a-4f6e-900a-089ed2bab5a8\\outside\\package.json',
+@potential-guide/pguide-task-bundle:test:     dest: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\288ae0ad-0c0a-4f6e-900a-089ed2bab5a8\\task\\package.json'
+@potential-guide/pguide-task-bundle:test:   }
+@potential-guide/pguide-task-bundle:test:
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:397:13
+@potential-guide/pguide-task-bundle:test: ✖ broken-template (2.9653ms)
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\940b0ff9-38d6-4b05-8ea4-8feb3ca071df\outside\missing.ts' -> 'D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\.cache\task-init\940b0ff9-38d6-4b05-8ea4-8feb3ca071df\task\src\main.ts'
+@potential-guide/pguide-task-bundle:test:       at async symlink (node:internal/fs/promises:1009:10)
+@potential-guide/pguide-task-bundle:test:       at async <anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:418:11)
+@potential-guide/pguide-task-bundle:test:       at async fixture (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:22:5)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:398:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async TestContext.<anonymous> (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle\test\init.test.ts:397:5)
+@potential-guide/pguide-task-bundle:test:       at async Test.run (node:internal/test_runner/test:1113:7)
+@potential-guide/pguide-task-bundle:test:       at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+@potential-guide/pguide-task-bundle:test:     errno: -4048,
+@potential-guide/pguide-task-bundle:test:     code: 'EPERM',
+@potential-guide/pguide-task-bundle:test:     syscall: 'symlink',
+@potential-guide/pguide-task-bundle:test:     path: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\940b0ff9-38d6-4b05-8ea4-8feb3ca071df\\outside\\missing.ts',
+@potential-guide/pguide-task-bundle:test:     dest: 'D:\\Code\\potential-guide.worktrees\\task-engine-server-config-validation\\packages\\pguide-task-bundle\\.cache\\task-init\\940b0ff9-38d6-4b05-8ea4-8feb3ca071df\\task\\src\\main.ts'
+@potential-guide/pguide-task-bundle:test:   }
+@potential-guide/pguide-task-bundle:test: [ELIFECYCLE] Test failed. See above for more details.
+@potential-guide/regulation-coordinator:test: cache miss, executing 57c861d0d7e05962
+pguide:build: cache hit, replaying logs eaecc744ef10654a
+pguide:build: $ tsc -b
+@potential-guide/pguide-regulate:test: cache miss, executing b8b8257d9ea3f0a0
+@potential-guide/task-engine-storage:test: cache miss, executing 3efdc54aeecf8213
+@potential-guide/check-environment:build: cache miss, executing 1122f2f74b82e7ce
+@potential-guide/check-sdk:test: cache miss, executing 5e391017402618d3
+@potential-guide/task-engine-server:build: cache hit, replaying logs 792127dc5c7a8005
+@potential-guide/task-engine-server:build: $ tsc -b
+@potential-guide/task-engine-http:test: cache miss, executing c7468f5bca26d1ed
+@potential-guide/pguide-task-bundle#test:  ERROR  command (D:\Code\potential-guide.worktrees\task-engine-server-config-validation\packages\pguide-task-bundle) C:\Program Files\nodejs\pnpm.CMD run test exited (1)
+
+ Tasks:    47 successful, 55 total
+Cached:    44 cached, 55 total
+  Time:    24.025s
+Failed:    @potential-guide/pguide-task-bundle#test
+
+ ERROR  run failed: command  exited (1)
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.

@@ -1,0 +1,331 @@
+{
+  "sourceCommit": "c010cba5234ca07a75ec315264eee40416c81186",
+  "verifiedDeploymentRevision": "d72dc8a439eb8d9d347e24d6a56048f4d1c403f7",
+  "purpose": "根路径 Gateway 诊断，不替代完整 Deployment 矩阵",
+  "scenarios": [
+    {
+      "entry": "pguide-task-engine",
+      "ui": false,
+      "ready": {
+        "event": "ready",
+        "url": "http://127.0.0.1:51250",
+        "pid": 46336
+      },
+      "requestId": "01M6RP22KQKB5AT1Q0M2PFCCVK",
+      "taskId": "01M6RP22RTX5H6D4J4F5B7MVMW",
+      "result": {
+        "message": "gateway-only-external-proof",
+        "resourceBytes": 600000,
+        "resourceSum": 25200000
+      },
+      "database": "diagnostic-false-false-58c179e6cf0c4592.sqlite",
+      "gracefulExit": true,
+      "engineClosed": true,
+      "uiClosed": true,
+      "contentSourceSurvived": true
+    },
+    {
+      "entry": "pguide-task-engine",
+      "ui": true,
+      "ready": {
+        "event": "ready",
+        "url": "http://127.0.0.1:64641",
+        "uiUrl": "http://127.0.0.1:64642",
+        "pid": 30552
+      },
+      "requestId": "01M6RP23MZ4GRYZCMB54JQ7C0G",
+      "taskId": "01M6RP23SZX41S30MC06NGAF84",
+      "result": {
+        "message": "gateway-only-external-proof",
+        "resourceBytes": 600000,
+        "resourceSum": 25200000
+      },
+      "database": "diagnostic-false-true-4b2642ba2ef215c5.sqlite",
+      "gracefulExit": true,
+      "engineClosed": true,
+      "uiClosed": true,
+      "contentSourceSurvived": true
+    },
+    {
+      "entry": "pguide task-engine",
+      "ui": false,
+      "ready": {
+        "event": "ready",
+        "url": "http://127.0.0.1:51628",
+        "pid": 47008
+      },
+      "requestId": "01M6RP24WC00S6J8B4RN7PP7ZF",
+      "taskId": "01M6RP251AW5FZA13YYYJ8BJ7R",
+      "result": {
+        "message": "gateway-only-external-proof",
+        "resourceBytes": 600000,
+        "resourceSum": 25200000
+      },
+      "database": "diagnostic-true-false-187c0a5fbb483ca0.sqlite",
+      "gracefulExit": true,
+      "engineClosed": true,
+      "uiClosed": true,
+      "contentSourceSurvived": true
+    },
+    {
+      "entry": "pguide task-engine",
+      "ui": true,
+      "ready": {
+        "event": "ready",
+        "url": "http://127.0.0.1:61788",
+        "uiUrl": "http://127.0.0.1:61789",
+        "pid": 32656
+      },
+      "requestId": "01M6RP263PSHHB2DJT7PBJNH9D",
+      "taskId": "01M6RP269E4VG4FGWYT4RKNZJ5",
+      "result": {
+        "message": "gateway-only-external-proof",
+        "resourceBytes": 600000,
+        "resourceSum": 25200000
+      },
+      "database": "diagnostic-true-true-3480e05a039485fb.sqlite",
+      "gracefulExit": true,
+      "engineClosed": true,
+      "uiClosed": true,
+      "contentSourceSurvived": true
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreigz52jdzqn2aoxj7zaz6tokqu7ieizphxl7wksstpafprhfg2oohq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihfrcmgimot5isffsnhqsemms2pp7zqftzm4jit3rv6wsd7ab76gu?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "*/*",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreigz52jdzqn2aoxj7zaz6tokqu7ieizphxl7wksstpafprhfg2oohq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihfrcmgimot5isffsnhqsemms2pp7zqftzm4jit3rv6wsd7ab76gu?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "*/*",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreigz52jdzqn2aoxj7zaz6tokqu7ieizphxl7wksstpafprhfg2oohq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihfrcmgimot5isffsnhqsemms2pp7zqftzm4jit3rv6wsd7ab76gu?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "*/*",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeihwe3d5uxmweitqtvoc3lzjow6wkikh5r7shwwojwqsoruqldvbdi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeiczp4zuaro57ypjh57xow2w66a3tmyevmsgmqk2hyrsv5gv57qtzi?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreigz52jdzqn2aoxj7zaz6tokqu7ieizphxl7wksstpafprhfg2oohq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihfrcmgimot5isffsnhqsemms2pp7zqftzm4jit3rv6wsd7ab76gu?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreighisvyn5fty52uf5mmdgz3iskams3qpjfhkqd6ctja2iqyojdwca?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafkreihoj475ei5uerwaocmacjrluurjxyasibeqfdubmolkgggfua4nlq?format=raw",
+      "accept": "application/vnd.ipld.raw",
+      "credentialsPresent": false
+    },
+    {
+      "method": "GET",
+      "path": "/ipfs/bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy?format=raw",
+      "accept": "*/*",
+      "credentialsPresent": false
+    }
+  ],
+  "ownedPids": [
+    46336,
+    30552,
+    47020,
+    28712,
+    47008,
+    50264,
+    42920,
+    32656
+  ],
+  "cleanup": {
+    "forcedOwnedPids": [],
+    "contentSourceClosed": true,
+    "pipeClosed": true,
+    "externalRootRemovalRequired": false,
+    "finalOwnedPidAbsenceVerified": true,
+    "externalRootRemoved": true
+  },
+  "gateway": "http://127.0.0.1:64193"
+}

@@ -1,0 +1,2281 @@
+{
+  "sourceCommit": "c010cba5234ca07a75ec315264eee40416c81186",
+  "deploymentBlob": "cda9ee9c25fee9cdff5233ad722f3acfdebab80d",
+  "verifiedDeploymentRevision": "d72dc8a439eb8d9d347e24d6a56048f4d1c403f7",
+  "acceptedInnerRevision": "e766edd27d16c247d8ff059021ecb8a08f03c9d9",
+  "platform": "win32",
+  "node": "v24.12.0",
+  "commands": [
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-agents",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-cli-core",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-config",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-objectives",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\objective-declarations",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pilot-protocol",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\apps\\pguide-task-engine",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-protocol",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-server",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-http",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-engine-storage",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\apps\\task-engine-webui",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\pguide-task-bundle",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "--dir",
+        "<source>\\packages\\task-sdk",
+        "pack",
+        "--pack-destination",
+        "<owned-root>\\packs",
+        "--json"
+      ],
+      "cwd": "<owned-root>",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "install",
+        "--prod",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "pnpm.cmd",
+      "args": [
+        "install",
+        "--prod",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only"
+      ],
+      "cwd": "<owned-root>\\author",
+      "code": 0
+    },
+    {
+      "command": "<owned-root>\\runtime\\node_modules\\.bin\\pguide-task-engine.cmd",
+      "args": [
+        "--pguide-command-metadata"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\@potential-guide\\pguide-task-engine\\dist\\main.js",
+        "--no-global-config",
+        "--help",
+        "--format",
+        "json"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "<owned-root>\\runtime\\node_modules\\pguide\\dist\\bin.js",
+        "task-engine",
+        "--no-global-config",
+        "--help",
+        "--format",
+        "json"
+      ],
+      "cwd": "<owned-root>\\runtime",
+      "code": 0
+    },
+    {
+      "command": "<node>",
+      "args": [
+        "--experimental-import-meta-resolve",
+        "prepare.mjs"
+      ],
+      "cwd": "<owned-root>\\author",
+      "code": 0
+    }
+  ],
+  "graphs": {
+    "runtime": {
+      "entries": [
+        "pguide",
+        "@potential-guide/pguide-task-engine"
+      ],
+      "internalPackages": 14,
+      "allPhysicalPathsInsideConsumer": true,
+      "productionPackages": [
+        {
+          "name": "pguide",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "cross-spawn",
+          "version": "7.0.6"
+        },
+        {
+          "name": "path-key",
+          "version": "3.1.1"
+        },
+        {
+          "name": "shebang-command",
+          "version": "2.0.0"
+        },
+        {
+          "name": "shebang-regex",
+          "version": "3.0.0"
+        },
+        {
+          "name": "which",
+          "version": "2.0.2"
+        },
+        {
+          "name": "isexe",
+          "version": "2.0.0"
+        },
+        {
+          "name": "@potential-guide/pguide-agents",
+          "version": "0.1.0"
+        },
+        {
+          "name": "yaml",
+          "version": "2.9.1"
+        },
+        {
+          "name": "@potential-guide/cli-core",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@microsoft/agent-host-protocol",
+          "version": "1.0.0"
+        },
+        {
+          "name": "ajv",
+          "version": "8.20.0"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3"
+        },
+        {
+          "name": "fast-uri",
+          "version": "3.1.9"
+        },
+        {
+          "name": "json-schema-traverse",
+          "version": "1.0.0"
+        },
+        {
+          "name": "require-from-string",
+          "version": "2.0.2"
+        },
+        {
+          "name": "jsonc-parser",
+          "version": "3.3.1"
+        },
+        {
+          "name": "@potential-guide/pguide-config",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/pguide-objectives",
+          "version": "0.4.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/objective-declarations",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "npm-package-arg",
+          "version": "13.0.2"
+        },
+        {
+          "name": "hosted-git-info",
+          "version": "9.0.3"
+        },
+        {
+          "name": "lru-cache",
+          "version": "11.5.3"
+        },
+        {
+          "name": "proc-log",
+          "version": "6.1.0"
+        },
+        {
+          "name": "semver",
+          "version": "7.8.5"
+        },
+        {
+          "name": "validate-npm-package-name",
+          "version": "7.0.2"
+        },
+        {
+          "name": "@potential-guide/pilot-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "jsonata",
+          "version": "2.1.0"
+        },
+        {
+          "name": "json-schema-typed",
+          "version": "9.0.0"
+        },
+        {
+          "name": "@potential-guide/pguide-task-engine",
+          "version": "0.1.0-rc.2"
+        },
+        {
+          "name": "@potential-guide/task-engine",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@helia/http",
+          "version": "3.0.4"
+        },
+        {
+          "name": "@helia/block-brokers",
+          "version": "5.2.4"
+        },
+        {
+          "name": "@helia/bitswap",
+          "version": "3.2.3"
+        },
+        {
+          "name": "@helia/interface",
+          "version": "6.2.1"
+        },
+        {
+          "name": "@libp2p/interface",
+          "version": "3.4.0"
+        },
+        {
+          "name": "@multiformats/dns",
+          "version": "1.0.15"
+        },
+        {
+          "name": "@dnsquery/dns-packet",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@leichtgewicht/ip-codec",
+          "version": "2.0.5"
+        },
+        {
+          "name": "utf8-codec",
+          "version": "1.0.0"
+        },
+        {
+          "name": "hashlru",
+          "version": "2.3.0"
+        },
+        {
+          "name": "p-queue",
+          "version": "9.3.5"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4"
+        },
+        {
+          "name": "p-timeout",
+          "version": "7.0.2"
+        },
+        {
+          "name": "progress-events",
+          "version": "1.1.0"
+        },
+        {
+          "name": "uint8arrays",
+          "version": "6.1.1"
+        },
+        {
+          "name": "multiformats",
+          "version": "14.0.5"
+        },
+        {
+          "name": "@multiformats/multiaddr",
+          "version": "13.0.3"
+        },
+        {
+          "name": "@chainsafe/is-ip",
+          "version": "2.1.0"
+        },
+        {
+          "name": "uint8-varint",
+          "version": "3.0.0"
+        },
+        {
+          "name": "uint8arraylist",
+          "version": "3.0.2"
+        },
+        {
+          "name": "main-event",
+          "version": "1.0.5"
+        },
+        {
+          "name": "interface-blockstore",
+          "version": "6.0.2"
+        },
+        {
+          "name": "interface-store",
+          "version": "7.0.2"
+        },
+        {
+          "name": "multiformats",
+          "version": "13.4.2"
+        },
+        {
+          "name": "interface-datastore",
+          "version": "9.0.3"
+        },
+        {
+          "name": "uint8arrays",
+          "version": "5.1.1"
+        },
+        {
+          "name": "@helia/utils",
+          "version": "2.5.2"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "9.2.7"
+        },
+        {
+          "name": "cborg",
+          "version": "5.1.11"
+        },
+        {
+          "name": "@ipld/dag-json",
+          "version": "10.2.9"
+        },
+        {
+          "name": "@ipld/dag-pb",
+          "version": "4.2.0"
+        },
+        {
+          "name": "@libp2p/keychain",
+          "version": "6.1.10"
+        },
+        {
+          "name": "@libp2p/crypto",
+          "version": "5.2.0"
+        },
+        {
+          "name": "@noble/curves",
+          "version": "2.4.0"
+        },
+        {
+          "name": "@noble/hashes",
+          "version": "2.4.0"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "7.1.2"
+        },
+        {
+          "name": "asn1js",
+          "version": "3.1.0"
+        },
+        {
+          "name": "pvtsutils",
+          "version": "1.3.6"
+        },
+        {
+          "name": "tslib",
+          "version": "2.9.1"
+        },
+        {
+          "name": "pvutils",
+          "version": "1.2.0"
+        },
+        {
+          "name": "interface-datastore",
+          "version": "10.0.1"
+        },
+        {
+          "name": "abort-error",
+          "version": "1.0.2"
+        },
+        {
+          "name": "interface-store",
+          "version": "8.0.0"
+        },
+        {
+          "name": "sanitize-filename",
+          "version": "1.6.4"
+        },
+        {
+          "name": "truncate-utf8-bytes",
+          "version": "1.0.2"
+        },
+        {
+          "name": "utf8-byte-length",
+          "version": "1.0.5"
+        },
+        {
+          "name": "@libp2p/utils",
+          "version": "7.4.5"
+        },
+        {
+          "name": "@chainsafe/netmask",
+          "version": "2.0.0"
+        },
+        {
+          "name": "@libp2p/logger",
+          "version": "6.2.16"
+        },
+        {
+          "name": "weald",
+          "version": "1.1.3"
+        },
+        {
+          "name": "ms",
+          "version": "4.0.0-nightly.202508271359"
+        },
+        {
+          "name": "supports-color",
+          "version": "10.2.2"
+        },
+        {
+          "name": "@multiformats/multiaddr-matcher",
+          "version": "3.0.2"
+        },
+        {
+          "name": "@sindresorhus/fnv1a",
+          "version": "3.1.0"
+        },
+        {
+          "name": "any-signal",
+          "version": "4.2.0"
+        },
+        {
+          "name": "cborg",
+          "version": "6.2.1"
+        },
+        {
+          "name": "delay",
+          "version": "7.0.0"
+        },
+        {
+          "name": "random-int",
+          "version": "3.1.0"
+        },
+        {
+          "name": "unlimited-timeout",
+          "version": "0.1.0"
+        },
+        {
+          "name": "is-loopback-addr",
+          "version": "2.1.0"
+        },
+        {
+          "name": "it-length-prefixed",
+          "version": "11.0.1"
+        },
+        {
+          "name": "it-reader",
+          "version": "7.0.0"
+        },
+        {
+          "name": "it-stream-types",
+          "version": "2.0.4"
+        },
+        {
+          "name": "it-pipe",
+          "version": "3.0.1"
+        },
+        {
+          "name": "it-merge",
+          "version": "3.0.15"
+        },
+        {
+          "name": "it-queueless-pushable",
+          "version": "2.0.5"
+        },
+        {
+          "name": "p-defer",
+          "version": "4.0.1"
+        },
+        {
+          "name": "race-signal",
+          "version": "2.0.2"
+        },
+        {
+          "name": "it-pushable",
+          "version": "3.2.4"
+        },
+        {
+          "name": "netmask",
+          "version": "2.1.1"
+        },
+        {
+          "name": "p-event",
+          "version": "8.0.2"
+        },
+        {
+          "name": "p-timeout",
+          "version": "8.1.0"
+        },
+        {
+          "name": "blockstore-core",
+          "version": "6.1.3"
+        },
+        {
+          "name": "it-all",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-filter",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-peekable",
+          "version": "3.0.10"
+        },
+        {
+          "name": "it-drain",
+          "version": "3.0.12"
+        },
+        {
+          "name": "it-foreach",
+          "version": "2.1.7"
+        },
+        {
+          "name": "it-to-buffer",
+          "version": "4.0.12"
+        },
+        {
+          "name": "libp2p",
+          "version": "3.5.1"
+        },
+        {
+          "name": "@libp2p/interface-internal",
+          "version": "3.2.2"
+        },
+        {
+          "name": "@libp2p/peer-collections",
+          "version": "7.0.32"
+        },
+        {
+          "name": "@libp2p/peer-id",
+          "version": "6.0.18"
+        },
+        {
+          "name": "@libp2p/multistream-select",
+          "version": "7.0.32"
+        },
+        {
+          "name": "@libp2p/peer-store",
+          "version": "12.0.32"
+        },
+        {
+          "name": "@libp2p/peer-record",
+          "version": "9.0.19"
+        },
+        {
+          "name": "mortice",
+          "version": "3.3.1"
+        },
+        {
+          "name": "it-queue",
+          "version": "1.1.4"
+        },
+        {
+          "name": "race-event",
+          "version": "1.6.1"
+        },
+        {
+          "name": "datastore-core",
+          "version": "12.0.1"
+        },
+        {
+          "name": "it-map",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-sort",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-take",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-parallel",
+          "version": "3.0.16"
+        },
+        {
+          "name": "p-retry",
+          "version": "8.0.1"
+        },
+        {
+          "name": "is-network-error",
+          "version": "1.3.2"
+        },
+        {
+          "name": "it-length-prefixed",
+          "version": "10.0.2"
+        },
+        {
+          "name": "it-reader",
+          "version": "6.0.5"
+        },
+        {
+          "name": "uint8arraylist",
+          "version": "2.4.9"
+        },
+        {
+          "name": "uint8-varint",
+          "version": "2.0.5"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "6.0.2"
+        },
+        {
+          "name": "@multiformats/multiaddr-to-uri",
+          "version": "12.0.0"
+        },
+        {
+          "name": "@multiformats/uri-to-multiaddr",
+          "version": "10.0.0"
+        },
+        {
+          "name": "is-ip",
+          "version": "5.0.1"
+        },
+        {
+          "name": "ip-regex",
+          "version": "5.0.0"
+        },
+        {
+          "name": "super-regex",
+          "version": "0.2.0"
+        },
+        {
+          "name": "clone-regexp",
+          "version": "3.0.0"
+        },
+        {
+          "name": "is-regexp",
+          "version": "3.1.0"
+        },
+        {
+          "name": "function-timeout",
+          "version": "0.1.1"
+        },
+        {
+          "name": "time-span",
+          "version": "5.1.0"
+        },
+        {
+          "name": "convert-hrtime",
+          "version": "5.0.0"
+        },
+        {
+          "name": "@helia/delegated-routing-v1-http-api-client",
+          "version": "5.2.1"
+        },
+        {
+          "name": "browser-readablestream-to-it",
+          "version": "2.0.12"
+        },
+        {
+          "name": "ipns",
+          "version": "10.1.6"
+        },
+        {
+          "name": "timestamp-nano",
+          "version": "1.0.1"
+        },
+        {
+          "name": "it-first",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-ndjson",
+          "version": "1.1.6"
+        },
+        {
+          "name": "@helia/routers",
+          "version": "4.0.6"
+        },
+        {
+          "name": "@libp2p/config",
+          "version": "1.1.40"
+        },
+        {
+          "name": "datastore-core",
+          "version": "11.0.4"
+        },
+        {
+          "name": "@helia/unixfs",
+          "version": "8.0.9"
+        },
+        {
+          "name": "@helia/interface",
+          "version": "7.1.2"
+        },
+        {
+          "name": "@ipshipyard/crypto",
+          "version": "1.1.0"
+        },
+        {
+          "name": "@ipshipyard/keychain",
+          "version": "1.0.2"
+        },
+        {
+          "name": "birnam",
+          "version": "1.0.0"
+        },
+        {
+          "name": "interface-blockstore",
+          "version": "7.0.1"
+        },
+        {
+          "name": "@multiformats/murmur3",
+          "version": "2.2.8"
+        },
+        {
+          "name": "ipfs-unixfs",
+          "version": "13.1.2"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "8.0.2"
+        },
+        {
+          "name": "ipfs-unixfs-exporter",
+          "version": "16.2.3"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "10.0.2"
+        },
+        {
+          "name": "@ipld/dag-json",
+          "version": "11.0.1"
+        },
+        {
+          "name": "hamt-sharding",
+          "version": "3.0.8"
+        },
+        {
+          "name": "sparse-array",
+          "version": "1.3.2"
+        },
+        {
+          "name": "it-last",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-to-buffer",
+          "version": "5.0.0"
+        },
+        {
+          "name": "ipfs-unixfs-importer",
+          "version": "17.1.1"
+        },
+        {
+          "name": "blockstore-core",
+          "version": "7.0.1"
+        },
+        {
+          "name": "it-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-parallel-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "rabin-wasm",
+          "version": "0.1.5"
+        },
+        {
+          "name": "@assemblyscript/loader",
+          "version": "0.9.4"
+        },
+        {
+          "name": "bl",
+          "version": "5.1.0"
+        },
+        {
+          "name": "buffer",
+          "version": "6.0.3"
+        },
+        {
+          "name": "base64-js",
+          "version": "1.5.1"
+        },
+        {
+          "name": "ieee754",
+          "version": "1.2.1"
+        },
+        {
+          "name": "inherits",
+          "version": "2.0.4"
+        },
+        {
+          "name": "readable-stream",
+          "version": "3.6.2"
+        },
+        {
+          "name": "string_decoder",
+          "version": "1.3.0"
+        },
+        {
+          "name": "safe-buffer",
+          "version": "5.2.1"
+        },
+        {
+          "name": "util-deprecate",
+          "version": "1.0.2"
+        },
+        {
+          "name": "debug",
+          "version": "4.4.3"
+        },
+        {
+          "name": "ms",
+          "version": "2.1.3"
+        },
+        {
+          "name": "minimist",
+          "version": "1.2.8"
+        },
+        {
+          "name": "node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "name": "whatwg-url",
+          "version": "5.0.0"
+        },
+        {
+          "name": "tr46",
+          "version": "0.0.3"
+        },
+        {
+          "name": "webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "name": "it-glob",
+          "version": "3.0.6"
+        },
+        {
+          "name": "fast-glob",
+          "version": "3.3.3"
+        },
+        {
+          "name": "@nodelib/fs.stat",
+          "version": "2.0.5"
+        },
+        {
+          "name": "@nodelib/fs.walk",
+          "version": "1.2.8"
+        },
+        {
+          "name": "@nodelib/fs.scandir",
+          "version": "2.1.5"
+        },
+        {
+          "name": "run-parallel",
+          "version": "1.2.0"
+        },
+        {
+          "name": "queue-microtask",
+          "version": "1.2.3"
+        },
+        {
+          "name": "fastq",
+          "version": "1.20.3"
+        },
+        {
+          "name": "reusify",
+          "version": "1.1.0"
+        },
+        {
+          "name": "glob-parent",
+          "version": "5.1.2"
+        },
+        {
+          "name": "is-glob",
+          "version": "4.0.3"
+        },
+        {
+          "name": "is-extglob",
+          "version": "2.1.1"
+        },
+        {
+          "name": "merge2",
+          "version": "1.4.1"
+        },
+        {
+          "name": "micromatch",
+          "version": "4.0.8"
+        },
+        {
+          "name": "braces",
+          "version": "3.0.3"
+        },
+        {
+          "name": "fill-range",
+          "version": "7.1.1"
+        },
+        {
+          "name": "to-regex-range",
+          "version": "5.0.1"
+        },
+        {
+          "name": "is-number",
+          "version": "7.0.0"
+        },
+        {
+          "name": "picomatch",
+          "version": "2.3.2"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-webui",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@tanstack/react-table",
+          "version": "9.3.1"
+        },
+        {
+          "name": "react",
+          "version": "19.3.1"
+        },
+        {
+          "name": "@tanstack/react-store",
+          "version": "0.11.2"
+        },
+        {
+          "name": "react-dom",
+          "version": "19.3.1"
+        },
+        {
+          "name": "scheduler",
+          "version": "0.28.0"
+        },
+        {
+          "name": "use-sync-external-store",
+          "version": "1.7.0"
+        },
+        {
+          "name": "@tanstack/store",
+          "version": "0.11.2"
+        },
+        {
+          "name": "@tanstack/table-core",
+          "version": "9.3.1"
+        },
+        {
+          "name": "class-variance-authority",
+          "version": "0.7.1"
+        },
+        {
+          "name": "clsx",
+          "version": "2.1.1"
+        },
+        {
+          "name": "get-nonce",
+          "version": "1.0.1"
+        },
+        {
+          "name": "lucide-react",
+          "version": "0.474.0"
+        },
+        {
+          "name": "radix-ui",
+          "version": "1.8.1"
+        },
+        {
+          "name": "@radix-ui/primitive",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-accessible-icon",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-visually-hidden",
+          "version": "1.2.13"
+        },
+        {
+          "name": "@radix-ui/react-primitive",
+          "version": "2.2.0"
+        },
+        {
+          "name": "@radix-ui/react-slot",
+          "version": "1.5.0"
+        },
+        {
+          "name": "@radix-ui/react-compose-refs",
+          "version": "1.1.5"
+        },
+        {
+          "name": "@radix-ui/react-alert-dialog",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-context",
+          "version": "1.3.0"
+        },
+        {
+          "name": "@radix-ui/react-dialog",
+          "version": "1.3.1"
+        },
+        {
+          "name": "aria-hidden",
+          "version": "1.2.6"
+        },
+        {
+          "name": "react-remove-scroll",
+          "version": "2.7.2"
+        },
+        {
+          "name": "react-remove-scroll-bar",
+          "version": "2.3.8"
+        },
+        {
+          "name": "react-style-singleton",
+          "version": "2.2.3"
+        },
+        {
+          "name": "use-callback-ref",
+          "version": "1.3.3"
+        },
+        {
+          "name": "use-sidecar",
+          "version": "1.1.3"
+        },
+        {
+          "name": "detect-node-es",
+          "version": "1.1.0"
+        },
+        {
+          "name": "@radix-ui/react-dismissable-layer",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-use-callback-ref",
+          "version": "1.1.5"
+        },
+        {
+          "name": "@radix-ui/react-use-layout-effect",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/react-use-effect-event",
+          "version": "0.0.5"
+        },
+        {
+          "name": "@radix-ui/react-focus-guards",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-focus-scope",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-id",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/react-portal",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-presence",
+          "version": "1.1.11"
+        },
+        {
+          "name": "@radix-ui/react-use-controllable-state",
+          "version": "1.3.0"
+        },
+        {
+          "name": "@radix-ui/react-arrow",
+          "version": "1.1.17"
+        },
+        {
+          "name": "@radix-ui/react-accordion",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-collapsible",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-collection",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-direction",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-aspect-ratio",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-checkbox",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-use-size",
+          "version": "1.1.5"
+        },
+        {
+          "name": "@radix-ui/react-context-menu",
+          "version": "2.4.1"
+        },
+        {
+          "name": "@radix-ui/react-menu",
+          "version": "2.2.1"
+        },
+        {
+          "name": "@radix-ui/react-popper",
+          "version": "1.4.0"
+        },
+        {
+          "name": "@floating-ui/react-dom",
+          "version": "2.1.9"
+        },
+        {
+          "name": "@floating-ui/dom",
+          "version": "1.8.0"
+        },
+        {
+          "name": "@floating-ui/core",
+          "version": "1.8.0"
+        },
+        {
+          "name": "@floating-ui/utils",
+          "version": "0.2.12"
+        },
+        {
+          "name": "@radix-ui/react-use-rect",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/rect",
+          "version": "1.1.3"
+        },
+        {
+          "name": "@radix-ui/react-roving-focus",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-use-is-hydrated",
+          "version": "0.1.3"
+        },
+        {
+          "name": "@radix-ui/react-avatar",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-dropdown-menu",
+          "version": "2.2.1"
+        },
+        {
+          "name": "@radix-ui/react-hover-card",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-form",
+          "version": "0.3.0"
+        },
+        {
+          "name": "@radix-ui/react-label",
+          "version": "2.1.17"
+        },
+        {
+          "name": "@radix-ui/react-menubar",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-one-time-password-field",
+          "version": "0.2.1"
+        },
+        {
+          "name": "@radix-ui/number",
+          "version": "1.1.3"
+        },
+        {
+          "name": "@radix-ui/react-password-toggle-field",
+          "version": "0.2.1"
+        },
+        {
+          "name": "@radix-ui/react-navigation-menu",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-use-previous",
+          "version": "1.1.4"
+        },
+        {
+          "name": "@radix-ui/react-popover",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-radio-group",
+          "version": "1.5.1"
+        },
+        {
+          "name": "@radix-ui/react-progress",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-scroll-area",
+          "version": "1.4.0"
+        },
+        {
+          "name": "@radix-ui/react-separator",
+          "version": "1.2.0"
+        },
+        {
+          "name": "@radix-ui/react-slider",
+          "version": "1.6.1"
+        },
+        {
+          "name": "@radix-ui/react-switch",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-tabs",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-toggle",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-select",
+          "version": "2.4.1"
+        },
+        {
+          "name": "@radix-ui/react-toggle-group",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-toolbar",
+          "version": "1.2.1"
+        },
+        {
+          "name": "@radix-ui/react-toast",
+          "version": "1.3.1"
+        },
+        {
+          "name": "@radix-ui/react-tooltip",
+          "version": "1.4.1"
+        },
+        {
+          "name": "@radix-ui/react-use-escape-keydown",
+          "version": "1.1.6"
+        },
+        {
+          "name": "tailwind-merge",
+          "version": "3.7.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-server",
+          "version": "0.1.0-rc.1"
+        },
+        {
+          "name": "@potential-guide/task-engine-http",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/task-engine-storage",
+          "version": "0.1.0-rc.0"
+        }
+      ]
+    },
+    "author": {
+      "entries": [
+        "@potential-guide/pguide-task-bundle"
+      ],
+      "internalPackages": 4,
+      "allPhysicalPathsInsideConsumer": true,
+      "productionPackages": [
+        {
+          "name": "@potential-guide/pguide-task-bundle",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@sinclair/typebox",
+          "version": "0.34.52"
+        },
+        {
+          "name": "ajv",
+          "version": "8.20.0"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3"
+        },
+        {
+          "name": "fast-uri",
+          "version": "3.1.9"
+        },
+        {
+          "name": "json-schema-traverse",
+          "version": "1.0.0"
+        },
+        {
+          "name": "require-from-string",
+          "version": "2.0.2"
+        },
+        {
+          "name": "esbuild",
+          "version": "0.28.2"
+        },
+        {
+          "name": "@esbuild/win32-x64",
+          "version": "0.28.2"
+        },
+        {
+          "name": "multiformats",
+          "version": "14.0.5"
+        },
+        {
+          "name": "semver",
+          "version": "7.8.5"
+        },
+        {
+          "name": "@helia/unixfs",
+          "version": "8.0.9"
+        },
+        {
+          "name": "@helia/interface",
+          "version": "7.1.2"
+        },
+        {
+          "name": "@ipshipyard/crypto",
+          "version": "1.1.0"
+        },
+        {
+          "name": "abort-error",
+          "version": "1.0.2"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "7.1.2"
+        },
+        {
+          "name": "uint8-varint",
+          "version": "3.0.0"
+        },
+        {
+          "name": "uint8arraylist",
+          "version": "3.0.2"
+        },
+        {
+          "name": "uint8arrays",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@ipshipyard/keychain",
+          "version": "1.0.2"
+        },
+        {
+          "name": "interface-datastore",
+          "version": "10.0.1"
+        },
+        {
+          "name": "interface-store",
+          "version": "8.0.0"
+        },
+        {
+          "name": "sanitize-filename",
+          "version": "1.6.4"
+        },
+        {
+          "name": "truncate-utf8-bytes",
+          "version": "1.0.2"
+        },
+        {
+          "name": "utf8-byte-length",
+          "version": "1.0.5"
+        },
+        {
+          "name": "@libp2p/interface",
+          "version": "3.4.0"
+        },
+        {
+          "name": "@multiformats/dns",
+          "version": "1.0.15"
+        },
+        {
+          "name": "@dnsquery/dns-packet",
+          "version": "6.1.1"
+        },
+        {
+          "name": "@leichtgewicht/ip-codec",
+          "version": "2.0.5"
+        },
+        {
+          "name": "utf8-codec",
+          "version": "1.0.0"
+        },
+        {
+          "name": "hashlru",
+          "version": "2.3.0"
+        },
+        {
+          "name": "p-queue",
+          "version": "9.3.5"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4"
+        },
+        {
+          "name": "p-timeout",
+          "version": "7.0.2"
+        },
+        {
+          "name": "progress-events",
+          "version": "1.1.0"
+        },
+        {
+          "name": "@multiformats/multiaddr",
+          "version": "13.0.3"
+        },
+        {
+          "name": "@chainsafe/is-ip",
+          "version": "2.1.0"
+        },
+        {
+          "name": "main-event",
+          "version": "1.0.5"
+        },
+        {
+          "name": "birnam",
+          "version": "1.0.0"
+        },
+        {
+          "name": "weald",
+          "version": "1.1.3"
+        },
+        {
+          "name": "ms",
+          "version": "4.0.0-nightly.202508271359"
+        },
+        {
+          "name": "supports-color",
+          "version": "10.2.2"
+        },
+        {
+          "name": "interface-blockstore",
+          "version": "7.0.1"
+        },
+        {
+          "name": "@ipld/dag-pb",
+          "version": "4.1.7"
+        },
+        {
+          "name": "@libp2p/logger",
+          "version": "6.2.8"
+        },
+        {
+          "name": "interface-datastore",
+          "version": "9.0.3"
+        },
+        {
+          "name": "interface-store",
+          "version": "7.0.2"
+        },
+        {
+          "name": "uint8arrays",
+          "version": "5.1.1"
+        },
+        {
+          "name": "multiformats",
+          "version": "13.4.2"
+        },
+        {
+          "name": "@libp2p/utils",
+          "version": "7.4.5"
+        },
+        {
+          "name": "@chainsafe/netmask",
+          "version": "2.0.0"
+        },
+        {
+          "name": "@libp2p/logger",
+          "version": "6.2.16"
+        },
+        {
+          "name": "@multiformats/multiaddr-matcher",
+          "version": "3.0.2"
+        },
+        {
+          "name": "@sindresorhus/fnv1a",
+          "version": "3.1.0"
+        },
+        {
+          "name": "any-signal",
+          "version": "4.2.0"
+        },
+        {
+          "name": "cborg",
+          "version": "6.2.1"
+        },
+        {
+          "name": "delay",
+          "version": "7.0.0"
+        },
+        {
+          "name": "random-int",
+          "version": "3.1.0"
+        },
+        {
+          "name": "unlimited-timeout",
+          "version": "0.1.0"
+        },
+        {
+          "name": "is-loopback-addr",
+          "version": "2.1.0"
+        },
+        {
+          "name": "it-length-prefixed",
+          "version": "11.0.1"
+        },
+        {
+          "name": "it-reader",
+          "version": "7.0.0"
+        },
+        {
+          "name": "it-stream-types",
+          "version": "2.0.4"
+        },
+        {
+          "name": "it-pipe",
+          "version": "3.0.1"
+        },
+        {
+          "name": "it-merge",
+          "version": "3.0.15"
+        },
+        {
+          "name": "it-queueless-pushable",
+          "version": "2.0.5"
+        },
+        {
+          "name": "p-defer",
+          "version": "4.0.1"
+        },
+        {
+          "name": "race-signal",
+          "version": "2.0.2"
+        },
+        {
+          "name": "it-pushable",
+          "version": "3.2.4"
+        },
+        {
+          "name": "netmask",
+          "version": "2.1.1"
+        },
+        {
+          "name": "p-event",
+          "version": "8.0.2"
+        },
+        {
+          "name": "p-timeout",
+          "version": "8.1.0"
+        },
+        {
+          "name": "@multiformats/murmur3",
+          "version": "2.2.8"
+        },
+        {
+          "name": "ipfs-unixfs",
+          "version": "13.1.2"
+        },
+        {
+          "name": "protons-runtime",
+          "version": "8.0.2"
+        },
+        {
+          "name": "ipfs-unixfs-exporter",
+          "version": "16.2.3"
+        },
+        {
+          "name": "@ipld/dag-cbor",
+          "version": "10.0.2"
+        },
+        {
+          "name": "@ipld/dag-json",
+          "version": "11.0.1"
+        },
+        {
+          "name": "@ipld/dag-pb",
+          "version": "4.2.0"
+        },
+        {
+          "name": "hamt-sharding",
+          "version": "3.0.8"
+        },
+        {
+          "name": "sparse-array",
+          "version": "1.3.2"
+        },
+        {
+          "name": "it-last",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-map",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-peekable",
+          "version": "3.0.10"
+        },
+        {
+          "name": "it-parallel",
+          "version": "3.0.16"
+        },
+        {
+          "name": "it-to-buffer",
+          "version": "5.0.0"
+        },
+        {
+          "name": "ipfs-unixfs-importer",
+          "version": "17.1.1"
+        },
+        {
+          "name": "blockstore-core",
+          "version": "7.0.1"
+        },
+        {
+          "name": "it-all",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-filter",
+          "version": "3.1.6"
+        },
+        {
+          "name": "it-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-first",
+          "version": "3.0.11"
+        },
+        {
+          "name": "it-parallel-batch",
+          "version": "3.0.11"
+        },
+        {
+          "name": "rabin-wasm",
+          "version": "0.1.5"
+        },
+        {
+          "name": "@assemblyscript/loader",
+          "version": "0.9.4"
+        },
+        {
+          "name": "bl",
+          "version": "5.1.0"
+        },
+        {
+          "name": "buffer",
+          "version": "6.0.3"
+        },
+        {
+          "name": "base64-js",
+          "version": "1.5.1"
+        },
+        {
+          "name": "ieee754",
+          "version": "1.2.1"
+        },
+        {
+          "name": "inherits",
+          "version": "2.0.4"
+        },
+        {
+          "name": "readable-stream",
+          "version": "3.6.2"
+        },
+        {
+          "name": "string_decoder",
+          "version": "1.3.0"
+        },
+        {
+          "name": "safe-buffer",
+          "version": "5.2.1"
+        },
+        {
+          "name": "util-deprecate",
+          "version": "1.0.2"
+        },
+        {
+          "name": "debug",
+          "version": "4.4.3"
+        },
+        {
+          "name": "ms",
+          "version": "2.1.3"
+        },
+        {
+          "name": "minimist",
+          "version": "1.2.8"
+        },
+        {
+          "name": "node-fetch",
+          "version": "2.7.0"
+        },
+        {
+          "name": "whatwg-url",
+          "version": "5.0.0"
+        },
+        {
+          "name": "tr46",
+          "version": "0.0.3"
+        },
+        {
+          "name": "webidl-conversions",
+          "version": "3.0.1"
+        },
+        {
+          "name": "it-glob",
+          "version": "3.0.6"
+        },
+        {
+          "name": "fast-glob",
+          "version": "3.3.3"
+        },
+        {
+          "name": "@nodelib/fs.stat",
+          "version": "2.0.5"
+        },
+        {
+          "name": "@nodelib/fs.walk",
+          "version": "1.2.8"
+        },
+        {
+          "name": "@nodelib/fs.scandir",
+          "version": "2.1.5"
+        },
+        {
+          "name": "run-parallel",
+          "version": "1.2.0"
+        },
+        {
+          "name": "queue-microtask",
+          "version": "1.2.3"
+        },
+        {
+          "name": "fastq",
+          "version": "1.20.3"
+        },
+        {
+          "name": "reusify",
+          "version": "1.1.0"
+        },
+        {
+          "name": "glob-parent",
+          "version": "5.1.2"
+        },
+        {
+          "name": "is-glob",
+          "version": "4.0.3"
+        },
+        {
+          "name": "is-extglob",
+          "version": "2.1.1"
+        },
+        {
+          "name": "merge2",
+          "version": "1.4.1"
+        },
+        {
+          "name": "micromatch",
+          "version": "4.0.8"
+        },
+        {
+          "name": "braces",
+          "version": "3.0.3"
+        },
+        {
+          "name": "fill-range",
+          "version": "7.1.1"
+        },
+        {
+          "name": "to-regex-range",
+          "version": "5.0.1"
+        },
+        {
+          "name": "is-number",
+          "version": "7.0.0"
+        },
+        {
+          "name": "picomatch",
+          "version": "2.3.2"
+        },
+        {
+          "name": "@helia/car",
+          "version": "6.0.9"
+        },
+        {
+          "name": "@helia/utils",
+          "version": "3.0.6"
+        },
+        {
+          "name": "@ipld/car",
+          "version": "5.4.6"
+        },
+        {
+          "name": "cborg",
+          "version": "5.1.11"
+        },
+        {
+          "name": "varint",
+          "version": "6.0.0"
+        },
+        {
+          "name": "it-drain",
+          "version": "3.0.12"
+        },
+        {
+          "name": "yaml",
+          "version": "2.9.1"
+        },
+        {
+          "name": "@potential-guide/task-protocol",
+          "version": "0.1.0-rc.0"
+        },
+        {
+          "name": "@potential-guide/cli-core",
+          "version": "0.3.0-rc.0"
+        },
+        {
+          "name": "@microsoft/agent-host-protocol",
+          "version": "1.0.0"
+        },
+        {
+          "name": "jsonc-parser",
+          "version": "3.3.1"
+        },
+        {
+          "name": "@potential-guide/task-sdk",
+          "version": "0.1.0-rc.0"
+        }
+      ]
+    }
+  },
+  "scenarios": [],
+  "configurationFailures": [],
+  "contentFailures": [],
+  "lifecycleFailures": [],
+  "cleanup": {
+    "forcedOwnedPids": [
+      49624
+    ],
+    "trackedChildrenRemaining": 0,
+    "signalControllerClosed": true,
+    "originalUserUnchanged": true,
+    "externalRootRemovalRequired": false,
+    "finalOwnedPidAbsenceVerified": true,
+    "externalRootRemoved": true
+  },
+  "errors": [
+    "Error: Invalid configuration or service startup failed; cleanup unconfirmed.\n\n    at waitReady (file:///<source>/.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Gateway-Only-Verify.mjs:91:29)\n    at async scenario (file:///<source>/.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Gateway-Only-Verify.mjs:350:15)\n    at async file:///<source>/.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Gateway-Only-Verify.mjs:410:5"
+  ],
+  "packedPackages": 16,
+  "installedSettings": {
+    "schemaVersion": 1,
+    "namespace": "task-engine",
+    "settings": {
+      "task-engine.host": {
+        "description": "Fixed loopback binding; localhost normalizes to 127.0.0.1.",
+        "schema": {
+          "enum": [
+            "127.0.0.1",
+            "localhost",
+            "::1"
+          ]
+        }
+      },
+      "task-engine.port": {
+        "description": "Engine TCP port; zero selects an available port.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "task-engine.database": {
+        "description": "SQLite filename, relative to the source file directory.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "task-engine.ipfsGatewayUrl": {
+        "description": "Required explicit read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. No default node.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "task-engine.scope": {
+        "description": "Single local Caller scope. Other scopes are denied.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+        }
+      },
+      "task-engine.ui": {
+        "description": "Start the HTTP-only local Web UI.",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "task-engine.uiOptions": {
+        "description": "Whole UI setting, replaced rather than deep merged. All properties required.",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "host",
+            "port",
+            "favoritesFile"
+          ],
+          "properties": {
+            "host": {
+              "enum": [
+                "127.0.0.1",
+                "localhost",
+                "::1"
+              ]
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "favoritesFile": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "protocol": "pguide-command-v1",
+    "command": "task-engine",
+    "version": "0.1.0-rc.2",
+    "description": "Start a foreground loopback Task Engine, optionally with its HTTP Web UI."
+  },
+  "help": {
+    "standalone": {
+      "schemaVersion": 1,
+      "command": "task-engine",
+      "usage": "pguide task-engine [--config server.yaml|server.json] [options]",
+      "options": [
+        "--host <127.0.0.1|localhost|::1>",
+        "--port <0..65535>",
+        "--database <path>",
+        "--ipfs-gateway-url <HTTP(S) Gateway base URL; required from an enabled source>",
+        "--scope <local-scope>",
+        "--ui",
+        "--no-ui",
+        "--ui-options '{\"host\":\"127.0.0.1\",\"port\":4310,\"favoritesFile\":\"favorites.json\"}'",
+        "--no-global-config",
+        "--cwd <directory>",
+        "--help",
+        "--format json"
+      ],
+      "precedence": "Explicit CLI > explicit YAML/JSON file > pguide USER config.jsonc > defaults. Project service settings are never read.",
+      "globalConfig": "<owned-root>\\isolated-user\\pguide\\config.jsonc",
+      "paths": "Effective CWD is --cwd or process CWD for both entrypoints and --config. Each file's paths are relative to that file; CLI paths are relative to effective CWD.",
+      "validation": "Invalid or unreadable global configuration/settings registry emits a warning and the entire global layer is ignored. Explicit file and CLI layers must validate even when overridden. Complete settings (including uiOptions) replace, never deep merge. No executable config or environment service overrides.",
+      "isolation": "--no-global-config skips the user main file, including top-level discovery and user commandDirectories. PATH and project discovery remain available.",
+      "defaults": {
+        "host": "127.0.0.1",
+        "port": 3000,
+        "database": "tasks.sqlite",
+        "scope": "local",
+        "ui": false,
+        "uiOptions": {
+          "host": "127.0.0.1",
+          "port": 4310,
+          "favoritesFile": "task-favorites.json"
+        }
+      },
+      "security": "No token; fixed loopback only (localhost becomes 127.0.0.1; ::1 supported). Caller local-cli is limited to the configured scope. Host/Origin/fetch-site, GET/POST and JSON writes are checked. Do not expose through a proxy. Other local users/processes are not isolated.",
+      "lifecycle": "Foreground only. Stops only this invocation's Engine/UI on SIGINT/SIGTERM. Never starts, stops or manages Kubo. No UI unless --ui. Old .mjs configs must be manually migrated. Gateway-only: an explicit URL is required (no credentials/query/fragment); no default node or public Gateway. Base paths are appended with /ipfs/{cid}?format=raw. Raw blocks only, no redirects, 2 MiB/block and 30 s/read. No service RPC or transport selection/fallback; author publishing/pinning is unchanged."
+    },
+    "pguide": {
+      "schemaVersion": 1,
+      "command": "task-engine",
+      "usage": "pguide task-engine [--config server.yaml|server.json] [options]",
+      "options": [
+        "--host <127.0.0.1|localhost|::1>",
+        "--port <0..65535>",
+        "--database <path>",
+        "--ipfs-gateway-url <HTTP(S) Gateway base URL; required from an enabled source>",
+        "--scope <local-scope>",
+        "--ui",
+        "--no-ui",
+        "--ui-options '{\"host\":\"127.0.0.1\",\"port\":4310,\"favoritesFile\":\"favorites.json\"}'",
+        "--no-global-config",
+        "--cwd <directory>",
+        "--help",
+        "--format json"
+      ],
+      "precedence": "Explicit CLI > explicit YAML/JSON file > pguide USER config.jsonc > defaults. Project service settings are never read.",
+      "globalConfig": "<owned-root>\\isolated-user\\pguide\\config.jsonc",
+      "paths": "Effective CWD is --cwd or process CWD for both entrypoints and --config. Each file's paths are relative to that file; CLI paths are relative to effective CWD.",
+      "validation": "Invalid or unreadable global configuration/settings registry emits a warning and the entire global layer is ignored. Explicit file and CLI layers must validate even when overridden. Complete settings (including uiOptions) replace, never deep merge. No executable config or environment service overrides.",
+      "isolation": "--no-global-config skips the user main file, including top-level discovery and user commandDirectories. PATH and project discovery remain available.",
+      "defaults": {
+        "host": "127.0.0.1",
+        "port": 3000,
+        "database": "tasks.sqlite",
+        "scope": "local",
+        "ui": false,
+        "uiOptions": {
+          "host": "127.0.0.1",
+          "port": 4310,
+          "favoritesFile": "task-favorites.json"
+        }
+      },
+      "security": "No token; fixed loopback only (localhost becomes 127.0.0.1; ::1 supported). Caller local-cli is limited to the configured scope. Host/Origin/fetch-site, GET/POST and JSON writes are checked. Do not expose through a proxy. Other local users/processes are not isolated.",
+      "lifecycle": "Foreground only. Stops only this invocation's Engine/UI on SIGINT/SIGTERM. Never starts, stops or manages Kubo. No UI unless --ui. Old .mjs configs must be manually migrated. Gateway-only: an explicit URL is required (no credentials/query/fragment); no default node or public Gateway. Base paths are appended with /ipfs/{cid}?format=raw. Raw blocks only, no redirects, 2 MiB/block and 30 s/read. No service RPC or transport selection/fallback; author publishing/pinning is unchanged."
+    }
+  },
+  "bundle": {
+    "cid": "bafybeideuxc2f4cl2f6wgkqqhjrjw46hcikuxeqtozyksxddsmblngtbmy",
+    "blocks": 7,
+    "standardImporter": true,
+    "offlineCarValidated": true,
+    "expectedResult": {
+      "message": "gateway-only-external-proof",
+      "resourceBytes": 600000,
+      "resourceSum": 25200000
+    },
+    "authorSourceAndBundleDirectoryRemovedBeforeRuntime": true
+  },
+  "rawSource": {
+    "event": "ready",
+    "url": "http://127.0.0.1:56520",
+    "pid": 49624
+  },
+  "rpc": {
+    "kuboStartedOrInstalled": false,
+    "configuredServiceRpcEndpoint": false,
+    "ownedEndpointProbeStatus": 503,
+    "expectedProbeCount": 1
+  },
+  "invocationFailure": {
+    "label": "纯参数 / Engine-only",
+    "entry": "standalone",
+    "error": "Error: Invalid configuration or service startup failed; cleanup unconfirmed.\n\n    at waitReady (file:///<source>/.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Gateway-Only-Verify.mjs:91:29)\n    at async scenario (file:///<source>/.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Gateway-Only-Verify.mjs:350:15)\n    at async file:///<source>/.silvermoon/ideas/01M6GRRES5EBHYDP1G9DZEGE8E/outer/Gateway-Only-Verify.mjs:410:5",
+    "stdout": "",
+    "stderr": "Invalid configuration or service startup failed; cleanup unconfirmed.\n"
+  }
+}

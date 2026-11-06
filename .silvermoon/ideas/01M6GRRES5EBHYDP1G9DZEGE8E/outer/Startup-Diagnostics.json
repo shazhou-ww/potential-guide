@@ -1,0 +1,108 @@
+{
+  "cases": [
+    {
+      "exitCode": 1,
+      "noDatabase": true,
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "negative-False-base-path-r2.sqlite",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:56520/good"
+      ],
+      "noReady": true,
+      "entry": "pguide-task-engine",
+      "output": "Invalid configuration or service startup failed; cleanup unconfirmed.",
+      "case": "base-path"
+    },
+    {
+      "exitCode": 1,
+      "noDatabase": true,
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "negative-False-missing-url-r2.sqlite"
+      ],
+      "noReady": true,
+      "entry": "pguide-task-engine",
+      "output": "Service requires an explicit ipfsGatewayUrl; provide --ipfs-gateway-url or task-engine.ipfsGatewayUrl. No default Gateway is selected.",
+      "case": "missing-url"
+    },
+    {
+      "exitCode": 1,
+      "noDatabase": true,
+      "arguments": [
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "negative-False-retired-flag-r2.sqlite",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:56520",
+        "--ipfs-transport=gateway"
+      ],
+      "noReady": true,
+      "entry": "pguide-task-engine",
+      "output": "RPC/transport service configuration is retired in CLI. Remove ipfsRpcUrl/ipfsTransport (including task-engine. setting IDs) and --ipfs-rpc-url/--ipfs-transport; migrate to ipfsGatewayUrl or --ipfs-gateway-url with an explicit read-only Gateway URL.",
+      "case": "retired-flag"
+    },
+    {
+      "exitCode": 1,
+      "noDatabase": true,
+      "arguments": [
+        "task-engine",
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "negative-True-base-path-r2.sqlite",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:56520/good"
+      ],
+      "noReady": true,
+      "entry": "pguide task-engine",
+      "output": "Invalid configuration or service startup failed; cleanup unconfirmed.",
+      "case": "base-path"
+    },
+    {
+      "exitCode": 1,
+      "noDatabase": true,
+      "arguments": [
+        "task-engine",
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "negative-True-missing-url-r2.sqlite"
+      ],
+      "noReady": true,
+      "entry": "pguide task-engine",
+      "output": "Service requires an explicit ipfsGatewayUrl; provide --ipfs-gateway-url or task-engine.ipfsGatewayUrl. No default Gateway is selected.",
+      "case": "missing-url"
+    },
+    {
+      "exitCode": 1,
+      "noDatabase": true,
+      "arguments": [
+        "task-engine",
+        "--no-global-config",
+        "--port",
+        "0",
+        "--database",
+        "negative-True-retired-flag-r2.sqlite",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:56520",
+        "--ipfs-transport=gateway"
+      ],
+      "noReady": true,
+      "entry": "pguide task-engine",
+      "output": "RPC/transport service configuration is retired in CLI. Remove ipfsRpcUrl/ipfsTransport (including task-engine. setting IDs) and --ipfs-rpc-url/--ipfs-transport; migrate to ipfsGatewayUrl or --ipfs-gateway-url with an explicit read-only Gateway URL.",
+      "case": "retired-flag"
+    }
+  ],
+  "sourceCommit": "c010cba5234ca07a75ec315264eee40416c81186"
+}
