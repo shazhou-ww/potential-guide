@@ -2,6 +2,18 @@
 
 本文对应 [Deployment.md](./Deployment.md)。实施已经监督者依据用户授权独立复验、接受并同步；现实世界尚未完成，不提交或接受 Outer。机器证据见 [Deployment-results.json](./Deployment-results.json)。
 
+## 最新观察：MCP 上传成功，Reference 路径仍待验证
+
+用户恢复 MCP 授权后，已通过 MCP 上传三个正确的完整单根 CAR，全部回执 CID 与已发布 npm 包及原独立执行证据一致。CLI 仍缺少独立 API token；没有复制 OAuth 凭据。最新机器证据见 [Public-delivery-observations.json](./Public-delivery-observations.json)，后文的认证失败和首次安装是历史时点，不再代表 MCP 当前不可用。
+
+Ubuntu 已安装 Engine 从 `https://pinboard.shazhou.work` raw Gateway 实际执行九项：tools 通过/问题/故障，directories 通过/问题，network 通过/问题/故障/取消。九个 Run 均有实际 exit、reclaimedAt，未出现 cleanupUnknown；工具超时子进程不存在、目录探针恢复、HTTP 故障及取消的活动请求归零等断言均在后续失败之前完成。另在 Ubuntu 的独立 npm 项目中，用已发布 SDK 示例构建 text CAR 成功，CID 和 SHA-256 与既有本地独立消费证据相同。
+
+验收脚本随后读取 `/ipfs/<cid>/resources/check.json` 返回 404；三个正确根的 raw 请求均为 200，但这不证明 HTTP UnixFS 路径可用。尚未完成公开 Reference 页面逐字节复验，不能把九个业务用例成功当作整个部署验收通过。当前剩余问题是 Gateway 路径能力与消费方式的契约澄清，而不是 CLI 没 token 导致整个流程无法继续。
+
+本次还发现并纠正验收操作自身的问题：远端手工暂存的是旧 CRLF CAR，监督者又曾给出与正确 CID 不配套的“批准哈希”；已从已发布 npm 包恢复正确暂存并用标准 CAR 读取器核对。期间误上传的操作自有旧 tools pin 已 unpin，但不宣称公开块字节立即消失。一次内联 base64 转抄错误被服务拒绝，修正后才得到正确回执。脚本的未定义 `request` 自由变量在运行时暴露，修为 `submitted.request` 后才完成九项业务用例。
+
+用户要求将全部遇到的问题另建 IDEA，已整理为 [验收问题复盘](../../01M6Q8VHHGG4G49XZE1VWS3W2Z/outer/inner/ideal/Acceptance-issues.md)。D-S01、D-S02、D-AC02 现有证据已满足；D-AC01 因 Reference 公开读取未证实保持未完成，原 IDEA 的 Outer 仍不提交或接受。
+
 ## 追加交付门限
 
 用户随后授权通过仓库 GitHub Actions 发布 SDK 和 environment 两个 npm 包，并在授权 Ubuntu 设备安装全套 Task Engine，以 `https://pinboard.shazhou.work` 为公共 Gateway 实跑检查。Deployment 已纳入这些要求；D-AC02 因新增证明要求重置为未完成。以下是追加要求之前的本地验证记录，不能替代 Ubuntu 公共 Gateway 验证或 npm 发布回执。

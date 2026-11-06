@@ -1,0 +1,480 @@
+{
+  "contractAtExecution": "52c073313448b506aa408e13a40e9a503faa1da1",
+  "publicationMethod": "Authenticated MCP inline complete single-root CAR; CLI remains TOKEN_REQUIRED",
+  "uploads": {
+    "tools": {
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "name": "check-environment-tools-0.1.0",
+      "size": 22797,
+      "blocks": 17,
+      "createdAt": "2026-11-06T01:45:22.922Z"
+    },
+    "directories": {
+      "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "name": "check-environment-directories-0.1.0",
+      "size": 19811,
+      "blocks": 15,
+      "createdAt": "2026-11-06T01:47:29.167Z"
+    },
+    "network": {
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "name": "check-environment-network-0.1.0",
+      "size": 23611,
+      "blocks": 16,
+      "createdAt": "2026-11-06T01:49:57.384Z"
+    }
+  },
+  "stagingCorrection": {
+    "observedAt": "2026-11-06T01:40:26.345Z",
+    "corrections": [
+      {
+        "kind": "tools",
+        "priorStagedRoot": "bafybeigwlidicu46j3wcrqkaylyphnyee5tn5d2ts6zaixpvzz5aeoerne",
+        "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+        "bytes": 23500,
+        "sha256": "eb4f8c14b3284587471fbea9164af4f4bc5a8466959a8643234daaaebf8a6018",
+        "source": "Installed published check-environment@0.1.0 CAR"
+      },
+      {
+        "kind": "directories",
+        "priorStagedRoot": "bafybeigqgtxskxxxslo5fckgca4bh6w7bxwv6j6lu7kxcrokww3pc5errm",
+        "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+        "bytes": 20438,
+        "sha256": "0833f5bc181c8a8a86d59ad6ce9617a32357599fa8fdfd1e31b2c19b6cefc47c",
+        "source": "Installed published check-environment@0.1.0 CAR"
+      },
+      {
+        "kind": "network",
+        "priorStagedRoot": "bafybeib3zof4di35cposnfdpisfblhrmahd6sun2zn56psboql5jemqju4",
+        "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+        "bytes": 24276,
+        "sha256": "5ca8f0079b24eb997b37706d62a20b6ce9f38a02058d0b86593170882b93c683",
+        "source": "Installed published check-environment@0.1.0 CAR"
+      }
+    ],
+    "protocolObservation": {
+      "status": 200,
+      "contentType": "application/vnd.ipld.raw",
+      "bytes": 219,
+      "source": "Stale CRLF root only; not accepted as final bundle verification"
+    }
+  },
+  "stalePinCleanup": {
+    "cid": "bafybeigwlidicu46j3wcrqkaylyphnyee5tn5d2ts6zaixpvzz5aeoerne",
+    "reason": "Operation-owned stale CRLF tools CAR; root did not match the published package manifest.",
+    "receiptBeforeCleanup": {
+      "name": "check-environment-tools-0.1.0",
+      "size": 22851,
+      "blocks": 17,
+      "createdAt": "2026-11-06T01:38:33.858Z"
+    },
+    "unpinReceipt": {
+      "unpinned": true
+    },
+    "publicBytesErased": false
+  },
+  "independentPublishedAuthor": {
+    "observedAt": "2026-11-06T01:41:51.967Z",
+    "node": "v24.22.2",
+    "source": "Published npm packages only; sample copied from installed check-sdk@0.1.0",
+    "dependencies": {
+      "@potential-guide/check-sdk": "0.1.0",
+      "@potential-guide/pguide-task-bundle": "0.1.0-rc.0",
+      "@sinclair/typebox": "0.34.52"
+    },
+    "installExitCode": 0,
+    "buildExitCode": 0,
+    "artifact": {
+      "directory": "/home/scottwei/.local/share/potential-guide/task-engine-20261106/published-sdk-author/dist/staging/text/bundle",
+      "car": "/home/scottwei/.local/share/potential-guide/task-engine-20261106/published-sdk-author/dist/staging/text/bundle.car",
+      "cid": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+      "declaration": {
+        "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
+        "name": "Nonempty text check",
+        "runtime": {
+          "type": "node",
+          "minVersion": "22.13.0"
+        },
+        "entry": "worker.cjs",
+        "inputSchema": {
+          "$ref": "schemas/0.json"
+        },
+        "resultSchema": {
+          "$ref": "schemas/1.json"
+        },
+        "messageSchema": {
+          "$ref": "schemas/2.json"
+        },
+        "include": [
+          "resources/check.json",
+          "resources/references/en/check.md",
+          "resources/references/en/problems/text-empty.md",
+          "schemas/0.json",
+          "schemas/1.json",
+          "schemas/2.json",
+          "task.yaml",
+          "worker.cjs"
+        ]
+      }
+    },
+    "carBytes": 15803,
+    "carSha256": "13a43fb808802e0aaedb138d6c2cd1a758fb3f5dbe68357a437453ffb74d9061"
+  },
+  "ubuntu": {
+    "observedAt": "2026-11-06T01:55:14.116Z",
+    "source": "Published npm packages only",
+    "node": "v24.22.2",
+    "gateway": "https://pinboard.shazhou.work",
+    "cases": [
+      {
+        "label": "tools-pass",
+        "request": {
+          "requestId": "01M6Q8VK7N6JP7GSKEDX3T4ZGE",
+          "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+          "timeoutMs": 30000,
+          "tools": [
+            {
+              "command": "/home/scottwei/.nvm/versions/node/v24.22.2/bin/node",
+              "args": [
+                "--version"
+              ],
+              "minimumVersion": "22.13.0"
+            }
+          ]
+        },
+        "taskId": "01M6Q8VY1S1YYKX16PFC33F5FW",
+        "runId": "01M6Q8VY35NRP963WP2ZP7P4TW",
+        "stage": "completed",
+        "canceled": false,
+        "result": {
+          "pass": true
+        },
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 18,
+          "occurredAt": "2026-11-06T01:51:42.549Z"
+        },
+        "reclaimedAt": "2026-11-06T01:51:42.603Z"
+      },
+      {
+        "label": "tools-gap",
+        "request": {
+          "requestId": "01M6Q8VYJCQC14VV355789V4HV",
+          "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+          "timeoutMs": 30000,
+          "tools": [
+            {
+              "command": "/home/scottwei/.nvm/versions/node/v24.22.2/bin/node",
+              "args": [
+                "-e",
+                "console.log('1.0.0')"
+              ],
+              "minimumVersion": "2.0.0"
+            }
+          ]
+        },
+        "taskId": "01M6Q8VYNJG2WBJYBF5C9YKGES",
+        "runId": "01M6Q8VYQRGJH5NW9JBVV26E9E",
+        "stage": "completed",
+        "canceled": false,
+        "result": {
+          "pass": false,
+          "problems": [
+            {
+              "target": "/home/scottwei/.nvm/versions/node/v24.22.2/bin/node",
+              "code": "tool-version",
+              "actual": "1.0.0"
+            }
+          ]
+        },
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 27,
+          "occurredAt": "2026-11-06T01:51:43.232Z"
+        },
+        "reclaimedAt": "2026-11-06T01:51:43.287Z"
+      },
+      {
+        "label": "tools-fault",
+        "request": {
+          "requestId": "01M6Q8VZ7XQYBGS686BHW778MJ",
+          "bundle": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+          "timeoutMs": 30000,
+          "tools": [
+            {
+              "command": "/home/scottwei/.nvm/versions/node/v24.22.2/bin/node",
+              "args": [
+                "-e",
+                "require('node:fs').writeFileSync(\"/home/scottwei/.local/share/potential-guide/task-engine-20261106/execution/timeout.pid\",String(process.pid));setInterval(()=>{},1000)"
+              ],
+              "minimumVersion": "1.0.0"
+            }
+          ],
+          "checkTimeoutMs": 1000
+        },
+        "taskId": "01M6Q8VZBF7MMQ0MFZXJPKDHPG",
+        "runId": "01M6Q8VZDDDVW2K90KWEQN1HN2",
+        "stage": "failed",
+        "canceled": false,
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 36,
+          "occurredAt": "2026-11-06T01:51:44.901Z"
+        },
+        "reclaimedAt": "2026-11-06T01:51:44.956Z"
+      },
+      {
+        "label": "directories-pass",
+        "request": {
+          "requestId": "01M6Q8W0W4S0M0Z4VS2ZF89VQE",
+          "bundle": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+          "timeoutMs": 30000,
+          "directories": [
+            {
+              "path": "/home/scottwei/.local/share/potential-guide/task-engine-20261106/execution",
+              "requirements": [
+                "exists",
+                "read",
+                "write"
+              ]
+            }
+          ]
+        },
+        "taskId": "01M6Q8W9T9H5NYJGMA8YERVDHR",
+        "runId": "01M6Q8W9WB1T9E4Q16S4X5S9J9",
+        "stage": "completed",
+        "canceled": false,
+        "result": {
+          "pass": true
+        },
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 45,
+          "occurredAt": "2026-11-06T01:51:54.578Z"
+        },
+        "reclaimedAt": "2026-11-06T01:51:54.632Z"
+      },
+      {
+        "label": "directories-gap",
+        "request": {
+          "requestId": "01M6Q8WAAE98A2KZ7TSJZJBVZW",
+          "bundle": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+          "timeoutMs": 30000,
+          "directories": [
+            {
+              "path": "/home/scottwei/.local/share/potential-guide/task-engine-20261106/execution/absent",
+              "requirements": [
+                "exists"
+              ]
+            }
+          ]
+        },
+        "taskId": "01M6Q8WAE096NWYFKEVAYWF75F",
+        "runId": "01M6Q8WAFZZD5A3NPYHC5V1V5E",
+        "stage": "completed",
+        "canceled": false,
+        "result": {
+          "pass": false,
+          "problems": [
+            {
+              "target": "/home/scottwei/.local/share/potential-guide/task-engine-20261106/execution/absent",
+              "code": "directory-unusable",
+              "actual": "ENOENT"
+            }
+          ]
+        },
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 54,
+          "occurredAt": "2026-11-06T01:51:55.179Z"
+        },
+        "reclaimedAt": "2026-11-06T01:51:55.233Z"
+      },
+      {
+        "label": "network-pass",
+        "request": {
+          "requestId": "01M6Q8WAWZ2XEBXC9TYMTQQ9WV",
+          "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+          "timeoutMs": 30000,
+          "dns": [],
+          "http": [
+            {
+              "url": "http://127.0.0.1:34225/pass",
+              "expectedStatus": [
+                200
+              ],
+              "followRedirects": false
+            }
+          ]
+        },
+        "taskId": "01M6Q8WKZRGGCXR5SEMSHSCBZ8",
+        "runId": "01M6Q8WM2B4ESN79XEHWVTP8ZR",
+        "stage": "completed",
+        "canceled": false,
+        "result": {
+          "pass": true
+        },
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 63,
+          "occurredAt": "2026-11-06T01:52:05.017Z"
+        },
+        "reclaimedAt": "2026-11-06T01:52:05.078Z"
+      },
+      {
+        "label": "network-gap",
+        "request": {
+          "requestId": "01M6Q8WMGYC3HQ6PXY5EVAS85A",
+          "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+          "timeoutMs": 30000,
+          "dns": [],
+          "http": [
+            {
+              "url": "http://127.0.0.1:34225/gap",
+              "expectedStatus": [
+                200
+              ],
+              "followRedirects": false
+            }
+          ]
+        },
+        "taskId": "01M6Q8WMMPTAFP847PHZQM78J8",
+        "runId": "01M6Q8WMPRB54WASZVAM0BBDKF",
+        "stage": "completed",
+        "canceled": false,
+        "result": {
+          "pass": false,
+          "problems": [
+            {
+              "target": "http://127.0.0.1:34225/gap",
+              "code": "http-status",
+              "actual": "503"
+            }
+          ]
+        },
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 72,
+          "occurredAt": "2026-11-06T01:52:05.685Z"
+        },
+        "reclaimedAt": "2026-11-06T01:52:05.737Z"
+      },
+      {
+        "label": "network-fault",
+        "request": {
+          "requestId": "01M6Q8WN55YFZT30AXXB1GR9D9",
+          "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+          "timeoutMs": 30000,
+          "dns": [],
+          "http": [
+            {
+              "url": "http://127.0.0.1:34225/slow",
+              "expectedStatus": [
+                200
+              ],
+              "followRedirects": false
+            }
+          ],
+          "checkTimeoutMs": 100
+        },
+        "taskId": "01M6Q8WN8HT1K4M9QA58FDWSX2",
+        "runId": "01M6Q8WNAJTBW1REBYZT6HS4XQ",
+        "stage": "failed",
+        "canceled": false,
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 81,
+          "occurredAt": "2026-11-06T01:52:06.395Z"
+        },
+        "reclaimedAt": "2026-11-06T01:52:06.446Z"
+      },
+      {
+        "label": "network-cancel",
+        "request": {
+          "requestId": "01M6Q8WNVPD0SPY8F3NVQDCJ7G",
+          "bundle": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+          "timeoutMs": 30000,
+          "dns": [],
+          "http": [
+            {
+              "url": "http://127.0.0.1:34225/slow",
+              "expectedStatus": [
+                200
+              ],
+              "followRedirects": false
+            }
+          ],
+          "checkTimeoutMs": 10000
+        },
+        "taskId": "01M6Q8WNZFKCN1HN7Y0HRMS65N",
+        "runId": "01M6Q8WP346K84NYNG4SY7PQWS",
+        "stage": "stopped",
+        "canceled": true,
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 92,
+          "occurredAt": "2026-11-06T01:52:07.301Z"
+        },
+        "reclaimedAt": "2026-11-06T01:52:07.366Z"
+      }
+    ],
+    "caseCount": 9,
+    "everyRunPhysicallyReclaimed": true,
+    "referencePagesVerified": 0,
+    "gatewayObservations": [
+      {
+        "kind": "tools",
+        "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+        "rawStatus": 200,
+        "rawContentType": "application/vnd.ipld.raw",
+        "indexStatus": 404,
+        "indexBody": "{\"error\":\"Not found\"}"
+      },
+      {
+        "kind": "directories",
+        "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+        "rawStatus": 200,
+        "rawContentType": "application/vnd.ipld.raw",
+        "indexStatus": 404,
+        "indexBody": "{\"error\":\"Not found\"}"
+      },
+      {
+        "kind": "network",
+        "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+        "rawStatus": 200,
+        "rawContentType": "application/vnd.ipld.raw",
+        "indexStatus": 404,
+        "indexBody": "{\"error\":\"Not found\"}"
+      }
+    ],
+    "remainingFailure": {
+      "name": "AssertionError",
+      "message": "Expected values to be strictly equal:\n\n404 !== 200\n"
+    },
+    "scriptCorrection": "finish now records submitted.request instead of an undefined free variable request",
+    "overallAcceptancePassed": false
+  },
+  "physicalAssertionsCompletedBeforeReferenceFailure": [
+    "Tool timeout child PID no longer existed",
+    "Directory write-probe file list restored",
+    "HTTP fault/cancel active requests returned to zero"
+  ]
+}
