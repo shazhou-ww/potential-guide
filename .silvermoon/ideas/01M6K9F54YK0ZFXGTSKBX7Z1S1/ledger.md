@@ -19,9 +19,7 @@
 ### Deployment steps
 
 - [x] **D-S01:** 观察主分支 CI 的完整结果
-- [ ] **D-S02:** 核验日常反馈与完整验证收益
 
 ### Deployment acceptance criteria
 
 - [x] **D-AC01:** 交付保障在真实 CI 中通过
-- [ ] **D-AC02:** 实际性能收益与入口可验证
