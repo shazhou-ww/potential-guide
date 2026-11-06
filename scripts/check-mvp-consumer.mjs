@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export async function checkMvpConsumer(root, directory, label, graph, run) {
+  assert.ok(["artifact-contracts", "mvp-server"].includes(label), "Unsupported MVP consumer.");
   const names = new Set(graph.map((entry) => entry.name));
   assert.ok(!names.has("@potential-guide/checker-host"));
   assert.ok(!names.has("@potential-guide/objective-host"));
@@ -103,35 +104,11 @@ console.log("pure-packed: checker/objective manifests, full files, References, d
     );
     console.log(await run(process.execPath, ["pure.mjs"], directory));
   } else {
-    await writeFile(
-      join(directory, "echo-config.mjs"),
-      await readFile(join(root, "examples", "task-server", "echo-config.mjs")),
-    );
-    await writeFile(
-      join(directory, "echo-type.mjs"),
-      await readFile(join(root, "examples", "task-server", "echo-type.mjs")),
-    );
-    if (label === "mvp-check")
+    for (const name of ["echo-config.mjs", "echo-type.mjs"])
       await writeFile(
-        join(directory, "build-bundles.mjs"),
-        await readFile(join(root, "examples", "task-server", "build-bundles.mjs")),
+        join(directory, name),
+        await readFile(join(root, "examples", "task-server", name)),
       );
-    if (label === "mvp-check") {
-      await writeFile(
-        join(directory, "check-config.mjs"),
-        `
-import {readFile} from "node:fs/promises";
-import {resolve} from "node:path";
-import {TaskError} from "@potential-guide/task-protocol";
-export default function configure(){
- return {port:0,database:process.env.TASK_SERVER_DATABASE??"check.sqlite",limits:{maxConcurrent:4,maxPayloadBytes:100663296,queryPageBytes:100663296,sourceEnvelopeBytes:100663296},
- authorize:(caller,_op,scope)=>caller.scope===scope,
- resolveCaller(request){if(request.headers.get("authorization")!=="Bearer fixture")throw new TaskError("unauthenticated","Authentication required.");return {scope:"example",subject:"example"}},
- };
-}
-`,
-      );
-    }
     await writeFile(
       join(directory, "consumer-config.mjs"),
       `
@@ -149,43 +126,21 @@ export default async function configure(){
       join(directory, "mvp.mjs"),
       `
 import assert from "node:assert/strict";
-import {writeFile,readdir,mkdir,copyFile} from "node:fs/promises";
-import {fileURLToPath,pathToFileURL} from "node:url";
-import {resolve} from "node:path";
+import {readFile,writeFile} from "node:fs/promises";
 import {startTaskServer} from "@potential-guide/task-engine-server";
 import {newId} from "@potential-guide/task-engine";
 import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
 const ipfsClient=new MemoryIpfsClient();
-${
-  label === "mvp-check"
-    ? `
-import {checkerSchemaUri} from "@potential-guide/check-artifacts/contracts";
-import {writeContractArtifact,packContractArtifact} from "@potential-guide/check-artifacts/build";
-import {buildExampleBundle} from "./build-bundles.mjs";
-const page=Buffer.from("---\\ntitle: Packed\\ndescription: Packed\\n---\\nBody\\n");
-const built=await writeContractArtifact(new Map([
- ["checker.yaml",Buffer.from(JSON.stringify({$schema:checkerSchemaUri,runtime:{type:"node",minVersion:"22.13.0"},entry:"checker.cjs",subjectSchema:{type:"object"},languages:["en"],problems:["bad"]}))],
- ["checker.cjs",Buffer.from("exports.execute=async(s,c)=>{c.progress({step:1});return {status:200,message:'',payload:{ok:false,problems:[{kind:'internal',id:'bad',parameters:{}}]}}}")],
- ["references/en/checker.md",page],["references/en/problems/bad.md",page]
-]),"artifact");
-await packContractArtifact(built.directory,"checker.tgz");
-await mkdir("imports");await copyFile("checker.tgz",resolve("imports","checker.tgz"));
-const bundle=await buildExampleBundle({ipfsClient,kind:"check",directory:resolve("author"),sourceOptions:{allowedOrigins:["https://example.test"],allowedFileRoots:[resolve("imports")]},downloadResources:{"https://example.test/checker.tgz":"resources/checker.tgz"},resources:{"resources/checker.tgz":resolve("checker.tgz")},binary:["resources/checker.tgz"]});
-const body={bundle,checker:{kind:"checker",url:"https://example.test/checker.tgz",digest:built.digest},subject:{},timeoutMs:10000};
-const fileBody={...body,checker:{...body.checker,url:pathToFileURL(resolve("imports","checker.tgz")).href}};
-`
-    : `import {readFile} from "node:fs/promises";const binding=JSON.parse(await readFile(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "binding.json"))},"utf8"));
+const binding=JSON.parse(await readFile(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "binding.json"))},"utf8"));
 for(const [cid,hex] of JSON.parse(await readFile(${JSON.stringify(join(directory, "..", "task-sdk", "fixture", "blocks.json"))},"utf8")))ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
-const body={bundle:binding.cid,text:"packed",timeoutMs:10000};`
-}
+const body={bundle:binding.cid,text:"packed",timeoutMs:10000};
 await writeFile("content.json",JSON.stringify([...ipfsClient.blocks].map(([cid,bytes])=>[cid,Buffer.from(bytes).toString("hex")])));
 process.env.TASK_SERVER_TOKEN="fixture";process.env.TASK_SERVER_PORT="0";
 const configure=(await import("./consumer-config.mjs")).default;
 const headers={authorization:"Bearer fixture","content-type":"application/json"};
-async function exercise(url,requestBody=body){
- const unsupportedFile=process.platform==="darwin"&&requestBody.checker?.url.startsWith("file:");
+async function exercise(url){
  assert.equal((await fetch(url+"/tasks/"+newId())).status,401);
- const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(requestBody)});
+ const response=await fetch(url+"/tasks",{method:"POST",headers:{...headers,"Idempotency-Key":newId()},body:JSON.stringify(body)});
  assert.ok(response.ok);let decision=await response.json();
  while(decision.status==="preparing")decision=await(await fetch(url+"/requests/"+decision.requestId+"/status?waitMs=1000",{headers})).json();
  assert.equal(decision.status,"accepted");const initial=await(await fetch(url+"/tasks/"+decision.taskId,{headers})).json();
@@ -196,32 +151,24 @@ async function exercise(url,requestBody=body){
  const resumed=await fetch(url+"/events?taskId="+initial.taskId,{headers:{...headers,"Last-Event-ID":cursor}});
  const resumedReader=resumed.body.getReader();await resumedReader.read();await resumedReader.cancel();
  let final;
- for(let i=0;i<500;i++){final=await (await fetch(url+"/tasks/"+initial.taskId,{headers})).json();if(final.termination)break;await new Promise(r=>setTimeout(r,10))}
- assert.equal(final.stage,unsupportedFile?"failed":"completed",JSON.stringify({request:requestBody,task:final}));
- if(unsupportedFile){
-  assert.equal(final.error.code,"artifact_file_unsupported");
-  assert.equal(final.result.failure.code,"artifact_file_unsupported");
-  assert.equal(final.result.result,undefined);
- }else{
- ${label === "mvp-check" ? `assert.equal(final.result.result.ok,false);assert.ok(final.result.evidence.prepared.checker.digest);` : `assert.deepEqual(final.result,{text:"packed"});`}
- }
+ for(let i=0;i<500;i++){final=await(await fetch(url+"/tasks/"+initial.taskId,{headers})).json();if(final.termination)break;await new Promise(r=>setTimeout(r,10))}
+ assert.equal(final.stage,"completed",JSON.stringify(final));
+ assert.deepEqual(final.result,{text:"packed"});
  let next;let events=0;
  do {const url_=new URL(url+"/event-history?taskId="+initial.taskId+"&limit=1");if(next)url_.searchParams.set("cursor",next);const page=await(await fetch(url_,{headers})).json();assert.ok(page.events.every(event=>!event.type.startsWith("run.")));events+=page.events.length;next=page.next}while(next);
  assert.equal(events,3);
  const run=await(await fetch(url+"/runs/"+final.run.runId,{headers})).json();
- assert.equal(run.stage,unsupportedFile?"failed":"completed");
+ assert.equal(run.stage,"completed");
  const history=await(await fetch(url+"/runs/"+run.runId+"/history",{headers})).json();
  assert.ok(history.events.some(event=>event.type==="run.started"));
  assert.ok(history.events.some(event=>event.type==="run.exited"));
  assert.ok(history.events.length>=5);
- if(requestBody.checker?.url.startsWith("file:"))console.log(JSON.stringify({case:unsupportedFile?"packed-unsupported-file-check":"packed-real-file-check",url:requestBody.checker.url,digest:requestBody.checker.digest,taskId:final.taskId,runId:final.run.runId,result:final.result}));
 }
 const signals=process.listenerCount("SIGINT");
 const server=await startTaskServer(await configure());
 assert.equal(process.listenerCount("SIGINT"),signals);
-try{await exercise(server.url);${label === "mvp-check" ? "await exercise(server.url,fileBody);" : ""}}finally{await server.close()}
-${label === "mvp-check" ? `assert.deepEqual(await readdir(".business-workers"),[]);` : ""}
-console.log("packed ${label}: programmatic readiness, auth, result, history and SSE reconnect; declarative CLI is verified separately");
+try{await exercise(server.url)}finally{await server.close()}
+console.log("packed mvp-server: programmatic readiness, auth, result, history and SSE reconnect; declarative CLI is verified separately");
 `,
     );
     console.log(await run(process.execPath, ["mvp.mjs"], directory));

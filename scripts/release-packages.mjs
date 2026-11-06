@@ -191,6 +191,10 @@ export const releasePackages = [
     name: "@potential-guide/cli-runtime",
     requiredExports: ["withPilot"],
     bins: [],
+    forbiddenDependencies: ["@potential-guide/check-artifacts"],
+    forbiddenFiles: ["js", "d.ts", "js.map", "d.ts.map"].map(
+      (extension) => `dist/objective-artifact.${extension}`,
+    ),
   },
   {
     id: "objective-declarations",
@@ -203,12 +207,6 @@ export const releasePackages = [
       "@potential-guide/objective-regulator",
       "@potential-guide/cli-runtime",
     ],
-  },
-  {
-    id: "pguide-pilot",
-    directory: "pguide-pilot",
-    name: "@potential-guide/pguide-pilot",
-    bins: ["pguide-probe", "pguide-scaffold", "pguide-validate"],
   },
   {
     id: "pguide-regulate",
@@ -303,31 +301,20 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
-    id: "probe-task",
-    directory: "probe-task",
-    name: "@potential-guide/probe-task",
-    requiredExports: ["createProbeTaskType", "validateProbeInput"],
-    bins: [],
-    forbiddenDependencies: [
-      "@potential-guide/checker-host",
-      "@potential-guide/objective-host",
-      "@potential-guide/objective-pilot",
-    ],
-  },
-  {
-    id: "check-task",
-    directory: "check-task",
-    name: "@potential-guide/check-task",
-    requiredExports: ["createCheckTaskType", "createArtifactSource", "validateCheckInput"],
-    bins: [],
-    forbiddenDependencies: ["@potential-guide/checker-host", "@potential-guide/objective-host"],
-  },
-  {
     id: "check-runtime-files",
     directory: "check-runtime-files",
     name: "@potential-guide/check-runtime-files",
     bins: [],
     requiredExports: ["readArtifact", "ensurePrivateDirectory", "closePrivateFileBackend"],
+    forbiddenFiles: [
+      "worker",
+      "worker-json",
+      "worker-types",
+      "worker-source",
+      "runtime-identity",
+    ].flatMap((name) =>
+      ["js", "d.ts", "js.map", "d.ts.map"].map((extension) => `dist/${name}.${extension}`),
+    ),
   },
   {
     id: "check-artifacts",

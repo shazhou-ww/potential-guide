@@ -14,12 +14,11 @@
   },
   "files": [
     "dist",
-    "examples",
     "README.md"
   ],
   "scripts": {
     "build": "tsc -b",
-    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "clean": "node -e \"const fs = require('node:fs'); fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('../../.cache/tsbuildinfo/cli-runtime.tsbuildinfo', { force: true })\"",
     "lint": "biome lint .",
     "test": "node --test",
     "typecheck": "tsc -b --pretty false"
@@ -28,7 +27,6 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@potential-guide/check-artifacts": "workspace:^",
     "@potential-guide/check-runtime-files": "workspace:^",
     "@potential-guide/cli-core": "workspace:^",
     "@potential-guide/objective-pilot": "workspace:^",

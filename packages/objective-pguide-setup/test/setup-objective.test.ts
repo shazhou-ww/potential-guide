@@ -62,7 +62,6 @@ async function setup(mode = "fix") {
   for (const [name, script] of Object.entries({
     config: join(root, "packages", "pguide-config", "dist", "bin.js"),
     agents: join(root, "packages", "pguide-agents", "dist", "bin.js"),
-    probe: bin("probe"),
     regulate: bin("regulate"),
   })) {
     await writeFile(
@@ -255,13 +254,6 @@ test("setup Pilot strictly loads with all level-scoped check and problem wiki co
         assert.ok(spec.locales["zh-CN"]?.[`${scope}/problems/${id}`]);
     }
   }
-  const result = await run(bin("validate"), [
-    "pilot",
-    join(objective, "objective.yaml"),
-    "--format",
-    "json",
-  ]);
-  assert.equal(result.code, 0, result.stdout + result.stderr);
 });
 
 test("native setup bootstrap distinguishes missing/unusable installation and exact versions", async () => {
@@ -357,6 +349,28 @@ test("configuration performs real ACP initialize and session/new without prompti
     assert.ok(messages[1].cwd.startsWith(f.scratch));
     assert.equal(messages[0].protocolVersion, 1);
     for (const { pid } of messages) assert.throws(() => process.kill(pid, 0));
+  } finally {
+    await rm(f.directory, { recursive: true, force: true });
+  }
+});
+
+test("configuration readiness needs config and Agent resources, not removed probe or optional regulate", async () => {
+  const f = await setup();
+  try {
+    await rm(
+      join(f.directory, "commands", `pguide-regulate${process.platform === "win32" ? ".cmd" : ""}`),
+    );
+    const help = await run(composition, ["--help", "--cwd", f.work, "--format", "json"], f.env);
+    assert.equal(help.code, 0, help.stdout + help.stderr);
+    const commands = JSON.parse(help.stdout).commands.map(
+      ({ command }: { command: string }) => command,
+    );
+    assert.ok(commands.includes("config"));
+    assert.ok(commands.includes("agents"));
+    assert.ok(!commands.includes("probe"));
+    assert.ok(!commands.includes("regulate"));
+    passed(await f.direct("configuration"));
+    assert.ok(!(await readFile(f.log, "utf8")).includes("session/prompt"));
   } finally {
     await rm(f.directory, { recursive: true, force: true });
   }
@@ -1016,13 +1030,6 @@ test("self-check manifest loads local-only input, attained verified and every re
       }
     }
   }
-  const validated = await run(bin("validate"), [
-    "pilot",
-    join(selfObjective, "dist", "package", "objective.yaml"),
-    "--format",
-    "json",
-  ]);
-  assert.equal(validated.code, 0, validated.stdout + validated.stderr);
   const f = await setup();
   try {
     const subject = selfSubject(f);
@@ -1340,8 +1347,9 @@ test("self-check CLI execution rejects without prompting for default or extended
       );
       assert.equal(result.code, 2, result.stdout + result.stderr);
       const report = JSON.parse(result.stdout);
-      assert.equal(report.status, "pilot-error");
-      assert.match(report.error, /Legacy Pilot execution is retired/);
+      assert.equal(report.schemaVersion, 1);
+      assert.match(report.error, /Unknown command.*probe/);
+      assert.doesNotMatch(report.error, /Install/);
       assert.deepEqual(await readdir(f.scratch), []);
       assert.equal(existsSync(f.log), false);
     } finally {

@@ -28,7 +28,6 @@
   "dependencies": {
     "@potential-guide/pguide-agents": "workspace:^",
     "@potential-guide/cli-core": "workspace:^",
-    "@potential-guide/pguide-pilot": "workspace:^",
     "@potential-guide/pguide-config": "workspace:^",
     "@potential-guide/pguide-objectives": "workspace:^",
     "cross-spawn": "catalog:"

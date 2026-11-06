@@ -8,5 +8,3 @@ export {
   filePathAllowed,
   ConfinedFileError,
 } from "./confined-file.js";
-export { workerSource as checkerWorkerSource } from "./worker-source.js";
-export { runtimeRevision as checkerRuntimeRevision } from "./runtime-identity.js";

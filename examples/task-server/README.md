@@ -1,102 +1,90 @@
 # Public-package Task Bundle examples
 
-The author builder emits the sole evolving v1 Bundle protocol. Check emits selected per-problem
-diagnostics (index/kind/problem ID, not parameter/environment dumps) through
-`context.log`; its existing Result/evidence schema remains unchanged. See
-[Run Logs](../../docs/task-run-logs.md) and the concise SDK assertion sample.
+The generic server installs Engine/HTTP/Storage/Server, not author SDKs or
+business adapters. The old Check task and Probe adapters, their configuration
+helpers and execution examples are retired. They have no compatibility
+registration or automatic Objective/state migration.
 
-The generic server installs Engine/HTTP/Storage/Server, **not** SDK, Check or Probe.
+## Author and run Echo
+
+On a separate author installation with `@potential-guide/pguide-task-bundle`,
+`@potential-guide/task-sdk` and `@potential-guide/task-protocol`, copy
+`build-bundles.mjs` and `echo-type.mjs`.
+
+```powershell
+node build-bundles.mjs echo .cache/author-echo
+```
+
+The builder accepts only `echo` and emits the current v1 directory, CAR and
+standard UnixFS root CID. Import/upload and pin the CAR using a caller-selected
+external tool. Authoring does not upload, publish npm packages or grant general
+host credentials to callbacks.
+
+For new business Checks, use [`check-sdk`](../../packages/check-sdk/README.md)
+and the standard Task Bundle authoring flow.
+[`check-environment`](../../packages/check-environment/README.md) provides
+working tools/directories/network examples with direct business inputs and
+`{pass, problems?}` results. Do not send an old Checker URL/digest/subject
+envelope to these new Bundles.
+
 Install `@potential-guide/pguide-task-engine` and run
 `pguide-task-engine --config ./server.yaml` against an independently managed
 read-only Trustless Gateway, or provide `--ipfs-gateway-url http://127.0.0.1:8080`.
-The URL is required: no default node, transport selection or RPC fallback exists.
-Authors build CARs offline and choose an external upload/import/pin tool.
-Old service RPC/transport fields and flags are rejected.
+There is no default content endpoint, RPC fallback or transport selection.
 See [service configuration](../../docs/task-server.md) for user settings,
 precedence, `--no-global-config` and optional `--ui`.
-The token-free CLI is fixed-loopback and single-scope only.
-The `.mjs` examples are **programmatic composition helpers**, never CLI config
-inputs: import `configureTaskServer` and pass its result to `startTaskServer`
-when custom token authentication or injected clients are required.
-These programmatic helpers require an injected `ipfsClient` or an explicit
-`IPFS_GATEWAY` URL; they no longer default to Kubo RPC. `check-in-process.mjs`
-also requires `IPFS_GATEWAY`. These helper environment variables are not service
-CLI configuration layers; the author builder no longer uses `IPFS_API`.
-Install `@potential-guide/task-engine` and `@potential-guide/task-protocol`
-alongside the programmatic helpers and Server/Engine packages they import.
-`check-config.mjs` and `probe-config.mjs` intentionally use that identical
-business-free configuration. Use a new v5 database path; older domains are
-rejected without migration or rewriting their bytes.
 
-On a separate author installation with `@potential-guide/pguide-task-bundle`,
-`@potential-guide/task-sdk` (and the
-chosen business packages), copy `build-bundles.mjs` and `echo-type.mjs`.
-`node build-bundles.mjs echo .cache/author-echo` prints the offline directory, CAR and root CID.
-For Check use `check` and explicitly authorize `CHECK_ORIGIN` and/or
-`CHECK_FILE_ROOT`. These are **business callback** policy, never a server
-registration. For Probe also supply `CHILD_SERVICE_URL`, `CHILD_SERVICE_TOKEN`
-and `CHECK_BUNDLE` (an exact root CID or `{cid,hint}` JSON Check Bundle reference).
-Child credentials are explicit private author configuration; never put real
-credentials in source control or publicly distributed Bundles. Run callbacks
-do not inherit general host credentials.
+The token-free CLI is fixed-loopback and single-scope only. `echo-config.mjs`
+is a **programmatic composition helper**, not CLI configuration: import
+`configureTaskServer` and pass its result to `startTaskServer` for token
+authentication or injected clients. It requires an injected `ipfsClient` or
+explicit `IPFS_GATEWAY`; it never defaults to Kubo RPC.
+Install Engine/Protocol alongside the programmatic Server packages it imports.
+Use a new v5 database path; older domains are rejected without rewriting them.
 
-The SDK produces a self-contained `worker.cjs`, declaration, locked Schema
-closure and selected resources. `buildExampleBundle` forwards explicit final-path
-`binary` patterns to the ordinary builder; embedding an archive requires, for example,
-`binary: ["resources/checker.tgz"]`. `resources` alone does not declare binary, and
-neither this helper nor the compiler guesses from an extension. Other resources use
-the default strict UTF-8/LF rules. Import/upload and pin the resulting CAR using an
-external tool and destination of your choice, not author source or `node_modules`. The returned root
-CID is standard UnixFS content identity; name is display-only, not a selector.
-Callbacks read bundled resources via `context.bundle.read(path)` byte streams,
-not `import.meta.url` or physical host paths. Existing business Checker/Objective
-archives and their URL/Digest inputs are unchanged.
-Gateway URLs must be root origins without path prefixes. Explicit binary data is fetched on demand
-by default, so a later Gateway failure can fail a Run; default text is validated before admission.
-`bundlePrefetch: true` restores
-complete prefetch when composing an Engine/Server programmatically.
+The Echo helper forwards explicit final-path `binary` patterns to the standard
+builder, for example `binary: ["resources/payload.tgz"]` when an archive is selected
+in `resources`. Resource selection alone does not declare binary, and extensions
+are never sniffed. Other resources use strict UTF-8/LF normalization. The final
+manifest contains the exact binary file list, and directory/CAR share one snapshot.
 
 POST `/tasks` with JSON and a fresh ULID `Idempotency-Key` (add a bearer token
-only when using the authenticated programmatic example):
+only when using the authenticated programmatic helper):
 
 ```json
 {
-  "bundle": "<exact-task-bundle-root-CID>",
+  "bundle": "<exact-echo-task-bundle-root-CID>",
   "timeoutMs": 30000,
-  "checker": {
-    "kind": "checker",
-    "url": "https://trusted.example/checker.tgz",
-    "digest": "sha256:<exact-64-hex-root-tree>"
-  },
-  "subject": {}
+  "text": "hello"
 }
 ```
 
 The receipt is `preparing`, `accepted` or `rejected`, not a Task snapshot.
 Use `/requests/:requestId/status?waitMs=1000` until a terminal decision; observation
 disconnects do not cancel preparation. `/requests/:requestId` reads original
-intent separately. Only accepted decisions expose a real Task ID. Then read
-`/tasks/:taskId`, its history, and independent `/runs/:runId` / Run history.
-There is no type directory or registered selector, and no fabricated preparing
-Task. Reuse an identical request ID only for the identical original request.
+intent separately. Only accepted decisions expose a Task ID. Then read its
+Task history and independent Run/Run history. Reuse an identical request ID
+only for the identical original request.
 
-`node check-in-process.mjs <bundle-cid-or-json> <checker-url> <checker-digest>`
-uses the same asynchronous admission protocol without Server.
-`file:` business URLs require an explicit callback-owned trusted root; a browser
-file picker does not grant remote filesystem access. The generic server has no
-business upload or raw filesystem route.
+Callbacks read bundled resources via `context.bundle.read(path)` byte streams,
+not author paths. Default text is validated before admission; explicit binary data
+is fetched on demand. `bundlePrefetch: true` restores complete prefetch in
+programmatic composition. A browser file picker
+does not grant remote filesystem access; Server has no business upload or raw
+filesystem route.
 
-Collection/SSE reads use a complete frozen baseline and source revision.
-Reconnect with the last acknowledged `Last-Event-ID`; source members remain
-atomic. CLI readiness is a JSON `ready` line. Catchable signals close cleanly;
-Windows forced termination exercises restart recovery, not graceful shutdown.
+Collection/SSE reads use a frozen baseline and source revision. Reconnect with
+the last acknowledged `Last-Event-ID`. CLI readiness is a JSON `ready` line;
+catchable signals close cleanly. Windows forced termination tests restart
+recovery, not graceful shutdown.
 
-`node probe-integration.mjs` exercises real authored Check/Probe Bundles,
-negative business observations and evidence, direct/HTTP agreement, SSE
-reconnect, child history, SQLite reopen, and physical business Worker cleanup.
-`pnpm pack:check` runs it on installed production tarballs. Its local opaque
-resources are fixture callback configuration, not host resource bridges.
-The stronger separate-install proof is
-`node scripts/check-packages.mjs --task-bundles`: author dependencies/source
-are removed before a distinct business-free production process consumes both
-CID-addressed directories and validates their actual results/evidence.
+## Verification
+
+`node scripts/check-packages.mjs --task-sdk` verifies a self-contained SDK Worker
+with author dependencies unavailable. `--task-service` verifies independent
+service/CLI consumption, and `--bundle-authoring` verifies the author commands.
+The authoring scenario also covers a generic tarball's exact binary bytes and
+manifest, default text normalization, the Echo helper, and unchanged CID checks.
+The removed `--task-bundles` Check-adapter consumer scope is rejected rather
+than silently running a different scenario. Run diagnostic logging is described
+in [Run Logs](../../docs/task-run-logs.md).

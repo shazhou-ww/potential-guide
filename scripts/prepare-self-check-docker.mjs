@@ -11,8 +11,6 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const harnessFiles = [
   "Dockerfile",
   "prepare-image.mjs",
-  "fixture.mjs",
-  "verify.mjs",
   "real-agent.mjs",
   "keychain.mjs",
   "keychain-entrypoint.sh",

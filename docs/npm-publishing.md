@@ -27,7 +27,6 @@ Potential Guide defines independent CLI, library, and Objective releases:
 | `@potential-guide/pilot-protocol` | `pilot-protocol-vX.Y.Z` |
 | `@potential-guide/cli-runtime` | `cli-runtime-vX.Y.Z` |
 | `@potential-guide/objective-declarations` | `objective-declarations-vX.Y.Z` |
-| `@potential-guide/pguide-pilot` | `pguide-pilot-vX.Y.Z` |
 | `@potential-guide/pguide-regulate` | `pguide-regulate-vX.Y.Z` |
 | `@potential-guide/pguide-objectives` | `pguide-objectives-vX.Y.Z` |
 | `@potential-guide/objective-monorepo-standard` | `objective-monorepo-standard-vX.Y.Z` |
@@ -38,7 +37,8 @@ Potential Guide defines independent CLI, library, and Objective releases:
 | `@potential-guide/objective-setup-marker` | `objective-setup-marker-vX.Y.Z` |
 
 Command wrapper packages use the `pguide-` prefix, including grouped
-`pguide-pilot` and `pguide-regulate`. Configuration is now
+`pguide-regulate`. The old grouped `pguide-pilot` package is retired, with no
+replacement probe/check package pre-created. Configuration is now
 `@potential-guide/pguide-config` with `pguide-config-v*` tags; its executable remains
 `pguide-config`. Shared libraries are not command wrappers
 and keep their responsibility names.
@@ -49,9 +49,11 @@ are protocol; `objective-pilot` consumes both protocols, then
 packages and their release tags are retired.
 The generic Task Engine release scope is documented below. Its release routes
 prepare configuration only: they do not prove external publishing authorization
-or a successful npm release. `check-task`, `probe-task`,
-`check-artifacts`, and `check-runtime-files` remain local-verification-only.
+or a successful npm release. `check-artifacts` and `check-runtime-files`
+remain local-verification-only.
 Their pack/install checks do not authorize bootstrap or product publication.
+`check-task` and `probe-task` are retired from the repository, verification packs and author
+examples. This does not deprecate or unpublish any historical npm version.
 Publish `check-sdk` before `check-environment`, which consumes it. Both Check
 packages use independent stable or RC tags and the same trusted publishing
 workflow and exact-main CI gate. Their npm packages deliver author/library
@@ -61,9 +63,9 @@ The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;
 `cli-runtime` consumes Pilot and artifact/file primitives;
-the command packages consume it and CLI Core. Publish `pguide-pilot` and
-`pguide-config`, `pguide-agents` and `pguide-objectives` before `pguide`, which
-installs all four as production dependencies.
+the retained command packages consume it and CLI Core. Publish `pguide-config`,
+`pguide-agents` and `pguide-objectives` before `pguide`, which
+installs all three as production dependencies.
 It does not install regulation. Publish changed transitive dependencies before
 their consumers. See [three-layer boundaries and migration](./package-layering.md).
 Git source remains a compatibility/source utility. Six concrete Objective packages
@@ -278,7 +280,6 @@ rules must allow these release tags:
 - `pilot-protocol-v*`
 - `cli-runtime-v*`
 - `objective-declarations-v*`
-- `pguide-pilot-v*`
 - `pguide-regulate-v*`
 - `pguide-objectives-v*`
 
@@ -456,10 +457,10 @@ metadata propagation failure.
 
 After every selected candidate has published successfully, run the CI workflow
 manually with `published=true`. Its independent consumers explicitly install
-`pguide@<manifest-version>` and all five explicitly selected command/config packages from npm,
+`pguide@<manifest-version>` and each explicitly selected retained command/config package from npm,
 without overrides. The verifier accepts the same `0.x` stable/RC versions as release
 tags, resolves every internal dependency from its actual parent (including nested
-copies), and checks all installed versions against the fifteen source manifests.
+copies), and checks all installed versions against their selected source manifests.
 It also imports the public libraries and verifies bins and runtime scenarios on
 the declared operating systems:
 
@@ -474,7 +475,7 @@ packages (`check-runtime-files` and `check-artifacts`), checks their contents, a
 unpublished RC dependencies available without requiring the main package to
 depend on optional commands. `pnpm pack:check` checks packed artifact structure;
 `pnpm consumers:check` additionally checks main-only
-consumption: exactly seven default commands, working bundled entrypoints without
+consumption: exactly five default commands, working bundled entrypoints without
 transitive PATH bins, and installation hints for missing optional commands.
 It also checks protocol-only consumption without business logic and combined
 explicit installation without synthetic conflicts. These prove local composition, not real registry
@@ -488,10 +489,11 @@ the manifest versions of any runtime support packages in that closure.
 Tarball overrides are never used in either registry mode.
 Deployment fixtures use the `worker.cjs` contract, not retired `run.*` checks.
 The old Host launchers and their deployment fixtures are removed.
-CLI execution checks now verify explicit retirement rather than running legacy
-Probe/Regulation workflows. Static CLI and generic Task Bundle consumers remain
-verified; old setup/self-check CLI execution and continuation are not supported
-until explicitly migrated.
+CLI execution checks verify removed probe/check/validate/scaffold entrypoints
+as unknown commands without installation advice, rather than running legacy
+Probe workflows. Configuration/resource CLI and generic Task Bundle consumers
+remain verified. Old regulation wrappers still reject execution; setup/self-check
+CLI execution and continuation are not supported until explicitly migrated.
 
 For a separately authorized stable release, update manifests to the reviewed stable
 versions and publish in dependency order first. Then verify the default consumer:

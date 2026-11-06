@@ -2,6 +2,8 @@
 
 Checker Host and Objective Host have been retired. Artifact formats and immutable
 Schemas remain valid business data; they are not automatically Task Bundles.
+The later `check-task` and `probe-task` adapters are also retired. Their source
+acquisition and observation APIs are not active compatibility surfaces.
 Use [Task Bundles](axis/task-engine-contracts/task-bundle.md) and the
 [Task Engine Server](task-server.md) for execution. The Host service and bridge
 sections below are historical protocol documentation, not available APIs.

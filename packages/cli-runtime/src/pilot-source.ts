@@ -19,7 +19,7 @@ export function assertPilotExecutionSupported(): void {
 
 function pilotExecutionError(): CliError {
   return new CliError(
-    "Legacy Pilot execution is retired. CLI probe, regulate and continue have not yet been migrated to Task Bundles.",
+    "Legacy Pilot execution is retired. The old probe/scaffold/validate CLI is removed; legacy regulate and continue do not execute or migrate Task Bundles.",
     2,
     "pilot-error",
     {

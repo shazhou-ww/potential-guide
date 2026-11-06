@@ -6,14 +6,6 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    "./worker": {
-      "types": "./dist/worker.d.ts",
-      "import": "./dist/worker.js"
-    },
-    "./worker-json": {
-      "types": "./dist/worker-json.d.ts",
-      "import": "./dist/worker-json.js"
-    },
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
@@ -24,8 +16,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node ../../scripts/embed-task-workers.mjs check-runtime-files && tsc -b",
-    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "tsc -b",
+    "clean": "node -e \"const fs = require('node:fs'); fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('../../.cache/tsbuildinfo/check-runtime-files.tsbuildinfo', { force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
     "typecheck": "tsc -b --pretty false"

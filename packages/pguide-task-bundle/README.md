@@ -313,10 +313,9 @@ repository, including a symlink resolving back into it, is rejected.
 The harness owns unique child directories and cleans only those children;
 `PGUIDE_KEEP_PACK_CONSUMERS=1` retains the author consumer for inspection.
 
-`node scripts/check-packages.mjs --task-bundles` separately tests packed
-SDK/Engine consumption by CID on a business-free host. Both commands own and
-clean their `.cache` fixtures; `PGUIDE_KEEP_PACK_CONSUMERS=1` retains them for
-inspection. They do not use an existing Kubo or publish any package to npm.
+`node scripts/check-packages.mjs --task-sdk` separately tests packed SDK Worker
+consumption with author dependencies unavailable. Neither command uses an
+existing Kubo or publishes any package to npm.
 
 To verify actual local publication and execution instead, use the
 [real Kubo CLI integration test](../../apps/pguide-task-engine/README.md#real-local-kubo-end-to-end-verification).

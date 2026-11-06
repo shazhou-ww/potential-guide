@@ -256,3 +256,53 @@ taskId、缓存状态及 run/build 退出状态，没有用 verify 的 bypass �
 上述本机回归完成后才重新勾 I-S03/I-AC03，表示实施验证完成，不是重新接受 Inner。
 首次 CI 的失败事实保留；新准确 Inner 仍须监督者重新审批。未写 Deployment/Outer/events，
 未把 Windows 两个 Node 版本的结果冒充 Linux/macOS 的后续 CI。
+
+## aafa4b0d 与 primary 退休历史的集成
+
+父监督者在 `aafa4b0d` 上执行未提交合并
+`d0ad01563664568253f748878ffe34918845b205`；该 primary 已吸收
+`d77fd5f0`、`45f07bf2`、`18a69251` 的退休历史。本轮只整合同一交付任务，
+不修改或审批其他 IDEA，不提交合并，不记录 lifecycle 事件。
+
+- 五处冲突按 primary 退休意图解决：删除 `probe-integration.mjs` 和
+  `check-task-bundle-consumer.mjs`；MVP 只保留 primary 的纯契约及 generic server；
+  Echo helper 拒绝 Check/Probe，保留显式 binary 参数和默认 UTF-8/LF。
+- 原 `--task-bundles` 场景不恢复，仍明确拒绝。历史 Check/Probe tarball 修复已随具体
+  产品退休被吸收，不能再把其旧成功回执称为新 graph 的验证。
+- 必要归档回归迁到保留的 `--bundle-authoring`：固定、平台无关的普通 USTAR/gzip
+  夹具，不引用任何 Check/Probe 业务；校验实际 packed API 输出的 binary 精确清单、
+  原字节、目录/CAR 同一 CID、Echo 参数转发、默认文本规范化、漏声明拒绝及失败不覆盖。
+  既有 LF/CRLF/CR、BOM、非法 UTF-8、同根不同 CAR 排列和错根拒绝保留；
+  compiler-independent 固定 CID 仍为 `bafybeibtkmjrucx7wqozzwuewnwtdoyhyucpr3wp2jbmmjr3zjjeugog2m`。
+- `environment-cache.test.mjs` 的精确 taskId/summary、GITHUB_ACTIONS 和 Node 版本证明未改。
+- 合并改变 manifest/lock 图后已 `pnpm install --frozen-lockfile --ignore-scripts`。
+  仅清理本 worktree 的三个退休包残留 `.cache/.turbo/dist/node_modules`，及
+  check-runtime-files 五个已删 Worker 源模块、cli-runtime 已删 objective-artifact 的生成输出。
+  普通缓存恢复后确认未复活这些文件；没有清共享缓存、没有永久 force、未碰父 worktree。
+
+新图实际验证（Windows、Node 24.11.1、pnpm 11.22.0）：
+
+| 命令 | 结果 |
+| --- | --- |
+| `node --test --test-concurrency=2 scripts/release-packages.test.mjs scripts/task-engine-contracts.test.mjs scripts/check-pipeline.test.mjs` | 21/21；退休路径/发布清单/旧 scope 拒绝、剩余 MVP 语法、Echo 拒绝旧 kind 均通过 |
+| `node scripts/check-packages.mjs --bundle-authoring` | 退出 0；5 个直接入口、11 个内部 tarball 包；新增通用归档与 Echo 回归、CID-only Engine/Worker、作者依赖不可用验证通过 |
+| `pnpm check` | 退出 0；70/70 Turbo tasks，root scripts 76/76，全部结构打包验证通过 |
+| 正常缓存恢复检查 | 6/6 build task 命中；未重新生成被退休的 orphan modules，未使用 force |
+| `git diff --check` / conflict 检查 | 无补丁错误、无未解决冲突 |
+
+packed 回执保留原固定 CID，同时记录含新增普通归档的完整 build CID：
+`bafybeialzhhsluscctdsq3vlxflhblrl75coace6wbb6alrgu7qmd623ia`。
+这对应不同文件树，不是为同一个 Bundle 增加第二种身份。
+日志位于 `.cache/identity-merge-{targeted,packed,check,cache-restore}.log`。
+
+通过后恢复 I-S03/I-AC03 的实施完成标记；冲突解决和本次证据已 stage。
+HEAD 仍为 `aafa4b0d5d9fcdb30fdd62037adbb69825dd2e01`，
+MERGE_HEAD 仍为 `d0ad01563664568253f748878ffe34918845b205`，未提交、推送或批准门禁。
+历史第一次 CI 失败记录及先前具体产品的修复证据保留，不将退休范围当作“跳过失败”。
+最终准确合并候选的提交与重新门禁仍交父监督者。
+
+监督者直接审阅相对新 primary 的七个剩余差异，确认未恢复退休路径，并独立以
+`PGUIDE_PACK_CONSUMER_ROOT=$env:TEMP` 重跑新图完整 bundle-authoring：
+5 入口、11 内部包和真实 Engine/Worker 通过，固定根及含归档 build 根均与上述回执一致。
+worktree/staged Silvermoon snapshot 与 diff 校验通过；新准确 Inner 可重新提交和接受，
+部署证据必须对应整合后的代码与新依赖图，不沿用已退休场景作为当前验收。

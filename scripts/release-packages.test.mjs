@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -32,16 +32,16 @@ test("local verification covers the internal runtime dependency closure without 
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
   }
-  for (const id of ["check-runtime-files", "check-artifacts", "check-task", "probe-task"]) {
+  for (const id of ["check-runtime-files", "check-artifacts"]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
   }
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 32);
+  assert.equal(releasePackages.length, 31);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 32);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 31);
   }
   for (const name of [
     "@potential-guide/pguide-task-bundle",
@@ -69,10 +69,121 @@ test("release inventory contains the new packages and excludes retired Guide and
     "objective-portfolio-supervisor",
     "pguide-supervise",
     "artifact-files",
+    "pguide-pilot",
   ]) {
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
   }
+});
+
+test("retired Check and Probe adapters have no workspace, consumer dependency, pack or authoring scenario", async () => {
+  for (const path of [
+    "../packages/probe-task",
+    "../examples/task-server/probe-config.mjs",
+    "../examples/task-server/probe-integration.mjs",
+    "../packages/check-task",
+    "../examples/task-server/check-config.mjs",
+    "../examples/task-server/check-in-process.mjs",
+    "./check-task-bundle-consumer.mjs",
+    "./embed-task-workers.mjs",
+  ])
+    await assert.rejects(access(new URL(path, import.meta.url)), { code: "ENOENT" });
+  assert.ok(!verificationPackages.some(({ id }) => id === "probe-task"));
+  assert.throws(() => parseReleaseTag("probe-task-v0.1.0-rc.0"), /Unsupported package/);
+  assert.ok(!verificationPackages.some(({ id }) => id === "check-task"));
+  assert.throws(() => parseReleaseTag("check-task-v0.1.0-rc.0"), /Unsupported package/);
+  for (const workspace of ["packages", "apps"])
+    for (const entry of await readdir(new URL(`../${workspace}/`, import.meta.url), {
+      withFileTypes: true,
+    })) {
+      if (!entry.isDirectory()) continue;
+      const path = new URL(`../${workspace}/${entry.name}/package.json`, import.meta.url);
+      let contents;
+      try {
+        contents = await readFile(path, "utf8");
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        throw error;
+      }
+      const manifest = JSON.parse(contents);
+      for (const field of [
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+      ])
+        assert.equal(
+          manifest[field]?.["@potential-guide/probe-task"],
+          undefined,
+          `${manifest.name} ${field}`,
+        );
+      for (const field of [
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+      ])
+        assert.equal(
+          manifest[field]?.["@potential-guide/check-task"],
+          undefined,
+          `${manifest.name} ${field}`,
+        );
+    }
+  for (const path of [
+    "../package.json",
+    "../turbo.json",
+    "../objectives.yaml",
+    "../package-layers.yaml",
+    "./check-generated-sources.mjs",
+    "./check-package-consumers.mjs",
+    "./check-packages.mjs",
+    "../examples/task-server/build-bundles.mjs",
+  ])
+    assert.ok(
+      !(await readFile(new URL(path, import.meta.url), "utf8")).includes("probe-task"),
+      path,
+    );
+  for (const path of [
+    "../package.json",
+    "../turbo.json",
+    "../objectives.yaml",
+    "../package-layers.yaml",
+    "./check-generated-sources.mjs",
+    "./check-package-consumers.mjs",
+    "./check-packages.mjs",
+    "../examples/task-server/build-bundles.mjs",
+  ])
+    assert.ok(
+      !/(?:@potential-guide\/|packages\/|["'])check-task(?:["'/]|$)/m.test(
+        await readFile(new URL(path, import.meta.url), "utf8"),
+      ),
+      path,
+    );
+});
+
+test("retired Pilot command package has no workspace, default dependency, release route or replacement placeholders", async () => {
+  for (const id of ["pguide-pilot", "pguide-probe", "pguide-check"])
+    await assert.rejects(access(new URL(`../packages/${id}`, import.meta.url)), { code: "ENOENT" });
+  assert.ok(!verificationPackages.some(({ id }) => id === "pguide-pilot"));
+  assert.throws(() => parseReleaseTag("pguide-pilot-v0.4.0-rc.0"), /Unsupported package/);
+  const main = JSON.parse(
+    await readFile(new URL("../packages/pguide/package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(main.dependencies["@potential-guide/pguide-pilot"], undefined);
+  const runtime = JSON.parse(
+    await readFile(new URL("../packages/cli-runtime/package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(runtime.dependencies["@potential-guide/check-artifacts"], undefined);
+  for (const file of [
+    "../objectives.yaml",
+    "../package-layers.yaml",
+    "../tsconfig.json",
+    "../.github/workflows/publish-npm.yaml",
+  ])
+    assert.ok(
+      !(await readFile(new URL(file, import.meta.url), "utf8")).includes("pguide-pilot"),
+      file,
+    );
 });
 
 test("Check packages have independent stable release routes in dependency order", () => {
@@ -245,13 +356,7 @@ test("package-specific RC tags preserve package identity and never select latest
 });
 
 test("command wrappers use pguide-prefixed names including config", () => {
-  for (const id of [
-    "pguide-pilot",
-    "pguide-regulate",
-    "pguide-objectives",
-    "pguide-config",
-    "pguide-agents",
-  ]) {
+  for (const id of ["pguide-regulate", "pguide-objectives", "pguide-config", "pguide-agents"]) {
     const entry = releasePackages.find((entry) => entry.id === id);
     assert.equal(entry?.name, `@potential-guide/${id}`);
     assert.equal(entry?.directory, id);

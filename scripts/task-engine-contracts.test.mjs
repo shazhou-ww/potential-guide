@@ -1,13 +1,80 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { access, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+test("retired Check and Probe authoring is rejected before creating an output directory", async () => {
+  const path = join(root, "examples", "task-server", "build-bundles.mjs");
+  const source = ts.createSourceFile(
+    path,
+    await readFile(path, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const declaration = source.statements.find(
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "buildExampleBundle",
+  );
+  assert.ok(declaration);
+  const buildExampleBundle = new Function(
+    "mkdir",
+    `return (${declaration
+      .getText(source)
+      .replace(/^export /, "")
+      .replaceAll("import.meta.url", JSON.stringify(pathToFileURL(path).href))});`,
+  )(async () => assert.fail("Retired authoring must not create output."));
+  const scratch = await mkdtemp(join(tmpdir(), "pguide-retired-probe-"));
+  const directory = join(scratch, "author");
+  try {
+    for (const kind of ["probe", "check"])
+      await assert.rejects(buildExampleBundle({ kind, directory }), /Unknown example callback/);
+    await assert.rejects(access(directory), { code: "ENOENT" });
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+});
+
+test("retired Check-only consumer scope fails explicitly instead of running unrelated consumers", () => {
+  const result = spawnSync(process.execPath, ["scripts/check-packages.mjs", "--task-bundles"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /Unsupported consumer scope --task-bundles/);
+});
+
+test("remaining MVP consumer fixtures compile and retired Check execution is rejected", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pguide-mvp-syntax-"));
+  const run = async (_command, args) => {
+    const result = spawnSync(process.execPath, ["--check", join(directory, args[0])], {
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    return "Consumer fixture syntax verified.";
+  };
+  try {
+    await checkMvpConsumer(root, directory, "mvp-server", [], run);
+    await checkMvpConsumer(
+      root,
+      directory,
+      "artifact-contracts",
+      [{ name: "esbuild" }, { name: "tar" }],
+      run,
+    );
+    await assert.rejects(
+      checkMvpConsumer(root, directory, "mvp-check", [], run),
+      /Unsupported MVP consumer/,
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("generic packed server rejects Check and authoring runtime dependencies", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pguide-server-dependency-"));
   try {

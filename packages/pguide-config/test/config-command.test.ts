@@ -65,7 +65,7 @@ test("unknown namespace saves warn, edits preserve comments, validation cannot c
   assert.equal(JSON.parse(validated.stdout).status, "unverified");
   for (const args of [
     ["set", "agents.unknown", "1"],
-    ["set", "pilot.probe", '{"timeoutMs":1}'],
+    ["set", "regulate.quota", '{"timeoutMs":1}'],
     ["set", "custom.other", '{"x":1,"x":2}'],
     ["set", "custom.other", "1", "--scope", "explicit"],
     ["show", "--scope=explicit"],
@@ -303,18 +303,19 @@ test("user config permissions round trip and invalid grants cannot replace the c
   }
 });
 
-test("config exposes JSONC help and validates whole probe edits", async () => {
+test("config exposes JSONC help and validates whole quota edits", async () => {
   const cwd = await mkdtemp(join(scratch, "pguide-config-strategy-"));
   try {
     const help = await run(["--help", "--format", "json"]);
     assert.equal(JSON.parse(help.stdout).configurationFormat, "jsonc");
     const strategy = {
       timeoutMs: 5000,
-      retry: { maxRetries: 2, delayMs: 10 },
+      maxAgentRuns: 2,
+      maxStallRuns: 1,
     };
     const configured = await run([
       "set",
-      "pilot.probe",
+      "regulate.quota",
       JSON.stringify(strategy),
       "--cwd",
       cwd,
@@ -322,11 +323,11 @@ test("config exposes JSONC help and validates whole probe edits", async () => {
       "json",
     ]);
     assert.equal(configured.code, 0, configured.stdout);
-    const read = await run(["get", "pilot.probe", "--cwd", cwd, "--format", "json"]);
+    const read = await run(["get", "regulate.quota", "--cwd", cwd, "--format", "json"]);
     assert.deepEqual(JSON.parse(read.stdout).value, strategy);
     const invalid = await run([
       "set",
-      "pilot.probe",
+      "regulate.quota",
       '{"effectTtlMs":0}',
       "--cwd",
       cwd,
@@ -334,7 +335,7 @@ test("config exposes JSONC help and validates whole probe edits", async () => {
       "json",
     ]);
     assert.equal(invalid.code, 2);
-    const unchanged = await run(["get", "pilot.probe", "--cwd", cwd, "--format", "json"]);
+    const unchanged = await run(["get", "regulate.quota", "--cwd", cwd, "--format", "json"]);
     assert.deepEqual(JSON.parse(unchanged.stdout).value, strategy);
   } finally {
     await rm(cwd, { recursive: true, force: true });

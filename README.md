@@ -27,14 +27,15 @@ and the extensible `pguide` command line:
 - `@potential-guide/cli-core` provides command protocol and CLI infrastructure
   without depending on Objective logic.
 - `@potential-guide/objective-declarations` shares declaration selection/binding
-  using protocol only; `@potential-guide/cli-runtime` assembles Git-backed Pilots.
+  using protocol only; `@potential-guide/cli-runtime` retains explicit npm package
+  preparation and legacy execution rejection, without static artifact CLI validation.
 - `@potential-guide/pguide-config` is the configuration extension whose executable is
   `pguide-config` and whose command name is `config`.
 - `@potential-guide/pguide-agents` manages independent user/project `agents.yaml`
   resources through `pguide agents`; profiles no longer belong in the main config.
-- `pguide` is a discovery/dispatch entrypoint that installs Pilot commands and
-  configuration and Objective declaration management by default. Regulation remains optional.
-  `@potential-guide/pguide-pilot` owns `probe`, `scaffold`, `validate`;
+- `pguide` is a discovery/dispatch entrypoint that installs configuration,
+  Agent resources and Objective declaration management by default. The old
+  `pguide-pilot` command package is retired. Regulation remains optional.
   `@potential-guide/pguide-regulate` owns `regulate`, `continue`;
   `@potential-guide/pguide-objectives` owns `objectives`.
 
@@ -110,126 +111,40 @@ the repository so missing author dependencies cannot resolve from ancestor works
 
 ## CLI
 
-```sh
-npm install --global pguide
-pguide --help
-pguide scaffold pilot ./my-pilot
-pguide validate pilot ./my-pilot/objective.yaml
-pguide probe --pilot ./my-pilot/objective.yaml --subject-file ./subject.json
-```
+`pguide` installs the `config`, `agents` and `objectives` command extensions;
+`diagnose` and `complete` are built in. Old top-level `probe`, `check`,
+`validate` and `scaffold` commands and `pguide-pilot` are retired.
+No replacement command packages are created in advance.
 
-Add `@potential-guide/pguide-regulate` for regulation.
-Portfolio Supervisor and `supervise` are retired; use the Coordinator library for
-request scheduling, without a built-in Planner or replacement CLI. See the
-[migration guide](./docs/supervisor-retirement.md).
-Pilot, config and objectives packages are production dependencies of `pguide`; their commands
-work even when a package manager does not expose transitive binaries on PATH.
-Each command package also provides
-standalone `pguide-<command>` binaries; no `pguide` installation is required for
-those entrypoints. Install selected RC versions explicitly when testing a candidate.
-The formerly published `@potential-guide/config` is now
-`@potential-guide/pguide-config`; remove the old package from explicit installations
-to avoid competing `pguide-config` shims. See [migration](./docs/package-layering.md).
-
-Commit the specification and its resources before probing so that the reported
-version identifies the contents actually evaluated. Validation and scaffolding
-do not require a committed version.
-
-`pguide regulate` uses named ACP/AHP profiles from user/project `agents.yaml`.
-Project same-name profiles replace whole user profiles. Main config retains
-`agents.defaultAgent` in user/project `config.jsonc`; `--config` is retired.
-See [package settings and manual migration](docs/package-settings.md).
-Migrate old embedded
-profiles explicitly with `pguide agents migrate --scope user|project`.
-See the [Agent manager](./packages/pguide-agents/README.md).
-Regulation state and protocol-visible transcript
-are stored under the platform state directory; credentials are never persisted.
-
-### Govern this repository
-
-The root [Objective declarations](./objectives.yaml) expose `standardize` with
-Unit input (no extra parameters). Each workspace owns its own `standardize`
-declaration; the root discovers pnpm workspaces, observes those Objectives through
-the dependency API, and enforces common policy and joint delivery requirements.
-See the [ownership and migration guide](./packages/objective-monorepo-standard/README.md).
+New checks use [Check SDK](./packages/check-sdk/README.md) and ordinary
+[Task Bundles](./packages/pguide-task-bundle/README.md).
+[Environment checks](./packages/check-environment/README.md) demonstrate the
+standard authoring, Reference and result contracts.
 
 ```sh
-pguide objectives show standardize --scope directory
-pguide probe --objective standardize --scope directory --format json
-pguide regulate --objective standardize --scope directory --target terminal --agent copilot
+pguide config path
+pguide agents list
+pguide objectives list
+pguide diagnose
+pguide task-bundle init my-task
+pguide task-bundle check author my-task/task.build.yaml
+pguide task-bundle build my-task/task.build.yaml
 ```
 
-Run these commands from the repository root. The Pilot is loaded from the
-upstream Git directory; the subject is the current local checkout, including
-uncommitted changes. Each invocation resolves the source and records its exact
-commit/tree evidence without pinning the declaration. Regulation requires an
-existing Agent profile (`copilot` above is an example) and appropriate permissions.
-An already satisfied target does not require an Agent repair.
-The upstream source must contain this migration before the default declaration
-can be consumed; an uncommitted local Pilot is not an upstream snapshot. Before
-publication, `scripts/verify-monorepo-pilot.mjs` verifies the generated resources
-from its own committed local Git fixture. Package directories expose the same
-command for independent observation. Dependency handoffs are advanced by the
-Supervisor, never by nested regulation inside checks.
+`task-bundle` and `task-engine` are optional extensions, not bundled default
+commands. Install their packages explicitly; upload/import/pin generated CARs
+with a caller-authorized external tool, then submit their exact CIDs to Engine.
+The new `task-bundle check`, `config validate` and `agents validate` operations
+remain supported. See [CLI guide](./packages/pguide/README.md) and
+[service configuration](./docs/task-server.md).
 
-This entry checks the existing workspace-wide contract; it does not yet split
-that contract into per-package Objectives. It checks structure and delivery
-preparation without executing builds, publishing or deploying. Run `pnpm check`
-separately for formatting, lint, types, tests and package validation.
-
-### Set up a target device
-
-For an already installed local device, prefer the standalone
-[self-check Objective](./packages/objective-pguide-self-check/README.md). Its
-`initial → installed → configured → verified` cumulative attainment checks verify installation,
-ACP stdio configuration and one isolated, directly prompted marker repair with
-independent exact-content verification. It does not nest regulation or require
-an extra `allowSanity` input; existing tool permissions still apply. Each check
-defaults to 20 seconds (24-second Pilot maximum within the default 30-second
-probe deadline). Remote setup integration remains future work.
-
-The [credential-free Docker harness](./scripts/self-check-docker/README.md)
-builds an explicit source commit, installs packed packages in a clean Linux
-consumer, and verifies positive and negative marker repairs with a local ACP
-fixture—without credentials or real model calls.
-
-The repository-owned [setup Objective](./packages/objective-pguide-setup/README.md) checks
-installation, configuration and ACP readiness on target **B**, while an already-ready
-control machine **A** runs setup regulation and guides its Agent to install/configure
-B. An explicit SSH target uses a dependency-free Node helper on POSIX B: B does
-not need pguide to begin checking. Omitting `target` (or `type:local`) preserves
-local bootstrap. It is a Git-subdirectory Pilot, not a new CLI command:
-
-```sh
-pguide probe --pilot 'git+https://github.com/shazhou-ww/potential-guide.git#packages/objective-pguide-setup/objective.yaml' --revision <commit> --subject-file <absolute-subject.json> --format json
-```
-
-Start with its control-Agent bootstrap instructions if B lacks Node or `pguide`.
-The native Node helper also runs directly from a checkout without snapshot
-dependencies. Sanity requires explicit consent, can incur Agent costs, and never
-uses a real project as its repair target. SSH requires existing host trust and
-noninteractive authorization, never forwards A's credentials/HOME, and never falls
-back to local checks. Target hostname/user evidence is separate from its SSH alias.
-Existing environment-based credentials
-are available only in the direct shell entrypoint, not silently forwarded into
-sanitized local Pilot probes; the guide documents existing file-authentication options.
-For real Agents needing longer startup, the direct helper accepts explicit
-`timeoutMs:180000`; Pilot wrappers reject budgets beyond their 30-second outer
-probe allowance. A successful direct check is not a cached Git Pilot terminal receipt.
-
-### Maintain a development environment
-
-The independent [development-machine health Pilot](./packages/objective-devbox-health/README.md)
-checks a dedicated Linux account, basic system health, selected TypeScript/Python/C++/Rust
-toolchains, task residue and sampled health trends. Checks do not install or repair;
-an authorized Agent performs maintenance and re-observes. Docker targets are inspected
-inside the named container, never by falling back to the host.
-
-Run `pnpm health:verify --report <absolute-report.json>` for the local Docker
-healthy/fault/recovery matrix after committing the Pilot and verification script.
-It uses disposable, resource-bounded containers without host mounts, Docker socket
-access or external runtime networking. Docker verification is the delivery scope;
-it does not establish native Linux, WSL host or long-term health.
+Repository Objective declarations and their shared business implementations
+remain available, but are not executed through the removed Pilot command.
+Use `pnpm check` for current repository validation and
+`pguide objectives show standardize --scope directory` to inspect declarations.
+The old `verify-monorepo-pilot.mjs` CLI verifier is retired.
+Setup, self-check and health retain their independently documented helper
+boundaries; no automatic Task Bundle or persisted-state migration is claimed.
 
 ## Publishing
 

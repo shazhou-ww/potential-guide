@@ -5,7 +5,6 @@ import { delimiter, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
-import { checkTaskBundleConsumer } from "./check-task-bundle-consumer.mjs";
 import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
 import { checkTaskServiceConsumer } from "./check-task-service-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
@@ -53,20 +52,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         "@potential-guide/task-engine",
       ],
     ],
-    [
-      "probe-task",
-      [
-        "@potential-guide/pguide-task-bundle",
-        "@potential-guide/probe-task",
-        "@potential-guide/check-task",
-        "@potential-guide/check-artifacts",
-        "@potential-guide/task-engine",
-        "@potential-guide/task-engine-server",
-        "@potential-guide/task-protocol",
-        "@potential-guide/task-sdk",
-        "@potential-guide/task-engine-http",
-      ],
-    ],
     ["artifact-contracts", ["@potential-guide/check-artifacts"]],
     [
       "mvp-server",
@@ -74,18 +59,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         "@potential-guide/task-engine-server",
         "@potential-guide/task-engine",
         "@potential-guide/task-protocol",
-      ],
-    ],
-    [
-      "mvp-check",
-      [
-        "@potential-guide/pguide-task-bundle",
-        "@potential-guide/task-sdk",
-        "@potential-guide/check-task",
-        "@potential-guide/task-engine-server",
-        "@potential-guide/task-engine",
-        "@potential-guide/task-protocol",
-        "@potential-guide/check-artifacts",
       ],
     ],
     ["task-protocol", ["@potential-guide/task-protocol"]],
@@ -109,7 +82,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
     ],
     ["protocol", ["@potential-guide/pilot-protocol"]],
     ["main", ["pguide"]],
-    ["pilot", ["@potential-guide/pguide-pilot"]],
     ["regulation", ["@potential-guide/pguide-regulate"]],
     ["coordinator", ["@potential-guide/effects", "@potential-guide/regulation-coordinator"]],
     ["objectives", ["@potential-guide/pguide-objectives"]],
@@ -132,6 +104,7 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         "pguide",
         "@potential-guide/pguide-task-bundle",
         "@potential-guide/task-sdk",
+        "@potential-guide/task-protocol",
         "@potential-guide/task-engine",
       ],
     ],
@@ -139,7 +112,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       "combined",
       [
         "pguide",
-        "@potential-guide/pguide-pilot",
         "@potential-guide/pguide-regulate",
         "@potential-guide/pguide-objectives",
         "@potential-guide/pguide-config",
@@ -147,7 +119,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       ],
     ],
   ];
-  if (!only) await checkTaskBundleConsumer(scratch, tarballs, manifests, run);
   for (const [label, entries] of scenarios) {
     if (only && label !== only) continue;
     const directory = join(scratch, label);
@@ -192,10 +163,7 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       directory,
       closure,
       entries,
-      label === "probe-task" ||
-        label === "npm-objectives" ||
-        label === "artifact-contracts" ||
-        label.startsWith("mvp-"),
+      label === "npm-objectives" || label === "artifact-contracts" || label.startsWith("mvp-"),
     );
     if (label === "bundle-authoring" || label === "task-sdk") {
       const authorEntries = ["@potential-guide/pguide-task-bundle"];
@@ -211,27 +179,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         "@potential-guide/check-runtime-files",
       ])
         assert.ok(!names.has(forbidden), `Author tools must not install ${forbidden}.`);
-    }
-    if (label === "probe-task") {
-      const names = new Set(graph.map((entry) => entry.name));
-      for (const forbidden of [
-        "@potential-guide/checker-host",
-        "@potential-guide/objective-host",
-        "@potential-guide/objective-pilot",
-      ])
-        assert.ok(!names.has(forbidden));
-      for (const filename of [
-        "probe-config.mjs",
-        "probe-integration.mjs",
-        "echo-config.mjs",
-        "echo-type.mjs",
-        "build-bundles.mjs",
-      ])
-        await writeFile(
-          join(directory, filename),
-          await readFile(join(root, "examples", "task-server", filename)),
-        );
-      console.log(await run(process.execPath, ["probe-integration.mjs"], directory));
     }
     if (label === "artifact-contracts" || label.startsWith("mvp-"))
       await checkMvpConsumer(root, directory, label, graph, run);
@@ -262,6 +209,14 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       }
     }
     if (label === "bundle-authoring") {
+      for (const [source, target] of [
+        ["build-bundles.mjs", "echo-builder.mjs"],
+        ["echo-type.mjs", "echo-type.mjs"],
+      ])
+        await writeFile(
+          join(directory, target),
+          await readFile(join(root, "examples", "task-server", source)),
+        );
       await writeFile(
         join(directory, "bundle-identity.mjs"),
         await readFile(join(root, "scripts", "bundle-identity-consumer.mjs")),
@@ -669,12 +624,9 @@ assert.equal(count,16);
           "config",
           "diagnose",
           "objectives",
-          "probe",
-          "scaffold",
-          "validate",
         ]);
         assert.deepEqual(result.conflicts, {});
-        for (const command of ["probe", "scaffold", "validate", "config", "agents", "objectives"]) {
+        for (const command of ["config", "agents", "objectives"]) {
           const entry = result.commands.find((entry) => entry.command === command);
           assert.equal(entry.compatible, true);
           assert.equal(entry.source, "bundled");
@@ -755,25 +707,14 @@ assert.equal(count,16);
           directory,
           env,
         );
-        const objective = join(directory, "pilot");
-        const scaffolded = JSON.parse(
-          await run(
-            executable,
-            ["scaffold", "pilot", objective, "--format", "json"],
-            directory,
-            env,
-          ),
-        );
-        assert.equal(scaffolded.schemaVersion, 1);
-        const validated = JSON.parse(
-          await run(
-            executable,
-            ["validate", "pilot", objective, "--format", "json"],
-            directory,
-            env,
-          ),
-        );
-        assert.equal(validated.schemaVersion, 1);
+        const objective = "git+https://example.test/definitions.git#objective/";
+        for (const command of ["probe", "check", "validate", "scaffold"]) {
+          const retired = JSON.parse(
+            await run(executable, [command, "--format", "json"], directory, env, 2),
+          );
+          assert.match(retired.error, new RegExp(`Unknown command.*${command}`));
+          assert.doesNotMatch(retired.error, /Install/);
+        }
         const declaration = join(directory, "declaration.json");
         await writeFile(
           declaration,
@@ -838,16 +779,7 @@ assert.equal(count,16);
         await run(executable, ["--help", "--format", "json"], directory, env),
       );
       assert.deepEqual(result.conflicts, {});
-      for (const name of [
-        "agents",
-        "objectives",
-        "probe",
-        "regulate",
-        "continue",
-        "scaffold",
-        "validate",
-        "config",
-      ]) {
+      for (const name of ["agents", "objectives", "regulate", "continue", "config"]) {
         assert.ok(
           result.commands.some((entry) => entry.command === name && entry.compatible),
           name,

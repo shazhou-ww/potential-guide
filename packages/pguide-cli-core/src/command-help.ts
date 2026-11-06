@@ -9,32 +9,21 @@ import {
   writeResult,
 } from "./index.js";
 
-type Command =
-  | "agents"
-  | "objectives"
-  | "probe"
-  | "regulate"
-  | "continue"
-  | "scaffold"
-  | "validate";
+type Command = "agents" | "objectives" | "regulate" | "continue";
 type Handler = Parameters<typeof commandMain>[1];
 
 export const commandDescriptions: Record<Command, string> = {
   agents: "Manage independent user and project Agent resources",
   objectives: "Discover and manage user and directory Objective declarations",
-  probe: "Pilot probe (execution retired pending Task Bundle migration)",
+
   regulate: "Pilot regulation (execution retired pending Task Bundle migration)",
   continue: "Persisted Regulation (continuation retired pending Task Bundle migration)",
-  scaffold: "Create an Objective Pilot skeleton",
-  validate: "Validate an Objective Pilot",
 };
 
 export const commandPackages: Record<Command, string> = {
   agents: "@potential-guide/pguide-agents",
   objectives: "@potential-guide/pguide-objectives",
-  probe: "@potential-guide/pguide-pilot",
-  scaffold: "@potential-guide/pguide-pilot",
-  validate: "@potential-guide/pguide-pilot",
+
   regulate: "@potential-guide/pguide-regulate",
   continue: "@potential-guide/pguide-regulate",
 };
@@ -69,51 +58,7 @@ const help: Record<Command, CommandHelp> = {
       },
     ],
   },
-  probe: {
-    description:
-      "Host-based execution is retired. This command rejects until migrated to Task Bundles.",
-    usage: "pguide probe (--objective <name> | --pilot <directory|Git URI|legacy-alias>) [options]",
-    sections: [
-      {
-        title: "Required",
-        lines: ["  Choose exactly one: --objective <name> OR --pilot <source> (never both)."],
-      },
-      {
-        title: "Options",
-        lines: [
-          "  --objective <name>     Select a declaration instead of --pilot",
-          "  --pilot <source>        Artifact directory/address, npm package, Git URI, or alias",
-          "  --scope <scope>        user | directory; disambiguate declaration scope",
-          "  --input-file <path|->  Declaration input; only Unit may omit it",
-          "  --subject-file <path|-> JSON subject (default: stdin); use - explicitly for stdin",
-          "  --revision <digest|ref> Exact artifact digest; legacy Git paths require a full commit",
-          "  --language <tag>        Select localized references (default: Pilot language)",
-          "  --report <path>         Also save the complete JSON observation",
-          "  --report-dir <path>     Override the default local JSONL evidence directory",
-          "  --no-reports            Disable local evidence (does not disable --report)",
-        ],
-      },
-      {
-        title: "Examples",
-        lines: [
-          "  pguide probe --pilot .\\objective --subject-file .\\subject.json",
-          "  pguide probe --pilot .\\objective --subject-file - --format json",
-          "  Get-Content -Raw .\\subject.json | pguide probe --pilot health --format json",
-        ],
-      },
-      {
-        title: "Notes",
-        lines: [
-          "  Execution returns exit 2 and pilot-error before source acquisition or Agent work.",
-          "  Build Task Bundles with pguide task-bundle build and submit exact references.",
-          "  Static scaffold/validate and Objective declaration management remain available.",
-          "  Manage declarations with pguide objectives; config aliases are legacy sources only.",
-          "  Use @name to require a registered Objective; bare names resolve when registered.",
-          "  Next: pguide regulate --help",
-        ],
-      },
-    ],
-  },
+
   regulate: {
     description:
       "Host-based regulation is retired. Execution rejects before Agent work or state mutation.",
@@ -179,73 +124,6 @@ const help: Record<Command, CommandHelp> = {
         lines: [
           "  Execution returns exit 2 and pilot-error before reading or changing a saved record.",
           "  No implicit conversion to Task Bundles and no automatic replay are provided.",
-        ],
-      },
-    ],
-  },
-  scaffold: {
-    description:
-      "Create a multilingual Pilot manifest, references and optional runnable check skeleton.",
-    usage: "pguide scaffold pilot <directory> [options]",
-    sections: [
-      {
-        title: "Arguments",
-        lines: [
-          "  pilot                   Supported scaffold type",
-          "  <directory>             Destination must be absent or empty",
-        ],
-      },
-      {
-        title: "Options",
-        lines: [
-          "  --language <tag>        BCP 47 language; repeat for multiple languages (default: en-US)",
-          "  --level <id>            Business level ID (default: ready; initial/terminal reserved)",
-          "  --check <id>            Generate one runnable check",
-          "  --problem <id>          Problem ID; repeat for multiple problems; requires --check",
-        ],
-      },
-      {
-        title: "Examples",
-        lines: [
-          "  pguide scaffold pilot .\\objective --check ready --problem not-ready",
-          "  pguide scaffold pilot .\\objective --language zh-CN --language en-US",
-        ],
-      },
-      {
-        title: "Next steps",
-        lines: [
-          "  Replace TODO guidance and implement the generated check. IDs use lowercase kebab-case.",
-          "  Validate with pguide validate pilot .\\objective\\objective.yaml.",
-          "  CLI execution is retired; author Task Bundles explicitly for the generic Engine.",
-        ],
-      },
-    ],
-  },
-  validate: {
-    description:
-      "Validate static Pilot references or local Objective artifact files without executing checks or resolving external artifact closure.",
-    usage: "pguide validate pilot <objective.yaml> | artifact <directory>",
-    sections: [
-      {
-        title: "Arguments",
-        lines: [
-          "  pilot                   Supported validation type",
-          "  <objective.yaml>            Local manifest path",
-        ],
-      },
-      {
-        title: "Examples",
-        lines: [
-          "  pguide validate pilot .\\objective\\objective.yaml",
-          "  pguide validate pilot .\\objective\\objective.yaml --format json",
-          "  pguide validate artifact .\\objective-artifact --format json",
-        ],
-      },
-      {
-        title: "Notes",
-        lines: [
-          "  Reads working-tree files; no commit is needed for static validation.",
-          "  Does not run checks or prove readiness. Next: pguide probe --help",
         ],
       },
     ],
@@ -334,16 +212,14 @@ export function getCommandHelp(command: Command, subcommand?: string): CommandHe
     return {
       ...help[command],
       constraints:
-        command === "probe" || command === "regulate"
+        command === "regulate"
           ? [
               "--objective and --pilot are mutually exclusive; exactly one is required.",
               "--scope and --input-file require --objective.",
               "--input-file cannot combine with --subject-file; --subject-file requires --pilot.",
-              ...(command === "regulate" ? ["--target is required."] : []),
+              "--target is required.",
             ]
-          : command === "scaffold"
-            ? ["--problem requires --check; destination must be absent or empty."]
-            : [],
+          : [],
     };
   const operations = command === "agents" ? agentOperations : objectiveOperations;
   const selected =
@@ -428,15 +304,11 @@ export function showCommandHelp(
   const value = {
     schemaVersion: 1,
     command,
-    ...(command === "probe"
-      ? { options: helpMetadata(selected).optionDetails.map(({ name }) => name) }
-      : command === "scaffold" || command === "validate"
-        ? { types: ["pilot"] }
-        : command === "agents"
-          ? { subcommands: Object.keys(agentOperations), resourceSchema: AGENTS_SCHEMA }
-          : command === "objectives"
-            ? { subcommands: Object.keys(objectiveOperations) }
-            : {}),
+    ...(command === "agents"
+      ? { subcommands: Object.keys(agentOperations), resourceSchema: AGENTS_SCHEMA }
+      : command === "objectives"
+        ? { subcommands: Object.keys(objectiveOperations) }
+        : {}),
     ...helpMetadata(selected),
   };
   writeResult(value, globals.format, formatCommandHelp(selected));

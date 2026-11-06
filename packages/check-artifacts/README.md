@@ -1,7 +1,11 @@
 # @potential-guide/check-artifacts
 
-For generic Engine consumers use `@potential-guide/check-task`; its Server
-composition is documented in [task-server.md](../../docs/task-server.md).
+New generic Engine checks use [`check-sdk`](../check-sdk/README.md) and ordinary
+Task Bundles, as demonstrated by [`check-environment`](../check-environment/README.md).
+The old `check-task` and Probe execution adapters are retired; this package
+retains legacy artifact build/validation APIs for repository schema generation
+and compatibility tests. There is no remaining production workspace consumer;
+its package retirement is a separate follow-up, not a reason to restore old CLI APIs.
 `@potential-guide/check-artifacts/contracts` is a pure validation entry for
 Checker/Objective manifests, complete supplied files/digests/References,
 mapping, subjects and results. It does not import network, filesystem, worker or
@@ -21,15 +25,15 @@ dependencies; subpath import isolation does **not** remove installation costs.
 
 The pure reference codec also accepts direct `checker:file:///...` archive
 references and exports `parseFileArtifactUrl` (syntax only, no IO).
-Actual file acquisition requires explicit `allowedFileRoots` in
-`@potential-guide/check-task`'s `createArtifactSource`. The legacy prepare/Host
-APIs and portable Objective embedded/dependency references do not gain file access.
+The removed Check task adapter no longer provides `createArtifactSource` or
+`allowedFileRoots` acquisition. The legacy prepare/Host APIs and portable
+Objective embedded/dependency references do not gain file access.
 
 The old Checker/Objective Hosts have been retired. This package remains the reusable
 explicit build/validation/preparation foundation, not a Task scheduler.
 Private filesystem primitives live in `check-runtime-files`.
-Generic execution uses `check-task` inside a Task Bundle. Existing pinned HTTPS
-preparation continues to reject redirects; no old Host protocol is restored.
+Existing pinned HTTPS preparation continues to reject redirects; no old Host
+or Check task execution protocol is restored.
 
 Standalone Check delivery, independent of npm Objective packages. This workspace
 library provides author-triggered build/pack and consumer-triggered preparation.
