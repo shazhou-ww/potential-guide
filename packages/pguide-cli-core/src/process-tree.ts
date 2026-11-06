@@ -296,4 +296,20 @@ export async function killProcessTree(child: ChildProcess): Promise<void> {
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
     }
   }
+  // Signal delivery is not exit acknowledgement; wait for every owned PID to be reaped.
+  const deadline = performance.now() + 2000;
+  while (descendants.size > 0) {
+    for (const pid of descendants) {
+      try {
+        process.kill(pid, 0);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+        descendants.delete(pid);
+      }
+    }
+    if (descendants.size === 0) return;
+    if (performance.now() >= deadline)
+      throw new Error("Owned POSIX process tree did not exit during bounded cleanup.");
+    await delay(10);
+  }
 }

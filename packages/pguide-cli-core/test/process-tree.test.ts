@@ -19,7 +19,7 @@ function windowsCommands(
     options?: { windowsHide?: boolean; timeout?: number },
   ) => Promise<{ stdout: string; stderr: string }>,
 ) {
-  nativeWindowsCommands(t, (...args) => simulatedCommand(execute(...args)));
+  nativeCommands(t, (...args) => simulatedCommand(execute(...args)));
 }
 
 function simulatedCommand(
@@ -28,13 +28,14 @@ function simulatedCommand(
   return Object.assign(pending, { child: { stdin: new PassThrough() } as unknown as ChildProcess });
 }
 
-function nativeWindowsCommands(
+function nativeCommands(
   t: TestContext,
   execute: (
     command: string,
     args: string[],
     options?: { windowsHide?: boolean; timeout?: number },
   ) => PromiseWithChild<{ stdout: string; stderr: string }>,
+  platformName: NodeJS.Platform = "win32",
 ) {
   const platform = Object.getOwnPropertyDescriptor(process, "platform");
   const systemRoot = process.env.SystemRoot;
@@ -47,7 +48,7 @@ function nativeWindowsCommands(
     if (systemRoot === undefined) delete process.env.SystemRoot;
     else process.env.SystemRoot = systemRoot;
   });
-  Object.defineProperty(process, "platform", { value: "win32" });
+  Object.defineProperty(process, "platform", { value: platformName });
   process.env.SystemRoot = "C:\\Windows";
   const replacement = (() => {
     throw new Error("Use the promisified fixture command.");
@@ -66,12 +67,80 @@ const tree = [
 const absent = () => Object.assign(new Error("gone"), { code: "ESRCH" });
 const ownedChild = () => ({ pid: 93001, exitCode: null, signalCode: null }) as ChildProcess;
 
+function posixCommands(t: TestContext) {
+  nativeCommands(
+    t,
+    (command, args) => {
+      assert.equal(command, "ps");
+      assert.deepEqual(args, ["-eo", "pid=,ppid="]);
+      return simulatedCommand(
+        Promise.resolve({
+          stdout: tree.map((row) => `${row.ProcessId} ${row.ParentProcessId}`).join("\n"),
+          stderr: "",
+        }),
+      );
+    },
+    "linux",
+  );
+}
+
+test("POSIX cleanup waits for every owned PID to disappear after signal delivery", async (t) => {
+  posixCommands(t);
+  const signalled: number[] = [];
+  const checks = new Map<number, number>();
+  t.mock.method(process, "kill", (pid: number, signal?: string | number) => {
+    assert.ok([93001, 93002, 93003].includes(pid));
+    if (signal === "SIGKILL") {
+      signalled.push(pid);
+      return true;
+    }
+    assert.equal(signal, 0);
+    const count = (checks.get(pid) ?? 0) + 1;
+    checks.set(pid, count);
+    if (pid === 93003 && count < 3) return true;
+    throw absent();
+  });
+  await killProcessTree(ownedChild());
+  assert.deepEqual(signalled, [93003, 93002, 93001]);
+  assert.deepEqual(
+    [...checks],
+    [
+      [93001, 1],
+      [93002, 1],
+      [93003, 3],
+    ],
+  );
+});
+
+test("POSIX cleanup fails when a signalled descendant remains alive past its deadline", async (t) => {
+  posixCommands(t);
+  let now = 0;
+  t.mock.method(performance, "now", () => (now += 1000));
+  t.mock.method(process, "kill", (pid: number, signal?: string | number) => {
+    if (signal === "SIGKILL" || pid === 93003) return true;
+    assert.equal(signal, 0);
+    throw absent();
+  });
+  await assert.rejects(killProcessTree(ownedChild()), /process tree did not exit/i);
+});
+
+test("POSIX cleanup never treats an unobservable PID as proven dead", async (t) => {
+  posixCommands(t);
+  const denied = Object.assign(new Error("not observable"), { code: "EPERM" });
+  t.mock.method(process, "kill", (_pid: number, signal?: string | number) => {
+    if (signal === "SIGKILL") return true;
+    assert.equal(signal, 0);
+    throw denied;
+  });
+  await assert.rejects(killProcessTree(ownedChild()), (error) => error === denied);
+});
+
 test("Windows snapshot owner sends EOF before awaiting its subprocess result", {
   timeout: 2000,
 }, async (t) => {
   const input = new PassThrough();
   let eof = false;
-  nativeWindowsCommands(t, (command) => {
+  nativeCommands(t, (command) => {
     if (command.endsWith("powershell.exe")) {
       const pending = new Promise<{ stdout: string; stderr: string }>((resolve) => {
         input.once("finish", () => {
@@ -338,7 +407,7 @@ if (process.platform === "win32") {
     }
     let modulePath: string | undefined;
     let elapsed = 0;
-    nativeWindowsCommands(t, (command, args, options) => {
+    nativeCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.ok(args[3]?.includes(query));
         const checkedQuery = String.raw`
@@ -404,7 +473,7 @@ if (process.platform === "win32") {
     if (process.arch !== "ia32" && existsSync(wow64)) hosts.push({ path: wow64, pointerSize: 4 });
     let host = hosts[0];
     let rows: unknown;
-    nativeWindowsCommands(t, (command, args, options) => {
+    nativeCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.ok(host);
         const { path, pointerSize } = host;
@@ -455,7 +524,7 @@ if (process.platform === "win32") {
     const utilityImport = String.raw`Import-Module -Name ($PSHOME + '\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop`;
     let target = query;
     let replacement = "";
-    nativeWindowsCommands(t, (command, args, options) => {
+    nativeCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
         assert.ok(args[3]?.includes(query), "fixture must replace the actual native query");
@@ -509,7 +578,7 @@ if (process.platform === "win32") {
     let alter = (script: string) => script;
     let stderr = "";
     let rows: unknown;
-    nativeWindowsCommands(t, (command, args, options) => {
+    nativeCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         const script = args[3];
         assert.ok(script);
@@ -602,7 +671,7 @@ test("forceful cleanup terminates an owned process and its uncooperative child",
     assert.equal(env.PSModulePath, undefined);
     assert.equal(env.ProgramFiles, undefined);
     assert.equal(env.LOCALAPPDATA, undefined);
-    nativeWindowsCommands(t, (command, args, options) => {
+    nativeCommands(t, (command, args, options) => {
       if (command.endsWith("powershell.exe")) {
         assert.equal(options?.timeout, 10_000);
         const started = performance.now();

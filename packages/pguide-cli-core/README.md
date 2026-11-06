@@ -119,6 +119,11 @@ stop the client in `finally` and supply an outer deadline. Optional
 completed. Both options are opt-in to preserve legacy caller behavior; the local
 self-check uses them without changing its configured tool permissions.
 
+POSIX `killProcessTree` waits up to two seconds after termination signals for
+every snapshotted owned PID to disappear, including descendants in separate
+process groups. A live or unobservable PID fails cleanup instead of reporting
+success before the operating system acknowledges exit.
+
 Windows `killProcessTree` snapshots owned PID/parent relationships through
 Toolhelp32 (`TH32CS_SNAPPROCESS`, `Process32FirstW`/`Process32NextW`), using in-memory
 C# P/Invoke compiled by the fixed system PowerShell host (bounded to 10000 ms),
