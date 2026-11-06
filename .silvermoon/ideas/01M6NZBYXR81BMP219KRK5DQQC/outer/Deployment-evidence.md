@@ -2,7 +2,13 @@
 
 本文对应 [Deployment.md](./Deployment.md)。实施已经监督者依据用户授权独立复验、接受并同步；现实世界尚未完成，不提交或接受 Outer。机器证据见 [Deployment-results.json](./Deployment-results.json)。
 
-## 当前结论
+## 追加交付门限
+
+用户随后授权通过仓库 GitHub Actions 发布 SDK 和 environment 两个 npm 包，并在授权 Ubuntu 设备安装全套 Task Engine，以 `https://pinboard.shazhou.work` 为公共 Gateway 实跑检查。Deployment 已纳入这些要求；D-AC02 因新增证明要求重置为未完成。以下是追加要求之前的本地验证记录，不能替代 Ubuntu 公共 Gateway 验证或 npm 发布回执。
+
+发布候选 `61aa5e50e5402e66afb3073b97a990536b2add0e` 已通过本地完整 `pnpm check`，其 [exact-main CI](https://github.com/shazhou-ww/potential-guide/actions/runs/42141060533) 第二次 attempt 全部通过，包括 Release verification (v1)。首次 attempt 的既有 Node 24 Probe 清理测试失败后仅重跑失败 job，没有修改代码、跳过测试或绕过门限。
+
+## 本地验证时点的结论
 
 - 已完成仓库之外的实际打包消费、独立作者构建，以及真实离线 Kubo、Gateway、HTTP Task Engine 和 Worker 执行。12 个用例通过，14 篇 Reference 按 CID 读取并逐页校验 SHA-256，所有 Run 都观察到实际退出和 reclaimedAt。
 - Pinboard 发布被认证前置条件阻塞。三个 `pinboard import` 均返回 `TOKEN_REQUIRED`，没有上传成功回执，也没有 Pinboard 导出或公共可获取性证据。不能用本地 Kubo 代替该门禁。
