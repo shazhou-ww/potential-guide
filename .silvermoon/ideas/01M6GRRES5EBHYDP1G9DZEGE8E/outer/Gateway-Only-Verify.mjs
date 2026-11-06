@@ -5,7 +5,7 @@ import { access, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/p
 import { get } from "node:http";
 import { createServer } from "node:net";
 import { homedir } from "node:os";
-import { delimiter, join, relative, resolve, sep } from "node:path";
+import { delimiter, dirname, join, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 
@@ -168,7 +168,9 @@ try {
       assert.equal(graph.some(({ name }) => name === "@potential-guide/task-sdk"), false);
   }
   const bin = resolve("runtime", "node_modules", ".bin");
-  env.PATH = bin + delimiter + process.env.PATH;
+  env.PATH = [bin, dirname(process.execPath),
+    ...(process.platform === "win32" ? [join(process.env.SystemRoot, "System32")] : ["/usr/bin", "/bin"]),
+  ].join(delimiter);
   const main = resolve("runtime", "node_modules", "@potential-guide", "pguide-task-engine", "dist", "main.js");
   const top = resolve("runtime", "node_modules", "pguide", "dist", "bin.js");
   const settings = JSON.parse(await readFile(join("runtime", "node_modules", "@potential-guide",

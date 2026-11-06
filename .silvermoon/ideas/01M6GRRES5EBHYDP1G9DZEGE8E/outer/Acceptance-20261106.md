@@ -16,6 +16,12 @@
 不访问 Kubo、不模拟服务读取、不声称已执行真实节点 pin。
 四个 D-* 恢复未勾选，等待新实测；辅助材料先同步 primary 后观察 revision。
 
+同步 `32180f573098d8db7a33994c5dfc44cd8d2965a7` 后第二次运行完成生产安装，
+但发现阶段继承的宿主 PATH 中另有全局 `pguide-task-engine`，按公开协议正确报
+`Ambiguous command task-engine`，尚未启动服务。进一步隔离运行期 PATH 为
+本次 consumer binary、当前 Node 目录及系统工具目录，保留安装期包管理器 PATH；
+不修改宿主 PATH 或移除全局 binary。此辅助材料修正亦先同步再证明。
+
 跨盘临时目录的首次尝试被既有同盘路径安全断言拒绝，未启动进程或写入夹具。
 改用新建的仓库外同盘独占目录，未放宽断言。
 
