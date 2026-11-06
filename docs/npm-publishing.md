@@ -4,6 +4,8 @@ Potential Guide defines independent CLI, library, and Objective releases:
 
 | Package | Release tag |
 | --- | --- |
+| `@potential-guide/check-sdk` | `check-sdk-vX.Y.Z` |
+| `@potential-guide/check-environment` | `check-environment-vX.Y.Z` |
 | `@potential-guide/pguide-task-bundle` | `pguide-task-bundle-vX.Y.Z` |
 | `@potential-guide/task-protocol` | `task-protocol-vX.Y.Z` |
 | `@potential-guide/task-engine` | `task-engine-vX.Y.Z` |
@@ -47,9 +49,14 @@ are protocol; `objective-pilot` consumes both protocols, then
 packages and their release tags are retired.
 The generic Task Engine release scope is documented below. Its release routes
 prepare configuration only: they do not prove external publishing authorization
-or a successful npm release. `check-environment`, `check-task`, `probe-task`,
-`check-sdk`, `check-artifacts`, and `check-runtime-files` remain local-verification-only.
+or a successful npm release. `check-task`, `probe-task`,
+`check-artifacts`, and `check-runtime-files` remain local-verification-only.
 Their pack/install checks do not authorize bootstrap or product publication.
+Publish `check-sdk` before `check-environment`, which consumes it. Both Check
+packages use independent stable or RC tags and the same trusted publishing
+workflow and exact-main CI gate. Their npm packages deliver author/library
+code; publishing the three environment CARs to Pinboard remains a separate
+operation.
 The independent `regulation-coordinator` library follows `objective-regulator`
 and owns its scheduling helpers and runner types. `cli-core` precedes
 `pguide-config`. `objective-declarations` consumes CLI Core and Pilot protocol only;

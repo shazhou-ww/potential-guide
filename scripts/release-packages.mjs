@@ -267,11 +267,6 @@ export const releasePackages = [
       "@potential-guide/objective-host",
     ],
   },
-];
-
-// Local verification includes support packages without authorizing their publication.
-export const verificationPackages = [
-  ...releasePackages,
   {
     id: "check-sdk",
     directory: "check-sdk",
@@ -302,6 +297,11 @@ export const verificationPackages = [
     ],
     bins: [],
   },
+];
+
+// Local verification includes support packages without authorizing their publication.
+export const verificationPackages = [
+  ...releasePackages,
   {
     id: "probe-task",
     directory: "probe-task",

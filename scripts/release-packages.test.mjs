@@ -32,23 +32,16 @@ test("local verification covers the internal runtime dependency closure without 
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
   }
-  for (const id of [
-    "check-runtime-files",
-    "check-artifacts",
-    "check-task",
-    "probe-task",
-    "check-environment",
-    "check-sdk",
-  ]) {
+  for (const id of ["check-runtime-files", "check-artifacts", "check-task", "probe-task"]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
   }
 });
 
 test("release inventory contains the new packages and excludes retired Guide and Supervisor", () => {
-  assert.equal(releasePackages.length, 30);
+  assert.equal(releasePackages.length, 32);
   for (const field of ["id", "directory", "name"]) {
-    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 30);
+    assert.equal(new Set(releasePackages.map((entry) => entry[field])).size, 32);
   }
   for (const name of [
     "@potential-guide/pguide-task-bundle",
@@ -64,6 +57,8 @@ test("release inventory contains the new packages and excludes retired Guide and
     "@potential-guide/git-source",
     "@potential-guide/objective-pilot",
     "@potential-guide/regulation-coordinator",
+    "@potential-guide/check-sdk",
+    "@potential-guide/check-environment",
   ]) {
     assert.ok(releasePackages.some((entry) => entry.name === name));
   }
@@ -78,6 +73,19 @@ test("release inventory contains the new packages and excludes retired Guide and
     assert.ok(!releasePackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.3.0-rc.0`), /Unsupported package/);
   }
+});
+
+test("Check packages have independent stable release routes in dependency order", () => {
+  const sdk = parseReleaseTag("check-sdk-v0.1.1");
+  const environment = parseReleaseTag("check-environment-v0.1.1");
+  assert.equal(sdk.name, "@potential-guide/check-sdk");
+  assert.equal(environment.name, "@potential-guide/check-environment");
+  assert.equal(sdk.distTag, "latest");
+  assert.equal(environment.distTag, "latest");
+  assert.ok(
+    releasePackages.findIndex(({ id }) => id === sdk.id) <
+      releasePackages.findIndex(({ id }) => id === environment.id),
+  );
 });
 
 test("generic Task Engine products have an exact public ten-package runtime release closure", async () => {

@@ -3,6 +3,8 @@ name: Publish package to npm
 on:
   push:
     tags:
+      - "check-sdk-v*"
+      - "check-environment-v*"
       - "pguide-task-bundle-v*"
       - "task-protocol-v*"
       - "task-engine-v*"
@@ -40,6 +42,8 @@ on:
         required: true
         type: choice
         options:
+          - check-sdk
+          - check-environment
           - pguide-task-bundle
           - task-protocol
           - task-engine
