@@ -1,0 +1,55 @@
+$ pnpm run sources:check && pnpm run layers:check && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run pack:check
+$ pnpm run settings:check && node scripts/check-generated-sources.mjs
+$ node scripts/build-settings.mjs --check
+$ node scripts/build.mjs
+ Tasks:    35 successful, 35 total
+Cached:    35 cached, 35 total
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+$ pnpm run build && node scripts/check-layers.mjs
+$ node scripts/build.mjs
+ Tasks:    35 successful, 35 total
+Cached:    35 cached, 35 total
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+$ biome format .
+$ turbo run lint && biome lint scripts config
+ Tasks:    35 successful, 35 total
+Cached:    35 cached, 35 total
+$ turbo run typecheck && tsc -p tsconfig.test.json --pretty false
+ Tasks:    35 successful, 35 total
+Cached:    35 cached, 35 total
+$ pnpm run sources:check && pnpm run build && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test --concurrency=2 && node --test --test-concurrency=2 scripts/*.test.mjs
+$ pnpm run settings:check && node scripts/check-generated-sources.mjs
+$ node scripts/build-settings.mjs --check
+$ node scripts/build.mjs
+ Tasks:    35 successful, 35 total
+Cached:    35 cached, 35 total
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+$ node scripts/build.mjs
+ Tasks:    35 successful, 35 total
+Cached:    35 cached, 35 total
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+$ node scripts/sync-objective-schemas.mjs --check
+$ node scripts/build-self-check-runtime.mjs --check
+$ node scripts/build-health-runtime.mjs --check
+$ node scripts/build-monorepo-runtime.mjs --check
+$ node scripts/build-setup-runtime.mjs --check
+$ node scripts/build-check-workers.mjs --check
+@potential-guide/pguide-task-bundle:test: test at test\car-files.test.ts:67:1
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\car-file-a5a593f1-4f90-4654-bc68-0f23331c809e\bundle.car' -> 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\car-file-a5a593f1-4f90-4654-bc68-0f23331c809e\alias.car'
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:185:13
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\ab0cb9ca-fe7e-4c7c-b69b-1b8f55219acb\custom-ignore' -> 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\ab0cb9ca-fe7e-4c7c-b69b-1b8f55219acb\task\.gitignore'
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:185:13
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\9215bc8b-9695-4b44-9212-09d06ebc46a7\missing' -> 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\9215bc8b-9695-4b44-9212-09d06ebc46a7\task\.gitignore'
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:397:13
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\5f3e2ab4-0b56-4d18-b89f-7619050bf0c5\outside\package.json' -> 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\5f3e2ab4-0b56-4d18-b89f-7619050bf0c5\task\package.json'
+@potential-guide/pguide-task-bundle:test: test at test\init.test.ts:397:13
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\d4c65fc5-33c9-4d01-a394-a6d733acea9a\outside\missing.ts' -> 'D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\pguide-task-bundle\.cache\task-init\d4c65fc5-33c9-4d01-a394-a6d733acea9a\task\src\main.ts'
+ Tasks:    49 successful, 54 total
+Cached:    49 cached, 54 total
+ ERROR  run failed: command  exited (1)
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.

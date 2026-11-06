@@ -8,6 +8,10 @@ Idea：`01M6K9F54YK0ZFXGTSKBX7Z1S1` / `pnpm-check-performance`。实际验证源
 
 范围调整必须先同步 primary、观察准确 deploymentRevision，再复核固定提交证据；之后才为该 revision 追加 `submitOuter`、同步并重新观察。用户的直接接受授权仅限上述范围，不包含 npm 发布、源码修改、宿主权限调整或其他 idea。
 
+范围调整已于 `a0329eaf590b55d2390d4429a4209f9b196b2349` 同步 primary，随后复核真实 CI `42209946131`：精确源码仍为 `3be07d32`，7 jobs 及全部必需 steps 仍 success；Git 对比确认此次契约提交未改动被测可执行源码、清单或 lockfile。历史八份原始 artifact 的真实性校验也再次通过，不作为当前性能证明。
+
+同步后按仓库要求重新执行同一独立 store 配置的完整 `pnpm check`，实际 checkout 为 `a0329eaf`，退出 1；五个相同 symlink 用例仍报 `EPERM`，Turbo 本轮为 49/54 successful。新增原始摘录见 [PostScopeCheck.txt](./PostScopeCheck.txt)。这次运行与先前绑定 `3be07d32` 的检查分开记录，既不是成功检查，也不是性能测量；没有跳过测试、修改源码、提权或修改宿主配置。明确授权接受范围不包含该本地失败项。
+
 ## 三类结论与提交绑定
 
 1. **CI 覆盖证明**：`42209946131` 绑定 `3be07d321a57637e9189eda452cfb2f5703eb295`；7 jobs 及下表必需 steps 全部实际 success，依原 D-S01 / D-AC01 判定覆盖。它不是性能测量。
