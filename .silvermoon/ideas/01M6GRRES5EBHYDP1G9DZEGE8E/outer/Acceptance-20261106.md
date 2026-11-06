@@ -26,6 +26,12 @@
 在服务启动前被 export 边界拒绝；改为仅使用公开 `validateContentCar` 返回的
 blockstore 迭代块流，不绕过 package exports，不更改产品。
 
+上述 blockstore 迭代会规范化 codec，不能作为原始 CAR 块 CID 的证明；
+根路径诊断第一次请求的 404 因此属于夹具错误，不能归因产品。
+最终使用 Node `--experimental-import-meta-resolve` 的 ESM 条件解析，
+从公开作者包所在位置导入其声明依赖 `@ipld/car` 的公共入口，
+由 CarReader 保留 CAR 原始 CID/字节，同时保留公开 CAR 校验。
+
 跨盘临时目录的首次尝试被既有同盘路径安全断言拒绝，未启动进程或写入夹具。
 改用新建的仓库外同盘独占目录，未放宽断言。
 

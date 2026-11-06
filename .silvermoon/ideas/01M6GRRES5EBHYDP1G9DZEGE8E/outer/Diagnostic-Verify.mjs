@@ -121,6 +121,10 @@ try {
         decision = await (await http(`${ready.url}/requests/${id}/status?waitMs=1000`)).json();
         if (decision.status !== "preparing") break;
       }
+      if (decision.status !== "accepted") {
+        result.scenarios.push({ entry: discovered ? "pguide task-engine" : "pguide-task-engine",
+          ui, ready, requestId: id, rejection: decision, database });
+      }
       assert.equal(decision.status, "accepted", JSON.stringify(decision));
       let task;
       for (let count = 0; count < 400; count++) {

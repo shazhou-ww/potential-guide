@@ -207,6 +207,7 @@ import assert from "node:assert/strict";
 import {readFile,writeFile} from "node:fs/promises";
 import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
 import {validateContentCar} from "@potential-guide/pguide-task-bundle/car";
+const {CarReader}=await import(import.meta.resolve("@ipld/car",import.meta.resolve("@potential-guide/pguide-task-bundle/car")));
 const built=await buildTaskBundle({
  declaration:{$schema:"https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
  name:"Gateway-only External",runtime:{type:"node",minVersion:"22.13.0"},entry:"worker.cjs",
@@ -214,17 +215,15 @@ const built=await buildTaskBundle({
  entry:"callback.mjs",outDirectory:"bundle",resources:{"resources/payload.bin":"payload.bin"}
 });
 const bytes=await readFile(built.car);
-const validated=await validateContentCar(bytes,built.cid),blocks=[];
-assert.equal(validated.cid,built.cid);
-for await(const {cid,bytes} of validated.blockstore.getAll()){
- const chunks=[];for await(const chunk of bytes)chunks.push(Buffer.from(chunk));
- blocks.push([cid.toString(),Buffer.concat(chunks).toString("base64")]);
-}
+assert.equal((await validateContentCar(bytes,built.cid)).cid,built.cid);
+const reader=await CarReader.fromBytes(bytes),blocks=[];
+assert.equal((await reader.getRoots())[0].toString(),built.cid);
+for await(const {cid,bytes} of reader.blocks())blocks.push([cid.toString(),Buffer.from(bytes).toString("base64")]);
 assert.ok(blocks.length>3);
 await writeFile("../blocks.json",JSON.stringify(blocks));
 console.log(JSON.stringify({cid:built.cid,blocks:blocks.length,standardImporter:true,offlineCarValidated:true}));
 `);
-  const publication = JSON.parse((await run(process.execPath, ["prepare.mjs"], "author", env)).stdout);
+  const publication = JSON.parse((await run(process.execPath, ["--experimental-import-meta-resolve", "prepare.mjs"], "author", env)).stdout);
   report.bundle = { ...publication, expectedResult: {
     message: "gateway-only-external-proof", resourceBytes: 600_000, resourceSum: 25_200_000,
   } };
