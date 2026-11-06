@@ -20,6 +20,7 @@ for (const acknowledgment of ["withheld", "late"]) {
           name: "Bounded drop reporting",
           runtime: { type: "node", minVersion: "22.13.0" },
           entry: "worker.cjs",
+          binary: [],
           inputSchema: { type: "object" },
           resultSchema: true,
           messageSchema: false,

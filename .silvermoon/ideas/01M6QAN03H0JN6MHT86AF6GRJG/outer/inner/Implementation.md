@@ -27,3 +27,9 @@ LF/CRLF/CR、UTF-8 错误、BOM、binary glob 和最终清单测试证明规范�
 ### I-AC03: 缓存与仓库集成通过
 
 真实接线的冷构建、正常命中和 binary 配置变化得到正确内容，旧输出不能逃过新校验；定向测试及 pnpm check 通过，证据可重复，不使用永久强制重建。
+
+## Implementation evidence
+
+修改范围、真实缓存回归、公开消费入口及实际验证结果见
+[Implementation-evidence.md](./Implementation-evidence.md)。
+实施候选保留未提交状态；所有 Deployment 和 lifecycle 门禁交由监督者。

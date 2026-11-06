@@ -21,6 +21,7 @@ const declaration = {
   name: "相同展示名称",
   runtime: { type: "node", minVersion: "22.13.0" },
   entry: "worker.cjs",
+  binary: [],
   include: ["task.yaml", "worker.cjs"],
   inputSchema: { $ref: "https://example.test/input" },
   resultSchema: { $ref: "https://example.test/result" },

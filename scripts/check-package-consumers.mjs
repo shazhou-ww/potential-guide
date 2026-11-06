@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
-import { delimiter, isAbsolute, join } from "node:path";
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { delimiter, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
@@ -10,6 +10,29 @@ import { checkTaskServiceConsumer } from "./check-task-service-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run, only) {
+  const override = process.env.PGUIDE_PACK_CONSUMER_ROOT;
+  if (!override) return checkConsumers(root, scratch, definitions, tarballs, run, only);
+  const repository = await realpath(root);
+  const requested = resolve(override);
+  const outside = (path) => {
+    const distance = relative(repository, path);
+    return isAbsolute(distance) || distance === ".." || distance.startsWith(`..${sep}`);
+  };
+  assert.ok(outside(requested), "PGUIDE_PACK_CONSUMER_ROOT must be outside the repository.");
+  await mkdir(requested, { recursive: true });
+  const canonical = await realpath(requested);
+  assert.ok(outside(canonical), "Consumer root must not resolve back into the repository.");
+  const owned = await mkdtemp(join(canonical, "pguide-packed-consumers-"));
+  try {
+    return await checkConsumers(root, owned, definitions, tarballs, run, only);
+  } finally {
+    if (process.env.PGUIDE_KEEP_PACK_CONSUMERS === "1")
+      console.log(`Owned external consumer fixtures retained: ${owned}`);
+    else await rm(owned, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
   const manifests = new Map();
   for (const { name, directory, workspace } of definitions) {
     manifests.set(
@@ -113,7 +136,15 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
         entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
       ),
     };
-    if (label === "bundle-authoring") manifest.dependencies["@sinclair/typebox"] = "0.34.52";
+    if (label === "bundle-authoring") {
+      manifest.dependencies["@sinclair/typebox"] = "0.34.52";
+      manifest.dependencies["@ipld/car"] = JSON.parse(
+        await readFile(
+          join(root, "packages/pguide-task-bundle/node_modules/@ipld/car/package.json"),
+          "utf8",
+        ),
+      ).version;
+    }
     await writeFile(join(directory, "package.json"), JSON.stringify(manifest, null, 2));
     await run(
       "pnpm",
@@ -177,6 +208,11 @@ export async function checkPackageConsumers(root, scratch, definitions, tarballs
       }
     }
     if (label === "bundle-authoring") {
+      await writeFile(
+        join(directory, "bundle-identity.mjs"),
+        await readFile(join(root, "scripts", "bundle-identity-consumer.mjs")),
+      );
+      console.log(await run(process.execPath, ["bundle-identity.mjs"], directory));
       const home = join(directory, "home");
       await mkdir(home);
       const env = {

@@ -6,9 +6,33 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import test from "node:test";
 import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
 
+test("Bundle runtime rejects a repository-local override before touching author inputs", async () => {
+  const previous = process.env.PGUIDE_PACK_CONSUMER_ROOT;
+  const directory = resolve(".cache", `rejected-bundle-isolation-${randomUUID()}`);
+  try {
+    process.env.PGUIDE_PACK_CONSUMER_ROOT = resolve(".");
+    await assert.rejects(
+      checkBundleAuthoringConsumer(directory, "fixture", new Map(), new Map(), () =>
+        assert.fail("Must not publish"),
+      ),
+      /outside the repository/,
+    );
+    await assert.rejects(access(directory), { code: "ENOENT" });
+  } finally {
+    if (previous === undefined) delete process.env.PGUIDE_PACK_CONSUMER_ROOT;
+    else process.env.PGUIDE_PACK_CONSUMER_ROOT = previous;
+  }
+});
+
 for (const fails of [false, true])
   test(`Bundle runtime isolation escapes author dependencies and cleans up on ${fails ? "failure" : "success"}`, async () => {
     const directory = resolve(".cache", `bundle-isolation-${randomUUID()}`);
+    const authorDependencies = [
+      "@sinclair/typebox",
+      "@potential-guide/task-sdk",
+      "@potential-guide/pguide-task-bundle",
+      "@potential-guide/ipfs-content",
+    ];
     const dependency = join(directory, "node_modules", "@sinclair", "typebox");
     const engine = "@potential-guide/task-engine";
     const manifest = { name: engine, version: "0.1.0", dependencies: {} };
@@ -16,8 +40,16 @@ for (const fails of [false, true])
     let runtime;
     await mkdir(dependency, { recursive: true });
     try {
-      await writeFile(join(dependency, "package.json"), '{"main":"index.js"}');
-      await writeFile(join(dependency, "index.js"), "module.exports={};");
+      for (const name of authorDependencies) {
+        const path = join(directory, "node_modules", ...name.split("/"));
+        await mkdir(path, { recursive: true });
+        await writeFile(join(path, "package.json"), '{"main":"index.js"}');
+        await writeFile(join(path, "index.js"), "module.exports={};");
+        assert.equal(
+          createRequire(join(directory, "probe.cjs")).resolve(name),
+          join(path, "index.js"),
+        );
+      }
       for (const file of ["main.ts", "contract.ts", "task.build.yaml"])
         await writeFile(join(directory, file), "");
       assert.equal(
@@ -34,10 +66,10 @@ for (const fails of [false, true])
             isAbsolute(location) || location === ".." || location.startsWith(`..${sep}`),
             "Runtime must be outside the repository dependency ancestry.",
           );
-          assert.throws(
-            () => createRequire(join(runtime, "probe.cjs")).resolve("@sinclair/typebox"),
-            { code: "MODULE_NOT_FOUND" },
-          );
+          for (const name of authorDependencies)
+            assert.throws(() => createRequire(join(runtime, "probe.cjs")).resolve(name), {
+              code: "MODULE_NOT_FOUND",
+            });
           const packageDirectory = join(runtime, "node_modules", ...engine.split("/"));
           await mkdir(packageDirectory, { recursive: true });
           await writeFile(join(packageDirectory, "package.json"), JSON.stringify(manifest));

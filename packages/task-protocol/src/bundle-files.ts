@@ -6,6 +6,7 @@ import {
 } from "./bundle.js";
 import { isTaskBundlePath, type TaskBundleFileLimits, taskBundleLimits } from "./bundle-paths.js";
 import { fail, type Json, type JsonObject, TaskError } from "./json.js";
+import { validateTaskText } from "./bundle-content.js";
 
 /** Inspect supplied bytes only; filesystem, transport and runtime eligibility belong to callers. */
 export function readTaskBundle(
@@ -64,6 +65,7 @@ export function readTaskBundle(
   const worker = files.get("worker.cjs");
   if (!yaml || !worker?.byteLength)
     fail("invalid_bundle", "Bundle requires task.yaml and nonempty worker.cjs.");
+  validateTaskText(yaml, "task.yaml");
   const parsed = parseTaskBundleYaml(yaml);
   if (
     unsupportedPaths.length &&
@@ -79,6 +81,8 @@ export function readTaskBundle(
   }
   const declaration = validateTaskBundle(parsed);
   validateTaskBundleFiles(declaration, files.keys());
+  const binary = new Set(declaration.binary);
+  for (const [path, content] of files) if (!binary.has(path)) validateTaskText(content, path);
   const schemaFiles = [...files].filter(([path]) => path.startsWith("schemas/"));
   let schemas: JsonObject[];
   try {

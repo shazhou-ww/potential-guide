@@ -93,6 +93,7 @@ export async function fixtureBundles(
         name: type.type,
         runtime: { type: "node", minVersion: "22.13.0" },
         entry: "worker.cjs",
+        binary: [],
         inputSchema: type.inputSchema,
         resultSchema: type.resultSchema,
         messageSchema: type.messageSchema,

@@ -33,6 +33,7 @@ async function fixture(t: TestContext) {
             name: "CAR file safety",
             runtime: { type: "node", minVersion: "22.13.0" },
             entry: "worker.cjs",
+            binary: [],
             include: ["task.yaml", "worker.cjs"],
             inputSchema: { type: "object" },
             resultSchema: false,

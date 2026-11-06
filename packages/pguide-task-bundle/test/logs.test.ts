@@ -16,6 +16,7 @@ for (const mode of ["timeout", "cancel", "unawaited", "host-invalid"]) {
       name: "SDK log boundary",
       runtime: { type: "node" as const, minVersion: "22.13.0" },
       entry: "worker.cjs" as const,
+      binary: [],
       inputSchema: { type: "object" },
       resultSchema: true,
       messageSchema: false,

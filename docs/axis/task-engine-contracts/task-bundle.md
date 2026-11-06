@@ -66,6 +66,7 @@ runtime:
   type: node
   minVersion: "22.13.0"
 entry: worker.cjs
+binary: []
 include:
   - task.yaml
   - worker.cjs
@@ -97,9 +98,19 @@ messageSchema: false
 | `runtime` | 必填对象，仅包含 `type` 和 `minVersion`；`type` 为 `node`，`minVersion` 为稳定的三段数字版本字符串。 |
 | `entry` | 必填，固定为 `worker.cjs`，指向 Bundle 根目录内的 CommonJS 文件。 |
 | `include` | 必填，完整成品的精确相对文件路径数组，包含 `task.yaml` 自身和 Worker；不允许通配符、重复、大小写歧义或文件/目录冲突。 |
+| `binary` | 必填，排序、无重复的精确 `resources/` 文件路径数组，必须是 include/实际文件集合的子集；空时显式 `[]`。不能声明 manifest、Worker 或 Schema 为 binary。 |
 | `inputSchema` | 必填，使用 Engine 支持的 JSON Schema Draft 2020-12 输入契约；可内联或通过 `$ref` 引用共享 Schema，解析后仍要求根输入为对象。 |
 | `resultSchema` | 必填，使用 Engine 支持的 JSON Schema Draft 2020-12 结果契约；可内联或通过 `$ref` 引用共享 Schema。 |
 | `messageSchema` | 必填，使用相同方言并支持 `$ref`；`false` 表示不接收业务消息，不能用省略代替。 |
+
+除 binary 清单内的原字节文件外，所有最终文件必须为合法 UTF-8、LF 换行。
+作者工具在计算内容树/CID 前仅将 CRLF 和孤立 CR 改为 LF，保留 BOM、Unicode 表示、
+空格与尾换行数量；非法 UTF-8 指明路径报错，不嗅探文件类型或自动转为 binary。
+作者 `task.build.yaml.binary` 是按 include 映射后最终路径匹配的 portable glob；
+生成 manifest 保存展开后的精确清单，不要求消费者持有作者配置或 Git 环境。
+读取目录/CAR/Engine 只验证，不重新规范化；缺少 binary 声明的旧 Bundle 必须重建。
+内容身份只有完整校验后的根 CID；合法同根不同 CAR 块序可接受，大小/容器哈希不参与判等。
+只有明确期望 CID 才比较目标，复制应使用已验快照而非重新打开可变源路径。
 
 1. 上表为 v1 完整顶层字段；未知字段、缺失字段或错误类型明确拒绝，不静默忽略。
    `$schema` 是声明格式与通信协议选择的唯一依据，不接受 `formatVersion` 或 `protocolVersion` 字段。
@@ -388,7 +399,8 @@ type BundleReference =
 2. 相同文件树只有在相同导入参数下才保证得到相同根 CID。
    构建与发布工具须固定并公开可复现的导入参数，包括 CID 版本、哈希、分块、DAG 布局
    及元数据处理；具体参数在实施阶段落实，不由宿主环境的可变默认值决定。
-3. 文件路径与原始字节保留，不对 YAML、JSON、换行或文本编码做语义归一化，
+3. 构建时先按上述默认 UTF-8/LF 与显式 binary 规则形成最终快照，
+   之后导入及读取保留快照的路径与原始字节，不再次改写 YAML/JSON/文本编码。
    不自动收录宿主 mtime、owner 或权限来改变交付身份。
    路径先通过 Bundle 文件集合校验，不能以静默重命名或改写内容使非法文件集合通过。
 4. CID 是标准 DAG 内容身份，不等同于文件字节哈希；
@@ -450,8 +462,9 @@ type BundleReference =
 2. 生产宿主使用明确配置的 Trustless HTTP Gateway，验证 CID、DAG 链接及所消费的块，
    不盲信普通 HTTP 响应，不回退到 RPC 或公共发现。
 3. Engine 在准入前验证完整目录清单、文件类型和尺寸、声明、入口与 Schema；
-   资源后继块默认按需获取和验证，后续 Gateway 故障可能使 Run 失败。
-   显式 `bundlePrefetch: true` 才在准入时验证完整资源字节。
+   默认文本资源须在准入前读取完整字节以验证 UTF-8/LF，不能用空占位符绕过内容约束。
+   显式 binary 资源的后继块默认按需获取和验证，后续 Gateway 故障可能使 Run 失败；
+   `bundlePrefetch: true` 才在准入时同时验证全部 binary 资源字节。
 4. 宿主以 Node 支持的装载方式直接启动已验证的自包含 `worker.cjs`，
    不依赖 Node Worker 原生接受 IPFS URI，不新增业务动态加载外部代码的执行模型。
    入口是否落地及资源是否物化为目录是宿主实现选择，不作为业务可依赖的存放位置契约；

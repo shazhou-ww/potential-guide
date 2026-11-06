@@ -12,6 +12,7 @@ import {
   readTaskArtifact,
 } from "@potential-guide/pguide-task-bundle/artifact";
 import { parse, stringify } from "yaml";
+import { normalizeTaskText } from "@potential-guide/task-protocol";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const execute = promisify(execFile);
@@ -39,7 +40,10 @@ test("accepted environment CARs contain only their validated exact resources and
           index.references[language].problems[code],
         ]),
       ])
-        assert.deepEqual(artifact.files.get(target), await readFile(join(root, source)));
+        assert.deepEqual(
+          artifact.files.get(target),
+          Buffer.from(normalizeTaskText(await readFile(join(root, source)), target)),
+        );
     }
     assert.deepEqual(
       [...artifact.files.keys()].filter((path) => path.startsWith("resources/")).sort(),

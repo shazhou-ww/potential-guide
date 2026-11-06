@@ -20,10 +20,16 @@ export async function inspectTaskArtifact(files: ReadonlyMap<string, Buffer>) {
 }
 
 /** Read one immutable directory or CAR snapshot, without author module evaluation. */
-export async function readTaskArtifact(path: string) {
+export async function readTaskArtifact(path: string, expectedCid?: string) {
   const absolute = resolve(path);
   const info = await lstat(absolute, { bigint: true });
-  if (info.isDirectory()) return { files: await readTaskArtifactFiles(absolute) };
+  if (info.isDirectory()) {
+    const files = await readTaskArtifactFiles(absolute);
+    const { cid } = await inspectTaskArtifact(files);
+    if (expectedCid !== undefined && !CID.parse(cid).toV1().equals(CID.parse(expectedCid).toV1()))
+      throw new Error("Task artifact CID does not match expected CID.");
+    return { files, cid };
+  }
   if (
     !info.isFile() ||
     info.isSymbolicLink() ||
@@ -134,9 +140,11 @@ export async function readTaskArtifact(path: string) {
   await walk(cid, "");
   const checked = await inspectTaskArtifact(files);
   if (checked.cid !== cid) throw new Error("Task CAR root differs from its canonical file tree.");
+  if (expectedCid !== undefined && !CID.parse(cid).toV1().equals(CID.parse(expectedCid).toV1()))
+    throw new Error("Task artifact CID does not match expected CID.");
   return { files, archive, cid };
 }
 
-export async function checkTaskArtifact(path: string) {
-  return inspectTaskArtifact((await readTaskArtifact(path)).files);
+export async function checkTaskArtifact(path: string, expectedCid?: string) {
+  return inspectTaskArtifact((await readTaskArtifact(path, expectedCid)).files);
 }

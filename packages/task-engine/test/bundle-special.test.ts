@@ -17,6 +17,7 @@ test("full Bundle admission rejects UnixFS symlinks even when the standard expor
             name: "Special file fixture",
             runtime: { type: "node", minVersion: "22.13.0" },
             entry: "worker.cjs",
+            binary: [],
             include: ["task.yaml", "worker.cjs", "resources/file"],
             inputSchema: { type: "object" },
             resultSchema: true,

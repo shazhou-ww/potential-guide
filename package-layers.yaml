@@ -40,4 +40,5 @@ deferredExternalization:
 developmentTools:
   "@potential-guide/pguide-task-bundle":
     - packages/check-environment/build.mjs
+    - packages/check-environment/verify.mjs
     - packages/check-sdk/examples/text/build.mjs

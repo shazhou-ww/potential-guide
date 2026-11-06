@@ -57,6 +57,7 @@ async function fixture(limits: Parameters<typeof createTaskEngine>[0]["limits"] 
       name: "HTTP fixture",
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema: { type: "object" },
       resultSchema: true,
       messageSchema: true,

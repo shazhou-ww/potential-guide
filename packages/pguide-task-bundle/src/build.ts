@@ -10,6 +10,8 @@ import {
   parseTaskBundleYaml,
   resolveBundleSchemas,
   validateTaskBundle,
+  normalizeTaskText,
+  selectTaskBinary,
 } from "@potential-guide/task-protocol";
 import { build } from "esbuild";
 import { stringify } from "yaml";
@@ -28,6 +30,8 @@ export interface BuildTaskBundleOptions {
   schemas?: readonly { path: string; digest: string }[];
   schemaDocuments?: readonly JsonObject[];
   resources?: Readonly<Record<string, string>>;
+  /** Portable globs matched against final Bundle-relative paths, not source paths. */
+  binary?: readonly string[];
   owner?: string;
 }
 async function regularFile(path: string): Promise<string> {
@@ -47,7 +51,11 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
       : options.declaration;
   if (!source || typeof source !== "object" || Array.isArray(source))
     throw new Error("Task build declaration must be an object.");
-  const declaration = validateTaskBundle({ ...source, include: ["task.yaml", "worker.cjs"] });
+  const declaration = validateTaskBundle({
+    ...source,
+    include: ["task.yaml", "worker.cjs"],
+    binary: [],
+  });
   assertTaskRuntime(declaration);
   const files = new Map<string, Buffer>();
   const schemas: JsonObject[] = [];
@@ -56,7 +64,9 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
     if (`sha256:${createHash("sha256").update(bytes).digest("hex")}` !== locked.digest)
       throw new Error("Shared Schema lock mismatch; update the lock explicitly.");
     const schema = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      new TextDecoder("utf-8", { fatal: true }).decode(
+        normalizeTaskText(bytes, `schemas/${index}.json`),
+      ),
     ) as JsonObject;
     schemas.push(schema);
     files.set(`schemas/${index}.json`, bytes);
@@ -74,6 +84,7 @@ export async function compileTaskBundle(options: BuildTaskBundleOptions) {
     files.set(path, await readFile(await regularFile(source)));
   }
   declaration.include = ["task.yaml", "worker.cjs", ...files.keys()].sort();
+  declaration.binary = selectTaskBinary(declaration.include, options.binary ?? []);
   const resolved = resolveBundleSchemas(
     declaration,
     schemas,
@@ -166,6 +177,9 @@ runTask(async (input, context) => {
     throw new Error("Task Worker must contain all non-builtin code dependencies.");
   files.set("worker.cjs", Buffer.from(bundle.outputFiles[0]!.contents));
   files.set("task.yaml", Buffer.from(stringify(declaration)));
+  for (const [path, bytes] of files)
+    if (!declaration.binary.includes(path))
+      files.set(path, Buffer.from(normalizeTaskText(bytes, path)));
   const checked = await inspectTaskArtifact(files);
   return { ...checked, contents: files, metafile: bundle.metafile };
 }

@@ -3,6 +3,11 @@ import { dirname, join, resolve } from "node:path";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { parseDocument, stringify } from "yaml";
+import {
+  normalizeTaskText,
+  readTaskBundle,
+  selectTaskBinary,
+} from "@potential-guide/task-protocol";
 
 const pathSchema = Type.String({ minLength: 1 });
 export const checkBuildSchema = Type.Object(
@@ -30,6 +35,7 @@ export const checkBuildSchema = Type.Object(
         Type.Object({ from: pathSchema, to: pathSchema }, { additionalProperties: false }),
       ),
     ),
+    binary: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { maxItems: 256 })),
   },
   { additionalProperties: false },
 );
@@ -106,7 +112,9 @@ async function outputDirectory(root: string, path: string): Promise<void> {
 }
 
 export function validateReference(bytes: Uint8Array, path: string): void {
-  const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes).replace(/^\uFEFF/, "");
+  const text = new TextDecoder("utf-8", { fatal: true })
+    .decode(normalizeTaskText(bytes, path))
+    .replace(/^\uFEFF/, "");
   const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text);
   if (!match) throw new Error(`${path}: missing Reference YAML frontmatter`);
   const metadata = yaml(match[1] ?? "", path);
@@ -133,6 +141,7 @@ export interface PreparedCheck {
   buildFile: string;
   staging: string;
   resources: ReadonlyMap<string, Buffer>;
+  binary: readonly string[];
 }
 
 /** Freeze author inputs before the ordinary Task compiler runs. */
@@ -295,10 +304,17 @@ export async function prepareCheck(buildFile: string): Promise<PreparedCheck> {
       to: `${path.slice(0, path.lastIndexOf("/") + 1)}`,
     })),
     outDirectory: "bundle",
+    binary: config.binary ?? [],
   };
   const output = join(staging, "task.build.yaml");
   await writeFile(output, stringify(generated));
-  return { kind: config.kind, staging, buildFile: output, resources };
+  const binary = selectTaskBinary(
+    ["task.yaml", "worker.cjs", ...resources.keys()],
+    config.binary ?? [],
+  );
+  if (binary.includes("resources/check.json"))
+    fail("generated resources/check.json cannot be binary");
+  return { kind: config.kind, staging, buildFile: output, resources, binary };
 }
 
 /** Compare the CAR's actual resource set and bytes, not its author include list. */
@@ -314,7 +330,14 @@ export function verifyCheckResources(
   const expected = [...prepared.resources.keys()].sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected))
     throw new Error(`Check ${prepared.kind}: CAR resource selection mismatch`);
+  const { declaration } = readTaskBundle(artifact);
+  if (JSON.stringify(declaration.binary) !== JSON.stringify(prepared.binary))
+    throw new Error(`Check ${prepared.kind}: CAR binary selection mismatch`);
   for (const [path, bytes] of prepared.resources)
-    if (!Buffer.from(artifact.get(path) ?? []).equals(bytes))
+    if (
+      !Buffer.from(artifact.get(path) ?? []).equals(
+        prepared.binary.includes(path) ? bytes : Buffer.from(normalizeTaskText(bytes, path)),
+      )
+    )
       throw new Error(`Check ${prepared.kind}: CAR resource bytes differ: ${path}`);
 }

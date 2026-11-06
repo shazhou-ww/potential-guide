@@ -28,6 +28,7 @@ test("V06/V10: real authenticated TCP Server executes the SDK entry, reopens SQL
         name: "独立 Server Bundle",
         runtime: { type: "node", minVersion: "22.13.0" },
         entry: "worker.cjs",
+        binary: [],
         inputSchema: { type: "object" },
         resultSchema: true,
         messageSchema: false,

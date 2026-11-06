@@ -18,6 +18,7 @@ export async function buildExampleBundle({ kind, directory, resources = {}, ipfs
       name: kind,
       runtime: { type: "node", minVersion: "22.13.0" },
       entry: "worker.cjs",
+      binary: [],
       inputSchema: { type: "object" },
       resultSchema: true,
       messageSchema: false,

@@ -213,6 +213,33 @@ test("Docker UI preparation uses existing catalog tools and builds assets before
   assert.match(manifest.scripts.build, /tailwindcss/);
 });
 
+test("Docker prepares generated Check types and accepts real environment Bundles before packing", async () => {
+  const source = await readFile(
+    new URL("./self-check-docker/prepare-image.mjs", import.meta.url),
+    "utf8",
+  );
+  const prepare =
+    'run(process.execPath, ["/source/packages/check-environment/prepare.mjs"], "/source");';
+  const build =
+    'run(process.execPath, ["/source/packages/check-environment/build.mjs"], "/source");';
+  assert.ok(source.includes(prepare));
+  assert.ok(source.includes(build));
+  assert.ok(source.indexOf('"/source/packages/check-sdk/tsconfig.json"') < source.indexOf(prepare));
+  assert.ok(source.indexOf(prepare) < source.indexOf('"/source/tsconfig.json"'));
+  assert.ok(source.indexOf('"/source/tsconfig.json"') < source.indexOf(build));
+  assert.ok(source.indexOf(build) < source.indexOf('await mkdir("/packs");'));
+  assert.ok(
+    source.includes(
+      '"/source/packages/check-environment/node_modules/@potential-guide/pguide-task-bundle"',
+    ),
+  );
+  assert.ok(
+    source.includes(
+      'await symlink("/toolchain/node_modules/typescript", "/source/node_modules/typescript")',
+    ),
+  );
+});
+
 test("consumer versions follow only the selected entry closure and reject missing workspace packs", () => {
   const manifests = new Map([
     ["pguide", { version: "0.4.0", dependencies: { support: "workspace:^" } }],

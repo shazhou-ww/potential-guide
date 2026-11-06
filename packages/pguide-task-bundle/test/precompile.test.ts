@@ -15,6 +15,7 @@ const declaration = {
   name: "Precompiled",
   runtime: { type: "node", minVersion: "22.13.0" },
   entry: "worker.cjs",
+  binary: [],
   include: ["task.yaml", "worker.cjs"],
   inputSchema: {
     type: "object",

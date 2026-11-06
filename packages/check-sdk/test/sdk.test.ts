@@ -123,6 +123,8 @@ test("callback preserves context, logs, faults, cleanup and cancellation identit
 });
 
 test("Reference frontmatter gates metadata only, never Markdown content", () => {
+  for (const newline of ["\n", "\r\n", "\r"])
+    validateReference(Buffer.from(page.replaceAll("\n", newline)), "page.md");
   for (const body of ["", "\n# Anything\n", "\n[broken](missing.md#none)\n", "\n[ref][id]\n"])
     validateReference(Buffer.from(page + body), "page.md");
   validateReference(
@@ -153,6 +155,40 @@ async function fixture() {
   });
   return directory;
 }
+
+test("Check comparison shares text normalization and explicit raw binary selection", async () => {
+  const directory = await fixture();
+  try {
+    const file = join(directory, "text.check.build.yaml");
+    const config: CheckBuild = parse(await readFile(file, "utf8"));
+    await writeFile(join(directory, "payload.bin"), Buffer.from([255, 13, 10, 0]));
+    config.resources = [{ from: "payload.bin", to: "resources/payload.bin" }];
+    config.binary = ["resources/*.bin"];
+    await writeFile(file, stringify(config));
+    let cid: string | undefined;
+    for (const newline of ["\n", "\r\n", "\r"]) {
+      await writeFile(join(directory, "references/en/check.md"), page.replaceAll("\n", newline));
+      const prepared = await prepareCheck(file);
+      const built = await buildTask(prepared.buildFile);
+      cid ??= built.cid;
+      assert.equal(built.cid, cid);
+      const artifact = await readTaskArtifact(built.car);
+      verifyCheckResources(prepared, artifact.files);
+      assert.deepEqual(artifact.files.get("resources/payload.bin"), Buffer.from([255, 13, 10, 0]));
+      const changed = new Map(artifact.files);
+      changed.set("resources/payload.bin", Buffer.from([255, 10, 0]));
+      assert.throws(() => verifyCheckResources(prepared, changed), /bytes differ/);
+      changed.set("resources/payload.bin", artifact.files.get("resources/payload.bin")!);
+      changed.set("resources/references/en/check.md", Buffer.from(`${page}changed\n`));
+      assert.throws(() => verifyCheckResources(prepared, changed), /bytes differ/);
+    }
+    config.binary = ["resources/**"];
+    await writeFile(file, stringify(config));
+    await assert.rejects(prepareCheck(file), /check.json cannot be binary/);
+  } finally {
+    await rm(directory, { recursive: true, force: true, maxRetries: 5 });
+  }
+});
 
 test("Check authoring rejects missing, misnamed, undeclared and invalid inputs", async () => {
   const changes: [string, (directory: string, config: CheckBuild) => Promise<void>][] = [
