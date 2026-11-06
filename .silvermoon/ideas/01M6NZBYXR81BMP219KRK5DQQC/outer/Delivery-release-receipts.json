@@ -1,0 +1,57 @@
+{
+  "observedAt": "2026-11-06T14:56:50.7831764Z",
+  "runs": [
+    {
+      "url": "https://github.com/shazhou-ww/potential-guide/actions/runs/42142928328",
+      "conclusion": "success",
+      "headSha": "61aa5e50e5402e66afb3073b97a990536b2add0e",
+      "jobs": [
+        {
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:18:23Z",
+          "completedAt": "2026-11-06T01:21:08Z",
+          "steps": [
+            {
+              "name": "Publish package",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T01:19:08Z",
+              "completedAt": "2026-11-06T01:19:13Z"
+            },
+            {
+              "name": "Verify published metadata and provenance",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T01:19:13Z",
+              "completedAt": "2026-11-06T01:21:04Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "url": "https://github.com/shazhou-ww/potential-guide/actions/runs/42143360575",
+      "conclusion": "success",
+      "headSha": "61aa5e50e5402e66afb3073b97a990536b2add0e",
+      "jobs": [
+        {
+          "conclusion": "success",
+          "startedAt": "2026-11-06T01:22:09Z",
+          "completedAt": "2026-11-06T01:25:44Z",
+          "steps": [
+            {
+              "name": "Publish package",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T01:22:54Z",
+              "completedAt": "2026-11-06T01:22:59Z"
+            },
+            {
+              "name": "Verify published metadata and provenance",
+              "conclusion": "success",
+              "startedAt": "2026-11-06T01:22:59Z",
+              "completedAt": "2026-11-06T01:25:41Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,58 @@
-# 部署验证与 Pinboard 阻塞
+# 部署验证与授权入口阻塞
 
 本文对应 [Deployment.md](./Deployment.md)。实施已经监督者依据用户授权独立复验、接受并同步；现实世界尚未完成，不提交或接受 Outer。机器证据见 [Deployment-results.json](./Deployment-results.json)。
 
-## 最新观察：MCP 上传成功，Reference 路径仍待验证
+## 最新独立复验：公共 CID 与 Reference 已验证，Ubuntu 入口未确认
+
+本轮于 2026-11-06 独立隔离工作区开展交付验收，基线 primary 为 `3be07d321a57637e9189eda452cfb2f5703eb295`，原 Outer 修订为 `bd83119f936dc2afd57ea90ad6eda3e2df06e468`。[Deployment.md](./Deployment.md) 的步骤、标准和文件内容均未改变（Git blob `42be8318f0078fe5e9d91feacd8e589122aaf0e0`）；未修改源码、Ideal/Inner 合约或事件。以下新证据不把历史 Ubuntu 执行当作当前设备复验。
+
+当前父会话明确未能确认获授权 Ubuntu 的 SSH 目标或用户名，要求不再从既有 SSH 别名推断验收机、不继续探测主机或读取凭据。因此本轮仅在 Windows 上做独立 npm 消费和公共 Gateway 复验，没有开展 Ubuntu 操作。前期只读 SSH 定位未找到已记录的验收目录，不能构成授权或设备证明。当前 MCP 的三个 pin detail 请求也均返回需要认证，未得到新的账户 pin 回执；没有重上传、改 pin、导出凭据或发布 npm。
+
+### 本轮实测与 D-* 结论
+
+机器证据为 [Delivery-verification-results.json](./Delivery-verification-results.json)，可复跑脚本为 [Delivery-verification.mjs](./Delivery-verification.mjs)。
+
+| ID | 当前结论 | 新实测及未满足部分 |
+| --- | --- | --- |
+| D-S01 | 已有发布步骤完成，保留勾选 | 原 MCP 上传回执仍是历史发布事实；本轮已发布 npm CAR 的三个单根 CID 与回执一致，指定公共 Gateway 的全部 17/15/16 个块逐字节匹配 CAR；当前账户 pin metadata 因认证未复查，不能声称获得新上传回执。 |
+| D-S02 | 未完成，重置勾选 | Windows 独立消费者实跑九个公共 CID 用例和两个独立作者用例，11 个 Run 均有 exit/reclaimedAt；授权 Ubuntu 的安装、CLI 和同批执行尚无法当前复验。 |
+| D-AC01 | 未完成 | 三个 CID 的 12 篇说明/问题 Reference 和三个 check.json 已通过标准 UnixFS exporter 按 CID 从公共 raw blocks 解析，逐字节/SHA-256 匹配已发布文件；仍缺获授权 Ubuntu 的当前执行证明。 |
+| D-AC02 | 未完成，重置勾选 | 两个 GitHub Actions 的发布、provenance 校验回执已重新读取，Windows 通过/非空问题/故障/取消和物理释放已实测，独立作者新检查已构建并实际消费；Ubuntu 全套指定版本、CLI、业务结果和物理释放尚无法当前复验。 |
+
+tools/directories/network 的当前 CAR SHA-256 分别为 `eb4f8c14b3284587471fbea9164af4f4bc5a8466959a8643234daaaebf8a6018`、`0833f5bc181c8a8a86d59ad6ce9617a32357599fa8fdfd1e31b2c19b6cefc47c`、`5ca8f0079b24eb997b37706d62a20b6ce9f38a02058d0b86593170882b93c683`。公开读取由已发布 Engine 的 `createIpfsGatewayClient` 验证块 CID，所有 48 个块与已发布 CAR 一致；Reference 使用标准 `ipfs-unixfs-exporter` 解码公开块，不读取仓库源码、不使用本地 Kubo、不用已下载 CAR 作为公共读取 fallback。
+
+三个 HTTP `/ipfs/<cid>/resources/check.json` 请求依然是 404，已原样保留在新 JSON 中，绝未把它们写成成功。既定标准要求“按实际 CID 读取”，没有要求 Gateway 必须支持 HTTP UnixFS 路径；标准 UnixFS/block 读取已实际证明全部内容完整性，因此 Reference 不再是 Windows 侧的未证实项。这不取消 Ubuntu 要求，也不提出源码修复或更改交付门限。
+
+九个公共用例为 tools 通过/问题/超时故障，directories 通过/问题，network 通过/问题/超时故障/取消。通过结果严格为 `{pass:true}`，问题结果为非空 problems；异常为 failed 且没有业务 result；取消为 stopped、canceled=true 且没有业务 result。物理断言额外确认工具超时 PID 不存在、目录探针文件清单恢复、HTTP 活动请求归零，关闭 Engine 与本地端点并删除本轮独占临时数据库/目录。
+
+独立作者仅复制已安装 `check-sdk@0.1.0` 的 text 示例到仓库外项目，用实际发布的 SDK/Task SDK/Bundle 包构建。构建回执见 [Delivery-author-receipt.json](./Delivery-author-receipt.json)，CAR CID 为 `bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu`，SHA-256 为 `13a43fb808802e0aaedb138d6c2cd1a758fb3f5dbe68357a437453ffb74d9061`。该新检查通过/问题两项由第二个独立 Engine 按 CAR 根 CID 实际执行，两次均有物理释放。它使用本地作者 CAR 块，不冒称该示例已经公共发布或在 Ubuntu 执行。
+
+### 发布回执与复现
+
+[Delivery-release-receipts.json](./Delivery-release-receipts.json) 保存本轮重新查询的 SDK/environment Action 结果：均指向 `61aa5e50e5402e66afb3073b97a990536b2add0e`，实际 Publish package 和 Verify published metadata and provenance 均 success；SDK 完成早于 environment 开始。这是对已发生发布的当前外部查证，不是再次发布。
+
+在仓库之外新建消费者项目，固定依赖：check-environment/check-sdk `0.1.0`，task-sdk/task-engine/task-engine-http/pguide-task-bundle `0.1.0-rc.0`，task-engine-server `0.1.0-rc.1`，TypeBox `0.34.52`，`@ipld/car` `5.4.6`，`ipfs-unixfs-exporter` `16.2.3`。执行 `pnpm install --ignore-scripts`。首次本轮验证不依赖仓库 node_modules；复跑只需要这些公共包、复制的发布示例和网络。
+
+```powershell
+$consumer = 'C:\owned\public-check-consumer'
+Copy-Item -LiteralPath "$consumer\node_modules\@potential-guide\check-sdk\examples\text" -Destination "$consumer\author" -Recurse
+node "$consumer\author\build.mjs"
+node --experimental-import-meta-resolve '.silvermoon\ideas\01M6NZBYXR81BMP219KRK5DQQC\outer\Delivery-verification.mjs' $consumer 'C:\owned\delivery-results.json'
+gh run view 42142928328 --repo shazhou-ww/potential-guide --json conclusion,headSha,jobs,url
+gh run view 42143360575 --repo shazhou-ww/potential-guide --json conclusion,headSha,jobs,url
+```
+
+脚本开发时修正了验收工具自身的 ESM import 条件、可信 caller 的 scope/subject、请求业务字段应在顶层以及 Task snapshot 的 run.runId 路径；最终完整脚本退出 0、11 项实际运行完成。没有据此修改产品实现或掩盖失败。新 JSON 是最终完整复跑的结果，而非早期失败结果的拼接。
+
+本轮仓库 `pnpm check` 已实际运行：sources/layers/format/lint/typecheck 阶段通过，test 在既有 `pguide-task-bundle` symlink 用例报 Windows `EPERM` 后退出 1，pack:check 未执行。首次缺依赖的自动恢复还遇到共享 pnpm store 的 SQLite 损坏；随后用本轮自有 store 完成 frozen 安装，没有修复/删除共享 store 或改宿主配置。可在支持创建符号链接的获授权环境重新运行完整检查；本轮不跳过这些测试、不擅自调整权限。公共消费者脚本的完整实跑退出 0，与仓库测试结论分别记录。
+
+### 阻塞与下一步
+
+恢复条件是上游明确确认获授权 Ubuntu 的设备入口及操作范围；再在独占目录、随机 loopback 端口和保留宿主配置的条件下复验全套指定包版本/CLI、公共 CID/Reference、11 项业务和物理释放。无需重复 npm 发布；不因直接 HTTP 路径 404 而要求改 Engine/SDK。若需要重新核查 Pinboard 账户 pin metadata，另需恢复当前 MCP 授权，不能转抄历史授权或 OAuth 凭据。
+
+当前 D-S02、D-AC01、D-AC02 不满足，不能提交 Outer；没有 submitOuter、acceptOuter 或 completed，也未到 human gate、没有 response.review 验收索引。下列内容均为旧时点的历史证据，不能覆盖本节结论。
+
+## 历史观察：MCP 上传成功，Reference 路径仍待验证
 
 用户恢复 MCP 授权后，已通过 MCP 上传三个正确的完整单根 CAR，全部回执 CID 与已发布 npm 包及原独立执行证据一致。CLI 仍缺少独立 API token；没有复制 OAuth 凭据。最新机器证据见 [Public-delivery-observations.json](./Public-delivery-observations.json)，后文的认证失败和首次安装是历史时点，不再代表 MCP 当前不可用。
 

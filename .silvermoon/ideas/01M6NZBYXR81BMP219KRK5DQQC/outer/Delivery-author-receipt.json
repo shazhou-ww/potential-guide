@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-11-06T15:05:15.6731247Z",
+  "source": "Installed published check-sdk@0.1.0 example copied outside repository",
+  "node": "v24.12.0",
+  "buildExitCode": 0,
+  "cid": "bafybeicldl4w2juh77ex3adu5hbxebljdnvt6te2many2tgphlkf2uqtqu",
+  "car": "author/dist/staging/text/bundle.car",
+  "carSha256": "13a43fb808802e0aaedb138d6c2cd1a758fb3f5dbe68357a437453ffb74d9061",
+  "declaration": {
+    "$schema": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json",
+    "name": "Nonempty text check",
+    "runtime": {
+      "type": "node",
+      "minVersion": "22.13.0"
+    },
+    "entry": "worker.cjs",
+    "inputSchema": {
+      "$ref": "schemas/0.json"
+    },
+    "resultSchema": {
+      "$ref": "schemas/1.json"
+    },
+    "messageSchema": {
+      "$ref": "schemas/2.json"
+    },
+    "include": [
+      "resources/check.json",
+      "resources/references/en/check.md",
+      "resources/references/en/problems/text-empty.md",
+      "schemas/0.json",
+      "schemas/1.json",
+      "schemas/2.json",
+      "task.yaml",
+      "worker.cjs"
+    ]
+  }
+}
