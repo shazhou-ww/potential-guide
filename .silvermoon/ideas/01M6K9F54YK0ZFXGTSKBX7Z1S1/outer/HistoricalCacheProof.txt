@@ -1,0 +1,4 @@
+measure (22.13.0)	Verify candidate worker cache restoration	2026-11-04T15:04:48.6618267Z Cached:    38 cached, 38 total
+measure (22.13.0)	Verify candidate worker cache restoration	2026-11-04T15:04:48.7932129Z All staged worker resources restored byte-for-byte from build cache.
+measure (24.11.1)	Verify candidate worker cache restoration	2026-11-04T14:51:45.1601190Z Cached:    38 cached, 38 total
+measure (24.11.1)	Verify candidate worker cache restoration	2026-11-04T14:51:45.2412403Z All staged worker resources restored byte-for-byte from build cache.

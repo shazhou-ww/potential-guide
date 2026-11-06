@@ -1,0 +1,187 @@
+diff --git a/.github/workflows/ci.yaml b/.github/workflows/ci.yaml
+index 68b2c304..8f400cde 100644
+--- a/.github/workflows/ci.yaml
++++ b/.github/workflows/ci.yaml
+@@ -60,0 +61,31 @@ jobs:
++  package-consumers:
++    name: Isolated package consumers
++    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
++    runs-on: ubuntu-latest
++    timeout-minutes: 20
++
++    steps:
++      - name: Check out repository
++        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
++        with:
++          persist-credentials: false
++
++      - name: Set up pnpm
++        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
++        with:
++          run_install: false
++
++      - name: Set up Node.js
++        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
++        with:
++          node-version: 24.11.1
++          cache: pnpm
++
++      - name: Install dependencies
++        run: pnpm install --frozen-lockfile
++
++      - name: Validate isolated package consumers
++        env:
++          PGUIDE_PACK_CONSUMER_ROOT: ${{ runner.temp }}
++        run: pnpm consumers:check
++
+@@ -107,0 +139,20 @@ jobs:
++
++  release-verification:
++    name: Release verification (v1)
++    needs: [check, package-consumers, deployment-cli]
++    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
++    runs-on: ubuntu-latest
++    timeout-minutes: 1
++    steps:
++      - name: Confirm all release checks passed
++        env:
++          CHECK_RESULT: ${{ needs.check.result }}
++          CONSUMERS_RESULT: ${{ needs.package-consumers.result }}
++          DEPLOYMENT_RESULT: ${{ needs.deployment-cli.result }}
++        run: |
++          if [ "$CHECK_RESULT" != success ] ||
++             [ "$CONSUMERS_RESULT" != success ] ||
++             [ "$DEPLOYMENT_RESULT" != success ]; then
++            echo "::error::Release verification requires all checks, package consumers and deployment jobs to succeed."
++            exit 1
++          fi
+diff --git a/package.json b/package.json
+index c234094a..3ab90030 100644
+--- a/package.json
++++ b/package.json
+@@ -25 +24,0 @@
+-    "task-workers:check": "node scripts/embed-task-workers.mjs check-runtime-files --check && node scripts/embed-task-workers.mjs check-task --check && node scripts/embed-task-workers.mjs probe-task --check",
+@@ -27,2 +26,2 @@
+-    "build": "turbo run build",
+-    "sources:check": "pnpm run settings:check && node scripts/check-generated-sources.mjs && pnpm run task-workers:check",
++    "build": "node scripts/build.mjs",
++    "sources:check": "pnpm run settings:check && node scripts/check-generated-sources.mjs",
+@@ -39 +38 @@
+-    "test": "pnpm run sources:check && pnpm run build && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test --concurrency=2 && node --test scripts/*.test.mjs",
++    "test": "pnpm run sources:check && pnpm run build && pnpm schemas:check && pnpm self-check:check && pnpm health:check && pnpm monorepo:check && pnpm setup:check && pnpm workers:check && turbo run test --concurrency=2 && node --test --test-concurrency=2 scripts/*.test.mjs",
+diff --git a/scripts/build.mjs b/scripts/build.mjs
+new file mode 100644
+index 00000000..44f2a62b
+--- /dev/null
++++ b/scripts/build.mjs
+@@ -0,0 +1,51 @@
++import { fileURLToPath } from "node:url";
++import { resolve } from "node:path";
++import spawn from "cross-spawn";
++
++const root = fileURLToPath(new URL("..", import.meta.url));
++async function environmentInputs(directory) {
++  const { environmentCacheInputs } = await import("./environment-cache-inputs.mjs");
++  return environmentCacheInputs(directory);
++}
++export async function buildWorkspace(args = [], run = spawn.sync, cacheInputs = environmentInputs) {
++  let acceptEnvironment = args.length === 0;
++  if (args.length) {
++    const plan = run("pnpm", ["exec", "turbo", "run", "build", ...args, "--dry=json"], {
++      cwd: root,
++      env: process.env,
++      encoding: "utf8",
++    });
++    if (plan.error) throw plan.error;
++    if (plan.status !== 0) throw new Error(plan.stderr || "Cannot inspect filtered build plan.");
++    const tasks = JSON.parse(plan.stdout).tasks;
++    if (
++      !Array.isArray(tasks) ||
++      tasks.length === 0 ||
++      tasks.some((task) => !task || typeof task.taskId !== "string")
++    )
++      throw new Error("Invalid filtered build plan.");
++    acceptEnvironment = tasks.some(
++      (task) => task.taskId === "@potential-guide/check-environment#build",
++    );
++  }
++  const env = { ...process.env };
++  if (acceptEnvironment) env.PGUIDE_ENVIRONMENT_BINARY_INPUTS = await cacheInputs(root);
++  const commands = [["exec", "turbo", "run", "build", ...args]];
++  if (acceptEnvironment)
++    commands.push([
++      "exec",
++      "turbo",
++      "run",
++      "verify",
++      "--filter=@potential-guide/check-environment",
++    ]);
++  for (const command of commands) {
++    const result = run("pnpm", command, { cwd: root, env, stdio: "inherit" });
++    if (result.error) throw result.error;
++    if (result.status !== 0) return result.status ?? 1;
++  }
++  return 0;
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
++  process.exitCode = await buildWorkspace(process.argv.slice(2));
+diff --git a/scripts/check-generated-sources.mjs b/scripts/check-generated-sources.mjs
+index d5985ef6..e664f6b1 100644
+--- a/scripts/check-generated-sources.mjs
++++ b/scripts/check-generated-sources.mjs
+@@ -7,9 +7 @@ import spawn from "cross-spawn";
+-export const generatedSources = [
+-  "pguide-cli-core/src/built-in-settings.ts",
+-  ...["check-runtime-files", "check-task", "probe-task"].flatMap((name) =>
+-    (name === "check-task"
+-      ? ["runtime-identity.ts"]
+-      : ["worker-source.ts", "runtime-identity.ts"]
+-    ).map((file) => `${name}/src/${file}`),
+-  ),
+-];
++export const generatedSources = ["pguide-cli-core/src/built-in-settings.ts"];
+diff --git a/turbo.json b/turbo.json
+index 1128f0eb..a0e1e5cd 100644
+--- a/turbo.json
++++ b/turbo.json
+@@ -4,4 +4,4 @@
+-    "@potential-guide/check-runtime-files#build": {
+-      "dependsOn": ["^build"],
+-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/embed-task-workers.mjs"],
+-      "outputs": ["dist/**"]
++    "@potential-guide/check-environment#verify": {
++      "dependsOn": ["build"],
++      "cache": false,
++      "outputs": []
+@@ -9 +9 @@
+-    "@potential-guide/check-task#build": {
++    "@potential-guide/check-environment#build": {
+@@ -11,4 +11,19 @@
+-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/embed-task-workers.mjs"],
+-      "outputs": ["dist/**"]
+-    },
+-    "@potential-guide/probe-task#build": {
++      "env": ["PGUIDE_ENVIRONMENT_BINARY_INPUTS"],
++      "inputs": [
++        "$TURBO_DEFAULT$",
++        "$TURBO_ROOT$/packages/task-protocol/src/**",
++        "$TURBO_ROOT$/packages/pguide-task-bundle/src/**",
++        "$TURBO_ROOT$/packages/check-sdk/src/authoring.ts",
++        "$TURBO_ROOT$/scripts/environment-cache-inputs.mjs"
++      ],
++      "outputs": [
++        "dist/*.js",
++        "dist/*.d.ts",
++        "dist/*.map",
++        "dist/tasks/**",
++        "dist/definitions/**",
++        "dist/staging/**",
++        "dist/candidate/**"
++      ]
++    },
++    "@potential-guide/check-sdk#build": {
+@@ -16,2 +31 @@
+-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/embed-task-workers.mjs"],
+-      "outputs": ["dist/**"]
++      "outputs": ["dist/**", "examples/text/dist/**"]

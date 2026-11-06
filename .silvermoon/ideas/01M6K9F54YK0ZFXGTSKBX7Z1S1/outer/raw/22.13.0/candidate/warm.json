@@ -1,0 +1,39 @@
+{
+  "label": "warm",
+  "revision": "c50c6fac463b903f224056321ef96a780cef7a65",
+  "node": "v22.13.0",
+  "pnpm": "11.22.0",
+  "platform": "linux-x64",
+  "seconds": 89.352847719,
+  "code": 0,
+  "stages": [
+    {
+      "stage": "sources:check",
+      "seconds": 3.212331516
+    },
+    {
+      "stage": "layers:check",
+      "seconds": 3.0304409100000003
+    },
+    {
+      "stage": "format:check",
+      "seconds": 1.087811116
+    },
+    {
+      "stage": "lint",
+      "seconds": 0.9199751219999999
+    },
+    {
+      "stage": "typecheck",
+      "seconds": 9.327195993
+    },
+    {
+      "stage": "test",
+      "seconds": 42.760633985
+    },
+    {
+      "stage": "pack:check",
+      "seconds": 27.737895309
+    }
+  ]
+}
