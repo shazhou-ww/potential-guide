@@ -4,7 +4,7 @@
 
 ### D-S01: 通过 Pinboard 发布检查 CAR
 
-通过标准流程检查三个 CAR，使用 `pinboard import <archive.car> --name <label> --endpoint https://pinboard.shazhou.work` 发布到用户的 Pinboard，核对返回 CID 与本地构建 CID 一致。Pinboard 是公开 IPFS 存储，仅发布确认可公开的自包含检查制品，不上传仓库、凭据或私有配置。记录提交、工具版本、制品名称和 CID；不代管生产服务。
+通过标准流程检查三个 CAR，优先使用 `pinboard import <archive.car> --name <label> --endpoint https://pinboard.shazhou.work` 发布到用户的 Pinboard。用户恢复 MCP 授权而 CLI 仍缺少独立 token 时，可通过已授权 MCP 上传相同的完整单根 CAR，不复制或导出 OAuth 凭据。两条通道均须核对返回 CID 与本地构建 CID 一致。Pinboard 是公开 IPFS 存储，仅发布确认可公开的自包含检查制品，不上传仓库、凭据或私有配置。记录提交、工具版本、制品名称和 CID；不代管生产服务。
 
 ### D-S02: 验证实际结果与结束状态
 
