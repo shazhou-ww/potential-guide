@@ -43,6 +43,15 @@ const source = createServer((request, response) => {
   response.end(bytes);
 });
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
+function requestId() {
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  let time = BigInt(Date.now()), prefix = "";
+  for (let i = 0; i < 10; i++) {
+    prefix = alphabet[Number(time % 32n)] + prefix;
+    time /= 32n;
+  }
+  return prefix + [...randomBytes(16)].map((byte) => alphabet[byte % 32]).join("");
+}
 async function bounded(promise, ms = 30000) {
   let timer;
   try {
@@ -72,7 +81,7 @@ try {
     for (const ui of [false, true]) {
       const entry = discovered ? join(owned, "runtime", "node_modules", "pguide", "dist", "bin.js")
         : join(owned, "runtime", "node_modules", "@potential-guide", "pguide-task-engine", "dist", "main.js");
-      const database = `diagnostic-${discovered}-${ui}.sqlite`;
+      const database = `diagnostic-${discovered}-${ui}-${randomBytes(8).toString("hex")}.sqlite`;
       const args = [join(owned, "signal-wrapper.mjs"), entry,
         ...(discovered ? ["task-engine"] : []), "--no-global-config", "--port", "0",
         "--database", database, "--ipfs-gateway-url", gateway,
@@ -101,7 +110,7 @@ try {
       assert.ok(ready, "无 ready");
       assert.equal(Boolean(ready.uiUrl), ui);
       assert.equal((await http(`${ready.url}/tasks`)).status, 200);
-      const id = "01" + randomBytes(24).toString("hex").slice(0, 24).toUpperCase();
+      const id = requestId();
       const submitted = await http(`${ready.url}/tasks`, { method: "POST",
         headers: { "content-type": "application/json", "idempotency-key": id },
         body: JSON.stringify({ bundle: previous.bundle.cid,
