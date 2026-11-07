@@ -7,7 +7,7 @@ import { Worker } from "node:worker_threads";
 import { resolveBundleSchemas, taskSchemaUri } from "@potential-guide/task-protocol";
 import { buildTaskBundle } from "../src/build.js";
 
-for (const mode of ["timeout", "cancel", "unawaited", "host-invalid"]) {
+for (const mode of ["stored", "timeout", "cancel", "unawaited", "host-invalid"]) {
   test(`SDK diagnostic ${mode} is bounded and independent from required output queue`, async () => {
     const directory = resolve(".cache", `sdk-logs-${randomUUID()}`);
     await mkdir(directory, { recursive: true });
@@ -22,21 +22,24 @@ for (const mode of ["timeout", "cancel", "unawaited", "host-invalid"]) {
       messageSchema: false,
     };
     await writeFile(join(directory, "task.yaml"), JSON.stringify(declaration));
-    await writeFile(
-      join(directory, "callback.ts"),
-      `
-export default async (_input, context) => {
+    const callback = `async (_input, context) => {
   const operation=context.log({level:"info",message:"diagnostic"});
   if(${JSON.stringify(mode)}==="unawaited") { void operation; await context.progress({stage:"execution",message:"required"}); return {ok:true}; }
   try { const receipt=await operation; await context.progress({stage:"execution",message:"required"}); return receipt; }
   catch(error) { return {code:error.code}; }
-}`,
+}`;
+    await writeFile(
+      join(directory, "callback.ts"),
+      mode === "stored"
+        ? `import {runTask} from "@potential-guide/task-sdk"; runTask(${callback});`
+        : `export default ${callback};`,
     );
     let worker: Worker | undefined;
     try {
       const built = await buildTaskBundle({
         declaration: join(directory, "task.yaml"),
         entry: join(directory, "callback.ts"),
+        entryMode: mode === "stored" ? "explicit" : "callback",
         outDirectory: join(directory, "bundle"),
       });
       const generation = randomUUID();
@@ -63,6 +66,17 @@ export default async (_input, context) => {
             worker!.postMessage({ generation, kind: "run", runId: "run", scope: "a", input: {} });
           else if (message.kind === "log") {
             logAt = performance.now();
+            assert.equal(message.generation, generation);
+            assert.equal(message.runId, "run");
+            assert.deepEqual(message.value, { level: "info", message: "diagnostic" });
+            if (mode === "stored")
+              worker!.postMessage({
+                generation,
+                runId: "run",
+                kind: "log-ack",
+                logId: message.logId,
+                value: { state: "stored", sequence: 7 },
+              });
             if (mode === "cancel")
               worker!.postMessage({ generation, runId: "run", kind: "cancel" });
             if (mode === "host-invalid")
@@ -88,7 +102,9 @@ export default async (_input, context) => {
           }
         });
       });
-      if (mode === "timeout") {
+      if (mode === "stored") {
+        assert.deepEqual(value, { state: "stored", sequence: 7 });
+      } else if (mode === "timeout") {
         assert.deepEqual(value, { state: "unavailable", reason: "timeout" });
         assert.ok(performance.now() - logAt < 2500);
       } else if (mode === "cancel") {

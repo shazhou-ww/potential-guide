@@ -1,10 +1,14 @@
 # Task Run 日志简短设计
 
-这是当前实施设计，API 与协议以源码和当前运行文档为准；[Evidence.md](Evidence.md) 保留被取代的 v2 历史验证。它服务于
+这是当前实施设计，API 与协议以源码和当前 axis 为准；
+[Evidence-v1.md](Evidence-v1.md) 提供当前证明，[Evidence.md](Evidence.md) 保留被取代的 v2 历史验证。它服务于
 [Implementation.md](Implementation.md) 的 I-S01、I-S02、I-S03；构想验收范围仍由
 [Idea.md](ideal/Idea.md) 定义；不改变已接受构想或代替 Deployment gate。
 完整运行说明与独立本地 tarball / standalone UI 步骤见
 [Run Logs](../../../../../docs/task-run-logs.md)。
+架构职责以 [RunContext](../../../../../docs/axis/task-engine-contracts/run-context.md)、
+[Run 日志](../../../../../docs/axis/task-engine-contracts/run-logs.md)和
+[C6/C7](../../../../../docs/axis/task-engine-responsibilities.md#c6-查询-run-诊断日志)为准。
 
 ## 范围与链路
 
@@ -26,9 +30,10 @@
 
 实施前 [RunContext](../../../../../packages/task-protocol/src/run.ts) 只提供
 `progress(value): Promise<void>` 和 `checkpoint(value): Promise<void>`；现在另有 typed async `log`。
-作者提供默认导出的异步回调，生成入口调用 `runTask`，不直接操作 parentPort。
+当前作者显式调用 `runTask(callback)`；回调接收继承 `RunContext` 的 `TaskContext`，
+包含真实的 `log` 方法，不直接操作 parentPort。低层 callback 构建模式仍用于兼容样例。
 
-### Before：现有 SDK 用法
+### Before：新增日志前的用法
 
 以下来自现有 [echo 回调](../../../../../packages/pguide-task-bundle/examples/low-level/echo/callback.ts)，
 progress 表示执行阶段，Result 只返回业务数据：
@@ -42,7 +47,7 @@ export default async function echo(input: { text: string }, context: RunContext)
 }
 ```
 
-如需详细诊断，目前没有独立作者 API。塞入 progress 会混淆业务进度；
+新增日志前没有独立作者 API。塞入 progress 会混淆业务进度；
 塞入 Result 会扩大或改变业务 Schema；console/stderr 不是可查询的 Run 日志历史。
 
 ### After：已固定 API
@@ -70,9 +75,9 @@ log(value: RunLogInput): Promise<RunLogReceipt>;
 Worker 回调示例（使用 v1 声明与当前 SDK）：
 
 ```ts
-import type { RunContext } from "@potential-guide/task-sdk";
+import { runTask } from "@potential-guide/task-sdk";
 
-export default async function echo(input: { text: string }, context: RunContext) {
+runTask(async function echo(input: { text: string }, context) {
   await context.progress({ stage: "execution", message: "Echoing the supplied text." });
   await context.log({
     level: "debug",
@@ -82,7 +87,7 @@ export default async function echo(input: { text: string }, context: RunContext)
   const result = { text: input.text };
   await context.log({ level: "info", message: "处理完成。" });
   return result;
-}
+});
 ```
 
 业务 Result 不变，详细日志不再占用 progress。作者不用填写 runId、generation、
@@ -94,13 +99,17 @@ export default async function echo(input: { text: string }, context: RunContext)
 上述示例选择让业务继续，缺失状态仍必须在消费 API 和 UI 可见，不能伪装写入成功。
 确认超时意味着写入结果未知，不自动重试或声称一定未写入。
 无效级别、非 JSON 字段等编程错误以明确的 TaskError 拒绝，不吞掉错误。
+SDK 负责有界队列、身份路由与确认，不自动遍历业务或日志 payload；
+Engine 校验 IPC structured-clone 后的日志值。不可克隆的值在发送端以 `invalid_payload`
+拒绝，不消耗日志序号；不能声称宿主看到了原始对象描述符。
 
 ## Worker、Engine 与保留边界
 
 - 唯一 v1 (`https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task/v1.json`)
   包含 `log` / `log-ack` / 累计聚合 `log-drop` / `log-drop-ack`，
   使用独立 `logId`，见 [Task Bundle v1 协议](../../../../../docs/task-bundle-worker.md)。
-  项目尚未正式发布，v1 可原地演进；已移除的 v2 与未来未知版本在执行前拒绝，不做别名。
+  当前 axis 的 `frozen: false` 允许 v1 原地演进；不由发布状态推断契约是否冻结。
+  已移除的 v2 与未来未知版本在执行前拒绝，不做别名。
   v1 支持日志；禁用、自定义宿主不支持日志仍须区别于“无日志”。
 - 宿主校验 generation、Run 与 scope，对同一 Run 分配单调序号及宿主接收时间。
   顺序以宿主接受顺序为准，不用 Worker 时钟推导跨 Run 顺序。
@@ -134,7 +143,7 @@ API 复用 Run 读取的身份与 scope 校验；不能仅凭 runId 读取其他
 保留失效报告 `gap` / `expired`，断连由客户端按游标补读；
 实时订阅不是无限内存队列，也不承诺任意旧序号永久可回放。
 
-在 [Task Engine Web UI](../../../../../apps/task-engine-web-ui) 的 Run 详情增加独立
+在 [Task Engine Web UI](../../../../../apps/task-engine-webui) 的 Run 详情增加独立
 Logs 区域，与 Result、progress 和现有事件历史分开：
 
 - 显示时间、级别、完整保留的 message 和展开的结构化 fields；当前 Run 身份始终可见。
@@ -148,7 +157,7 @@ Logs 区域，与 Result、progress 和现有事件历史分开：
 I-AC01 验证同一真实 SDK bundle 的日志与精简 Result 分离；
 I-AC02 验证 HTTP、历史/实时衔接及 Web UI 按 Run 隔离；
 I-AC03 验证失败、取消、强制停止、容量、存储故障与慢消费者下资源有界且缺失可见。
-实际命令、结果、源码定位与基线失败区分统一见 [Evidence.md](Evidence.md)。
+当前命令、结果、源码定位与环境阻塞区分统一见 [Evidence-v1.md](Evidence-v1.md)。
 
 ## 固定容量与实施调整
 
@@ -173,5 +182,5 @@ I-AC03 验证失败、取消、强制停止、容量、存储故障与慢消费�
   不可用/过期/不支持/禁用的完整性为 unknown。Logs 不制造物理清理证明。
 - UI 独立跟随与暂停，历史页替换当前窗口；实时窗口最多 300 条 / 1 MiB，
   超限可见。切换 Run 与较晚返回的历史读取使用 AbortController 和代际隔离。
-- check 作者适配器显式记录选定的问题 kind/id/index 与汇总，不转储问题参数。
-  SDK 另提供逐项 assertion 的精简 Result 样例及 standalone UI 实际链路测试。
+- 通用 SDK 的逐项 assertion 样例返回精简 Result，详细诊断只写入 Logs；
+  standalone UI 测试使用该样例，不依赖已退休的 Check 专用作者适配器。
