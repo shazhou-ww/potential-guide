@@ -145,16 +145,25 @@ Publish only after each upstream version is available, in these groups:
 
 | Group | Packages | Candidate guidance |
 | --- | --- | --- |
-| 1 | `task-protocol`, `cli-core` | Protocol: `0.1.0-rc.0`; CLI Core: current `0.3.0-rc.0` candidate |
-| 2 | `task-sdk`, `task-engine-http`, `task-engine-storage`, `task-engine-webui` | `0.1.0-rc.0` |
-| 3 | `pguide-task-bundle`, `task-engine` | `0.1.0-rc.0` |
-| 4 | `task-engine-server` | `0.1.0-rc.0` |
-| 5 | `pguide-task-engine` | `0.1.0-rc.0` |
+| 1 | `task-protocol`, `cli-core` | Protocol: `0.1.0-rc.1`; CLI Core: already published `0.3.0-rc.0`, unchanged |
+| 2 | `task-sdk`, `task-engine-http`, `task-engine-storage`, `task-engine-webui` | `0.1.0-rc.1` |
+| 3 | `pguide-task-bundle`, `task-engine` | `0.1.0-rc.1` |
+| 4 | `task-engine-server` | `0.1.0-rc.2` |
+| 5 | `pguide-task-engine` | `0.1.0-rc.3` |
+| 6 | `check-sdk` | `0.2.0-rc.0` |
+| 7 | `check-environment` | `0.2.0-rc.0` |
 
-After removing the unused Artifact Files dependency, version preparation preserves eight existing `0.1.0-rc.0` candidates and
-CLI Core's `0.3.0-rc.0`; only the UI moves from `0.1.0` to `0.1.0-rc.0`.
-The resulting ten-package scope contains nine `0.1.0-rc.0` candidates and
-one `0.3.0-rc.0` candidate. Neither Check support package needs a version change.
+The Bundle normalization follow-up advances the nine generic Task packages
+within their existing candidate series and leaves CLI Core unchanged.
+It also advances both Check packages from stable `0.1.0` to `0.2.0-rc.0`
+because the emitted Bundle contract is incompatible. This eleven-package RC
+release must not move any `latest` tag. Internal `workspace:^` dependencies
+are packed against the updated manifest versions, including the new protocol
+and Engine minimum candidates. The independent Check text example uses these
+same candidates.
+Rebuild old Bundles without the required `binary` declaration. Publishing npm
+packages does not import or pin the rebuilt CARs; artifact delivery and consumer
+CID updates remain separate operations.
 Unified verification must confirm each source manifest version, its matching
 release tag, and every packed internal dependency range against the dependency's
 actual manifest version before publishing.

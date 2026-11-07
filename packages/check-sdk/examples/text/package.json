@@ -6,9 +6,9 @@
     "build": "node build.mjs"
   },
   "dependencies": {
-    "@potential-guide/check-sdk": "0.1.0",
-    "@potential-guide/task-sdk": "0.1.0-rc.0",
-    "@potential-guide/pguide-task-bundle": "0.1.0-rc.0",
+    "@potential-guide/check-sdk": "0.2.0-rc.0",
+    "@potential-guide/task-sdk": "0.1.0-rc.1",
+    "@potential-guide/pguide-task-bundle": "0.1.0-rc.1",
     "@sinclair/typebox": "0.34.52"
   }
 }

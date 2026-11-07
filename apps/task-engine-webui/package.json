@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/task-engine-webui",
-  "version": "0.1.0-rc.0",
+  "version": "0.1.0-rc.1",
   "description": "Local HTTP task workbench and packaged browser assets.",
   "exports": {
     "./server": {

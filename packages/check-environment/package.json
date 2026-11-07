@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/check-environment",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.0",
   "description": "Reusable tool version, directory and network checks delivered as standalone Task Bundles.",
   "type": "module",
   "main": "./dist/index.js",

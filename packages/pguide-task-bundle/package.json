@@ -1,6 +1,6 @@
 {
   "name": "@potential-guide/pguide-task-bundle",
-  "version": "0.1.0-rc.0",
+  "version": "0.1.0-rc.1",
   "description": "Offline TypeBox Task Bundle authoring and CAR inspection for pguide.",
   "type": "module",
   "sideEffects": false,
