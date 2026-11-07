@@ -13,7 +13,8 @@ author check/build/artifact check，验证 SDK 明确依赖、独立类型检查
 
 ### D-S02: 验证真实 Engine 数据职责与隔离执行
 
-把完整 Bundle 复制到独立执行目录，通过真实 Engine 验证 CID/DAG、声明握手、
+将完整验证块装配到独立测试的显式离线 block port，以根 CID Request 经当前公开 Engine
+执行，不注册类型、不依赖退役目录装载入口。验证 CID/DAG、声明握手、
 input/message 投递及 result/checkpoint/failed.result 接纳。执行阶段断网，不依赖作者
 源码、contract 或构建工具。宿主自己的已声明 Schema/CID 依赖允许存在，但 Worker
 只能使用 Bundle 和 Node 内置模块。最低 Node 与当前支持环境均验证有效数据及
@@ -45,6 +46,6 @@ RunFailure 证据在接纳前拒绝；捕获/忽略 NACK 不导致成功、持�
 
 ### D-AC03: 体积及来源可追溯
 
-独立消费默认模板的 Worker 和全部 Bundle 字节低于同环境旧包基线，不借旁路/外部
+独立消费默认模板的 Worker 和全部 Bundle 字节低于同环境旧重复校验包基线，不借旁路/外部
 依赖转移。包摘要、提交和依赖图与实际输出对应，声明/引用仍绑定，解释与实施阶段
-数据的差别。不给所有业务任务作统一降幅承诺，不以 gzip 或仓库内测试替代此验收。
+数据的差别；历史 20784/21547、11196/11959 不代表当前样本。不给所有业务任务作统一降幅承诺，不以 gzip 或仓库内测试替代此验收。

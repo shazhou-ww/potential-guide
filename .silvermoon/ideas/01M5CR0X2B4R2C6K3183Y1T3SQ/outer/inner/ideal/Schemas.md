@@ -1,6 +1,39 @@
 # Schema 逐项讨论清单
 
-本文保存规范讨论及逐项评审意见，不是已批准的完整格式设计。局部明确的修改方向与待讨论建议分别记录，不因排列顺序或候选建议而自动定案。
+本文服务于[当前 Idea](./Idea.md)，先给出 2026-11-07 的活动目录与评审边界。
+后续旧逐项清单、评审意见及 Review.html 是历史材料，不是实时产品目录、当前规范
+或已经批准的完整格式设计；不因排列顺序、旧版本号或子 IDEA 接受自动定案。
+
+## 当前活动目录与评审边界
+
+| 格式族 | 当前归属与规范来源 | 本 IDEA 的处理 |
+| --- | --- | --- |
+| Task Bundle / Task Build | [Bundle Axis](../../../../../../docs/axis/task-engine-contracts/task-bundle.md)、task/v1 与 task-build/v1 机器 Schema、作者 CLI | 已有明确 URI、`$schema`、离线 Schema 闭包与 CID 身份；复核文档一致性，不重开发布域名或恢复 v2/URL-Digest |
+| Task/Run/Request 公开协议 | [职责入口](../../../../../../docs/axis/task-engine-responsibilities.md)及受理、匹配、观察、终止契约 | 按数据域与事实边界分类；业务类型定义不得扩展为核心 prerequisites/周期状态机 |
+| 生命周期事件、查询与订阅 | [revision](../../../../../../docs/axis/task-engine-contracts/revision.md)、pagination、subscription | revision 是源事件位置/水位，cursor 不是格式版本；独立时间推算不造事实 |
+| Run 日志及 Worker 通信 | [日志](../../../../../../docs/axis/task-engine-contracts/run-logs.md)、run-context、Worker 文档 | 诊断 sequence/ACK 与生命周期独立；不因日志可见就承诺永久回放或把日志当结果 |
+| Task 内部存储及恢复 | [持久化](../../../../../../docs/axis/task-engine-contracts/persistence-recovery.md)、数据域契约 | 内部格式校验不变成公共 Schema 承诺；未知旧域明确拒绝且原样保留，不自动迁移或重演 |
+| Check 作者声明、资源索引与结果 | [Check SDK](../../../../../../packages/check-sdk/README.md)、环境包与其 Schema | 业务规范独立于 Engine；复核生产者/消费者与公共范围，不恢复旧 Host/Probe 适配器 |
+| Objective/Pilot/Agent 公开定义 | [Objective 规范](../../../../../../docs/objective-contracts.md)、现行机器 Schema 与各包 | 引用已落实子项，逐项核对当前 active URI，不把历史 v1/v2 直接当现状或自动升级 |
+| 主配置与扩展描述 | [包设置](../../../../../../docs/package-settings.md)、[分层](../../../../../../docs/package-layering.md) | 已落实 JSONC、完整 setting ID 与扩展自有 key；不恢复核心集中枚举或旧配置入口 |
+| Regulator/Coordinator 的输出与恢复 | 现存库、[Supervisor 退役说明](../../../../../../docs/supervisor-retirement.md)及各自 README | 仍需逐个确认第三方消费与内部持久化承诺；不将退役 Portfolio 或新治理 Bundle 方案混成当前格式 |
+| 通用 CLI 输出与证据文件 | 共享 CLI 与具体交付工具的公开入口 | 分别确认机器接口、诊断和业务报告范围；内部 Evidence JSONL 不因文件名自动成为核心事件协议 |
+
+项目公开机器定义已位于
+`https://shazhou-ww.github.io/potential-guide/schemas/`，采用相应格式的 `$schema`；
+现有本地定义不等于本轮重新确认公网可获取，外部可用性须另行实测。
+Axis 当前协议以显式 `frozen: false` 标记可原地演进，不能从 v1、npm 发布或历史接受推断
+冻结；明确冻结后的不兼容变化另定契约，不能自行清除标记。非 Axis 格式沿其所属规范处理。
+
+当前未决的是各活动格式尚缺的开放范围、稳定性和消费者承诺，不是重新决定已落地的
+配置拆分或发布域名。逐项评审必须写明来源、已知决定、剩余问题及证明方式；
+历史定义不作为活动输入，保留其引用和语义，不批量改写旧数据。
+
+## 历史目录与讨论
+
+以下保留旧基线的讨论过程。Review.html 的 18 页对应 2026-10-27 的源码快照，
+不因本次目录刷新自动变成新报告；其 Portfolio、旧 Host、候选版本及“待确定域名”
+等内容不得覆盖上面的当前目录或所属规范。
 
 可使用离线 [HTML 评审文档](./Review.html) 阅读当前用途、用例、示例、TypeScript 类型及 YAML 表达的 Schema。2026-10-27 已按提交 `fc47e63bf4eb92953b8bd1d178cd0f1df6ead0b9` 刷新为 18 页：Manifest v3（累计达成与 worker）、已实现 JSONC settings、Portfolio v4、Git v4/npm v5 恢复，以及新增 ObjectiveSource、CheckResult/依赖请求、包级设置描述与注册、Check Host、Coordinator 请求/恢复快照和 YAML 状态测试树。Objective v3、声明和 Agent 三份正式定义与仓库 Schema 一致；其他页标注解释用草案及切片范围，不冒充已发布完整格式。下方历史评审保留原始讨论过程，不再作为当前实现状态；报告以该精确源码为依据，不把旧交付证据自动套用到新版本。
 

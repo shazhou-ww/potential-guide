@@ -1,9 +1,12 @@
 # 旧架构 npm 包废弃执行手册
 
-这是交给另一台已授权设备的计划，不是执行完成记录。2026-11-05 当前设备
+这是交给获授权设备的计划，不是执行完成记录。2026-11-05 当时设备
 `npm whoami --registry=https://mirrors.tencent.com/npm/` 返回 `ENEEDAUTH`，
 未执行任何 npm deprecate、unpublish、publish 或 dist-tag 操作。不得保存登录
 token、OTP 或私人 npm 配置到仓库或证据文件。
+
+2026-11-07 已按当前源码刷新迁移边界，但没有重新验证 npm 登录、远端版本或执行废弃。
+实际操作前必须重新查询，不把历史页面、旧 registry 地址或本次文档更新当作授权。
 
 ## 清单和依据
 
@@ -29,9 +32,11 @@ Guide 的 `0.1.0`／`0.2.0-rc.2`、Supervisor 的 `0.1.0`／`0.3.0-rc.0`，
 
 - Task Engine、Protocol、SDK、Bundle CLI、Engine CLI、HTTP／Storage／Server／WebUI
   是新架构，不废弃。
-- `check-artifacts`、`check-runtime-files` 仍被新 Check／Probe adapter 使用。
+- `check-artifacts`、`check-runtime-files` 仍有活跃消费者；旧 check-task/probe-task
+  适配包已从 workspace 及交付链路退役，不能再以它们证明当前依赖或重装它们。
 - Pilot／Regulator／Coordinator、其协议和共享 CLI 仍有活消费者；不因“旧架构”
-  一词就整包废弃。`pguide-pilot` 还有 scaffold／静态 validate。
+  一词就整包废弃。`pguide-pilot`、`pguide-check`、`pguide-probe` 已退出 workspace；
+  历史 CLI 示例不是当前安装建议，也不因此将这些包加入第一批 npm 管理清单。
 - Checker／Objective Host、`pguide-supervise`、已仓库移除的 `artifact-files`：
   本次未取得可靠已发布证据，不添加到批量命令。npmx 404 不等于权威不存在。
 - 不做 unpublish，不删除历史产物，不重新发布，不改变 `latest` 或 `rc`。

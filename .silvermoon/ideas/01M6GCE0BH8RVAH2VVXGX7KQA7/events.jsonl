@@ -1,2 +1,3 @@
 {"type":"setAlias","timestamp":"2026-11-03T09:41:28.845Z","payload":{"alias":"retire-legacy-check-probe"}}
 {"type":"submitIdeal","timestamp":"2026-11-03T09:43:42.629Z","payload":{"idealRevision":"fba56f0a5781164801f06aec12845d4ab70ac252"}}
+{"type":"abandon","timestamp":"2026-11-07T01:19:31.429Z"}

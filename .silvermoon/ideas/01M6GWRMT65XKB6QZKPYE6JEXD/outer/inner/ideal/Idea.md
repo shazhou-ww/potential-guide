@@ -1,23 +1,23 @@
-# 构建并发布类型安全的 Task Bundle
+# 离线构建类型安全的 Task Bundle 与 CAR
 
 ## 问题
 
-当前作者需手写运行声明并编程调用 SDK 构建/导入；文件选择、Schema 与业务类型缺少统一作者流程，
-构建入口还混合了 IPFS 连接和发布能力。
+TypeBox 作者输入、离线 CLI 与 CAR 产出已经落地，但本 IDEA 仍要求已移除的内置 publish，
+并以旧生成入口和 Kubo 验证描述当前交付，无法准确指导后续复核。
 
 ## 结果
 
-以 `task.build.yaml`、TypeBox 契约模块及业务回调生成完整 `dist`，
-通过 pguide 的独立 `task-bundle` 扩展检查、构建和发布。具体边界见[作者流程](Authoring.md)。
+以 `task.build.yaml`、TypeBox 契约模块及显式 SDK 入口离线生成完整成品目录和 CAR，
+通过独立扩展的 init/check/build 交付可复现作者流程；当前边界见[作者流程](Authoring.md)。
 
 ## 边界
 
-1. 构建规则可用通配符，成品声明生成精确文件清单；作者不再维护第二份顶层 `task.yaml`，不提供独立 include 命令。
-2. 生成的 JSON Schema 是 Engine/Worker 共同契约，TypeBox 定义与推导类型不引入运行时第二套校验语义。
-3. 构建不联网发布，发布只消费成品且不执行任务；服务启动与可选 Web UI 属于同级 task-engine 扩展，不在本 Idea 实施。
+1. 构建规则可用通配符，成品声明生成精确 include/binary 清单；不维护第二份顶层 `task.yaml`，不提供独立 include 命令。默认文本按 UTF-8/LF 规范化，显式 binary 保留原字节。
+2. TypeBox 类型与生成 Schema 同源；构建检查离线契约闭包并绑定声明，SDK 只负责 Worker 运行时，Engine 承担业务数据接纳校验，不恢复自动 Worker validator。
+3. init/check/build 均不上传、pin、启动 Engine 或发布 npm；工具输出 CAR，外部工具负责导入及交付。服务启动和 Web UI 不在本 IDEA 内。
 
 ## 验收标准
 
-1. 运行声明、Worker、共享 Schema 和精确清单由构建输入一致生成，推导类型与实际校验可对照验证。
-2. clean 成品不带旧输出或未选文件；缺失、额外文件和不支持的 Schema 在校验/发布中明确失败。
-3. `pguide task-bundle check/build/publish` 可独立发现与使用，发布 CID 与成品一致，不要求启动 Engine 或安装作者依赖。
+1. init 生成显式启动 SDK 的最小作者项目；声明、Worker、共享 Schema 和精确清单同源生成，类型与宿主实际校验可对照验证。
+2. clean 目录与 CAR 来自同一规范化快照；缺失、额外文件、错误 CID、非法文本和不支持 Schema 明确失败，失败不破坏旧输出。
+3. pguide 发现与独立 binary 均支持 init/check/build；仅凭 CAR 可独立校验并由 Engine 实际执行，执行环境不依赖作者源码或构建工具，上传另行处理。

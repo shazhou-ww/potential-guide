@@ -2,19 +2,19 @@
 
 ## Steps
 
-### I-S01: 明确接口与实施边界
+### I-S01: 明确公共读取与 Check 解释边界
 
-依据[修改建议副本](./ideal/Recommendation.md)和 Idea 边界核对现有实现、数据形状及兼容性，不扩大至外部产品。
+核对当前 Engine 公开 block client、内部 UnixFS 读取和 Check 资源约定，选择可由独立消费者导入的窄入口。底层不解释 check.json、Task 或 Run；Check 层校验索引及声明语言，不暴露宿主配置或引入类型注册。
 
 ### I-S02: 落实改动与针对性回归
 
-复用 Engine 的标准内容读取实现，设计窄的公开只读适配入口；Check 层解释 resources/check.json 并选择声明语言和资源。
+复用标准 CID/块验证及 UnixFS 字节流，保留取消、路径、块数和字节预算；Check 层解释 resources/check.json 并选择声明语言和资源。历史验收脚本作为输入，不复制为第二套私有 DAG 协议。
 
 ## Acceptance criteria
 
-### I-AC01: 改动满足本地契约
+### I-AC01: 公共入口保持内容与业务分层
 
-实现、文档和公开入口与本子 IDEA 的范围一致；未验证的根因和来源不被表示为已确认。
+以包导出和独立消费测试证明入口受支持、根到文件的 DAG 与字节受验证，Check 索引解释不进入底层 IPFS 接口；文档区分已有读取证明与新 API 的交付状态。
 
 ### I-AC02: 回归保持既有保护
 

@@ -1,5 +1,34 @@
 # Regulate 需求讨论与未决问题
 
+## 当前架构映射
+
+2026-11-07 按[当前 Idea](./Idea.md)和 [Axis](../../../../../../docs/axis/task-engine-responsibilities.md)
+刷新准备边界；本节优先于下方历史候选，不声明治理能力已经实现或接受。
+
+- 治理实现以自包含 Bundle/CAR 交付，运行请求引用准确根 CID；不再注册
+  type=regulate，不依赖退役 Check/Probe 适配包或 Engine 类型目录。
+- Objective Digest/Revision、subject、投入与治理目标是业务身份/输入；
+  Run 共享仍按相同 Bundle CID、Input、scope 和时间政策裁决，不能用业务“合流”
+  替换 Engine 匹配。一个 Run 的结果按通用契约传播，业务不能逐个提前完成 Task。
+- 各请求不同目标或投入若不能满足同一 Input 的共享条件，就不能强行共享 Run。
+  资源接续可以在类型内部或受授权 Task 消息中设计，但须保留 taskId、caller、
+  messageId 和接纳/撤回因果；未决消息形状留待 I-S01，不据此添加通用 Engine API。
+- 等待只用原 Task Deadline，追加不重置期限，不复活终结 Task/Run。
+  不引入独立治理时间配额、连续停滞退出或固定共享 execution 总上限；
+  单次 Agent 安全限制、已启用额度合取及先到投入的业务记账仍须明确并验证。
+- 共享业务资源复用不等于 Run 共享。Engine 不管理 Objective 业务依赖图、
+  自动周期重提或任意 Agent 资源池；可信适配保持权限，不因预算投入扩权。
+- 当前库可以复用，但真实 ACP/AHP 装配、子 Check/观察调用和副作用身份必须在实施
+  契约中明确；历史 Check/Probe MVP 接受不证明新 Bundle 的依赖、结果或取消成立。
+- 已开始且失去跟踪的 Run 按 stopped 恢复，物理退出与副作用未知；
+  重连不自动重演修复，可靠退出/清理前不复用相应容量。
+
+## 历史讨论
+
+以下保留 2026-10-31 的用户需求、候选及决定。注册三类 Task、旧共享 execution
+模型和 Coordinator 通用职责交接只代表当时方案，不是当前实施要求。
+资源与授权需求继续作为约束来源，但须按上面的当前架构映射收敛，不自动批准未决方案。
+
 本文件服务 [Idea.md](Idea.md)，保存截至 2026-10-31 00:22（UTC+8）的准备期讨论，
 用于跨设备继续讨论，不是实现方案定稿、执行证据或验收记录。
 

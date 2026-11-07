@@ -2,6 +2,10 @@
 >
 > 本副本保留原建议全文；跨产品引用仅说明协作边界，不代表本子 IDEA 承接外部服务改造。
 
+## 当前范围与历史建议
+
+以下保留 2026-11-06 的原始建议，不作为当前缺失证据清单。后续[独立交付验收](../../../../01M6NZBYXR81BMP219KRK5DQQC/outer/Deployment-evidence.md)已经证明三个公共 CID 的索引与 12 篇 Reference 可通过标准 UnixFS/raw 块完整读取。当前 [Idea.md](./Idea.md)承接的是公共入口、负向诊断与独立包消费，不再以“Reference 尚未读出”为前提。原始 E4 描述仅代表其历史时点，不能抹去已完成证明或替代新入口验证。
+
 # R-10：提供基于 raw Gateway 的受验证 Reference 读取入口
 
 **产品与责任**：Task Engine 内容读取能力、Check 消费工具；Pinboard 负责声明实际 Gateway 能力。**覆盖**：A-31、A-32。证据见[问题清单](../../../../01M6Q8VHHGG4G49XZE1VWS3W2Z/outer/inner/ideal/Acceptance-issues.md)的 E3、E4。

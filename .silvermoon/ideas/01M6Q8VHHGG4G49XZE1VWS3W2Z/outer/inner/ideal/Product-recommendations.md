@@ -10,7 +10,7 @@
 
 ## 建议总览
 
-“先做”表示优先讨论的交付基础能力，不表示已获实施授权。
+下表保留 2026-11-06 的建议拆分与优先次序，不是实时产品缺陷或生命周期清单。“先做”不表示已获实施授权；当前范围以各子 IDEA 为准。本父级只交付归属与协调材料。
 
 | 建议 | 对应产品 / 责任方 | 希望发生的变化 | 建议次序 | 主要覆盖问题 |
 | --- | --- | --- | --- | --- |
@@ -23,7 +23,7 @@
 | [R-07：交付受测试的消费验收工具](./recommendations/R-07-consumer-verification.md) | 仓库消费验证工具、pguide 分发入口 | 不再临时拼跨平台脚本；失败也能保存阶段结果并清理资源 | 先做 | A-20、A-21、A-22、A-23、A-24、A-25 |
 | [R-08：把 Check 消费契约做成可执行范例](./recommendations/R-08-check-contracts.md) | Check SDK、check-environment | 请求、问题码和取消解读不再靠猜，错误定位到字段和阶段 | 随后 | A-26、A-27 |
 | [R-09：让启动与物理回收失败可诊断](./recommendations/R-09-engine-lifecycle.md) | Task Engine、Probe、测试链路 | 把偶发超时变成有因果证据的失败，再按证据修复 | 诊断先做，行为修复后定 | A-28、A-29、A-30 |
-| [R-10：提供受验证的按 CID 读取 Reference 入口](./recommendations/R-10-reference-reading.md) | Task Engine 内容读取、Check 消费工具 | raw-only Gateway 也能读取并校验 Reference，不猜 HTTP 路由 | 先做，当前直接阻塞 | A-31、A-32 |
+| [R-10：提供受验证的按 CID 读取 Reference 入口](./recommendations/R-10-reference-reading.md) | 通用内容读取适配、Check 消费工具 | 已证明 raw-only 可完整读取；继续交付受支持公共入口，不猜 HTTP 路由 | 公共入口待产品化，非读取可行性阻塞 | A-31、A-32 |
 | [R-11：按验收范围展示当前证据](./recommendations/R-11-evidence-scope.md) | Silvermoon、仓库交付报告适配 | 一眼区分已安装、已上传、已执行、未验证及过期证据 | 随后 | A-33 |
 
 ## 为什么这样拆

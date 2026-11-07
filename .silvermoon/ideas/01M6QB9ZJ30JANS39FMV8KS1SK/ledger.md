@@ -4,12 +4,12 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 明确接口与实施边界
+- [ ] **I-S01:** 明确公共读取与 Check 解释边界
 - [ ] **I-S02:** 落实改动与针对性回归
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 改动满足本地契约
+- [ ] **I-AC01:** 公共入口保持内容与业务分层
 - [ ] **I-AC02:** 回归保持既有保护
 
 ## Deployment

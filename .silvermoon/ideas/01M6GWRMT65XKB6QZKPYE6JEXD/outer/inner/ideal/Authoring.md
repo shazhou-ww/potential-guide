@@ -1,8 +1,41 @@
 # Task Bundle 作者流程与调整边界
 
-本文件服务于 [Idea](Idea.md)。这是下一轮改造候选，不表示现有实现已支持以下格式。
-当前核对基线为 `6b5893ce80cdb0c3189a2ffdfb6abec1134e3aa2`。
-用户已选择尝试 TypeBox；具体发行包、版本及受支持能力须在实施时验证，不凭库名承诺全部特性可用。
+本文件服务于 [Idea](Idea.md)。2026-11-07 刷新以当前
+[作者 CLI](../../../../../../packages/pguide-task-bundle/README.md)、
+[SDK](../../../../../../packages/task-sdk/README.md)及
+[Axis](../../../../../../docs/axis/task-engine-contracts/task-bundle.md)为核对来源。
+这是当前构想候选，不代表重新执行实现、部署或接受；既有版本和证据保留各自时点。
+
+## 当前作者流程
+
+| 入口 | 当前职责 | 禁止的隐含副作用 |
+| --- | --- | --- |
+| `init [directory]` | 离线生成构建描述、TypeBox 契约和显式导入 runTask 的入口，声明依赖 | 不安装依赖、不覆盖未知文件、不启动服务 |
+| `check author <file>` | 在可信作者侧检查构建输入；明确可能求值契约模块 | 不写成品、不上传、不执行 Task |
+| `check artifact <car-or-directory>` | 校验完整 CAR/目录、精确声明、Schema、DAG 及期望 CID（如有） | 不规范化已交付字节，不重新构建或切换内容身份 |
+| `build <file>` | 从同一确定快照生成本地目录及 `<outDirectory>.car` | 不联网发布、不导入或 pin、不创建 Task |
+
+- 不存在 `publish`、上传、RPC 或 pin 子入口；需要交付 CAR 时由外部工具承担，
+  回执不能混入离线构建成功。Task SDK 只提供 Worker 运行时，作者工具在本 CLI。
+- 新模板使用 `source.mode: explicit`，由作者入口调用公开 SDK；未指定 mode 的
+  callback/exportName 形状只保留现有明确支持，不把它当作新模板，也不重复启动。
+- TypeBox 定义生成离线闭包 Schema 与类型，构建绑定准确声明；Engine 校验业务输入、
+  消息及输出，Worker 不自动携带业务 validator、Ajv 或 CID 解析器。
+- include 的 portable glob 映射生成精确清单，binary 按映射后的最终资源路径展开。
+  默认文件必须合法 UTF-8，构建仅规范化 CRLF/CR 为 LF；binary 保留字节，读取不再改写。
+- 成品目录、CAR 与声明使用同一已验证快照，固定标准 UnixFS 导入参数。
+  身份仅为根 CID，同根不同 CAR 块序可接受；没有明确期望 CID 时不虚构目标匹配。
+- 缺失/额外文件、链接、非法路径、越界输出、坏文本、缺 binary 声明和未知 Schema
+  明确失败；受管理输出只在完整候选成功后替换，不能借清理删除未知文件。
+- 独立消费只用准确候选包、公开 exports 与必要运行依赖，经根 CID Request 验证；
+  不要求作者 CLI 启动 Engine、安装 Kubo 或控制现有服务。
+
+## 历史方案边界
+
+以下自“作者输入与成品分离”至文末保留旧基线
+`6b5893ce80cdb0c3189a2ffdfb6abec1134e3aa2` 的方案上下文，**不是当前实施要求**。
+其中内置 publish/RPC/pin、SDK 构建职责及默认生成启动代码已由上面的当前流程取代；
+其余内容也须经现行契约复核，不能恢复旧命令或凭旧接受事件宣称本候选完成。
 
 ## 作者输入与成品分离
 

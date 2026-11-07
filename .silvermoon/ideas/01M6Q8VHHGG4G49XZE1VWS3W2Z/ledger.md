@@ -4,20 +4,20 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 确认最小整改集合
-- [ ] **I-S02:** 落实整改与针对性回归
+- [ ] **I-S01:** 对齐建议归属与当前证据
+- [ ] **I-S02:** 交付协调与导航说明
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 改动可映射到问题编号
-- [ ] **I-AC02:** 证明不削弱既有约束
+- [ ] **I-AC01:** 建议归属完整且可追溯
+- [ ] **I-AC02:** 父级不重复承接产品整改
 
 ## Deployment
 
 ### Deployment steps
 
-- [ ] **D-S01:** 回放跨环境交付链路
+- [ ] **D-S01:** 验证协调材料可独立使用
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 现实结果可复验
+- [ ] **D-AC01:** 协调入口准确且不冒充整改

@@ -4,23 +4,20 @@
 
 ## 问题
 
-raw 块获取足以运行 Task，但消费者误以为同一 Gateway 必然支持 HTTP 文件路径，导致 Reference 验证停在 404。
+公共 raw Gateway 已能经标准 UnixFS 读取三份检查索引和全部 12 篇 Reference，但消费者仍需手工组装读取与校验脚本，缺少受支持的公共消费入口。
 
 ## 结果
 
-提供复用标准块验证与 UnixFS 解析的只读消费入口，让 raw-only Gateway 上的索引和 Reference 也可独立逐字节验证。
+提供复用标准块验证与 UnixFS 解析的只读公共入口，将已经证明可行的 raw-only 消费方式产品化，并保持通用内容读取与 Check 资源解释分层。
 
 ## 边界
 
 - 本子 IDEA 只负责 Task Engine 内容读取及 Check 消费；不要求 Pinboard 新增 HTTP 路径路由，不恢复私有 ipfs-content fixture 为生产依赖，也不加入 fallback 节点。
-- 本次仅创建与整理独立子 IDEA，不代表已批准实施或验收；与父 IDEA 分别维护生命周期。
+- 遵守 [Axis 内容分层](../../../../../../docs/axis/task-engine-contracts/task-bundle.md#ipfs-access-与-bundle-解释的分层)：底层只处理 CID、DAG 与字节流，Check 层解释索引、语言和问题码，不新增 Engine 业务状态或类型目录。
+- [已完成的公共读取证据](../../../../01M6NZBYXR81BMP219KRK5DQQC/outer/Deployment-evidence.md)仅证明其指定制品与环境；本次更新不等于公共 API 已交付，也不继承 Ubuntu 验证或其他 IDEA 的接受。
 
 ## 验收标准
 
-- 显式 Gateway/CID/相对路径与预算足以读取三个检查索引和全部 Reference，并与已验证制品字节一致。
+- 独立安装后的公共入口以显式 Gateway/CID/相对路径和预算读取检查索引与 Reference；内容身份只用根 CID，返回字节与对应已验证制品一致。
 - 缺子块、坏哈希、越界路径、坏索引、取消与超限有准确失败阶段。
 - HTTP 路径 404 不阻断已选择的 raw 读取方式，成功仍须真实外部证明。
-
-## 下一步
-
-核对本子 IDEA 的范围和验收标准，再提交构想验收。

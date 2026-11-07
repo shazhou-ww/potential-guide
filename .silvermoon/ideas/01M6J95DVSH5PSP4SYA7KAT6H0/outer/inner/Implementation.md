@@ -4,9 +4,17 @@
 [Evidence.md](Evidence.md) 中的数据是保留的历史，不作为本边界的验收证明。
 本轮实际结果见 [Engine-Validation-Evidence.md](Engine-Validation-Evidence.md)。
 
+2026-11-07 本候选刷新规范与证明边界，不重新声称执行下列工作。历史实现可以复用，
+但 Axis/SDK 的职责一致性和当前包复验是新要求，ledger 的 I-* 重新保持未完成；
+本次仅更新合约，不修改产品规范、运行时代码或历史接受事件。
+
 ## Steps
 
 ### I-S01: 明确宿主与显式入口边界
+
+先核对 Axis、SDK、Worker 协议和构建工具的当前职责：移除 SDK 自动业务 Result
+校验、旧生成入口等残留规范措辞，以宿主完整校验、显式入口和可替换封装为同一边界。
+不把“Schema 同源”误写成 Worker 必须携带 validator。
 
 保留 init 入口的公开 SDK runTask 值导入、contract 类型导入、依赖版本/包字段保留，
 以及 callback/exportName 兼容、自定义委托封装、独立 SDK 副本。构建/制品/发布工具
@@ -38,7 +46,8 @@ NACK 后退出，也不能丢失明确失败。成功回收必须在物理退出
 真实 Engine/TypeSupervisor、持久事实和真实 Worker 联合验证数据与 ACK 生命周期；
 覆盖高级 JSON Schema、Never、引用/siblings、原型字段和既有资源/日志/取消。
 使用实际 init、正式构建参数及 metafile 复测，不把失败、负控制或代理测试当通过。
-保留共享未知修改，本轮不提交、推送、发布或记录接受事件。
+复核已有实现而非重做旧预编译方案；保留历史证据来源，记录当前候选的实际结果，
+不以历史全绿或文档刷新冒充复验，不自动发布或记录接受事件。
 
 ## Acceptance criteria
 
@@ -48,6 +57,8 @@ NACK 后退出，也不能丢失明确失败。成功回收必须在物理退出
 默认及共享引用/组合任务的 Worker 图没有 schema-runtime、task-validator、任何 Ajv
 或 multiformats。类型导入不引入 contract 运行时；作者主动 validator 确实执行并单独
 归因。构建不执行入口，错误契约/引用/预算失败不破坏旧输出，产物不 external 非内置代码。
+Axis、SDK 及 Worker 说明通过逐项对照，不再同时要求 SDK 自动校验业务结果；
+此规范对齐未完成前不能仅凭已有实现勾选。
 
 ### I-AC02: 宿主校验、拒绝及物理回收有效
 
@@ -61,6 +72,6 @@ RunFailure 证据不持久化，最终 Run 失败而非成功或悬挂，exit �
 ### I-AC03: 可复现真实交付体积下降
 
 固定 Node/esbuild/lock 和构建参数，记录真实 init 的原始 Worker 与全部文件字节、
-逐依赖贡献、分析/正式构建一致性及独立目录 Worker/CID 一致性。以本轮共享工作树
-CID 精简后的 20784/21547 为直接对照，34148/34911 及更早数据仅作历史；
+逐依赖贡献、分析/正式构建一致性及独立目录 Worker/CID 一致性。使用同环境可复现的
+旧重复校验候选为直接对照，20784/21547、11196/11959 及更早数据仅作历史；
 新 Worker 与总量均下降且不转移至旁路文件。声明与引用文件仍完整交付。

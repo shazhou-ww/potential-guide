@@ -6,23 +6,21 @@
 
 ## 结果
 
-在 [Check + Server MVP](../../../../01M65ABHR94EQ14NYTGZAWRRV3/outer/inner/ideal/Idea.md) 和
-[Probe](../../../../01M65AH22HXJXNC7BQNVD0ZTHB/outer/inner/ideal/Idea.md) 完成后交付 `@potential-guide/regulate-task`，
-注册 `type=regulate`，经同一服务运行观察、修复和再观察，支持资源接续与成果共享，
-复用 ACP/AHP 并以 VS Code Copilot AHP 验证真实闭环，
-正常返回目标达成、耗尽或无法自行解决的阻碍。
+以自包含 Task Bundle 交付治理回调，经根 CID Request 在现行 Engine 上完成
+观察、授权修复与新观察；复用 ACP/AHP，并以 VS Code Copilot AHP 的真实闭环证明
+目标达成、资源耗尽或无法自行解决的阻碍，不要求注册 type=regulate 或恢复旧 MVP 适配包。
 
-准备期已明确需求、并发治理与 execution join 讨论及未决问题见
-[Discussion.md](Discussion.md)；其中候选方案尚未定稿，不代表验收或实施授权。
+资源接续与协作仍是业务目标；当前架构映射及保留的历史讨论见
+[Discussion.md](Discussion.md)，旧 execution join 候选不直接扩展 Engine 协议。
 
 ## 边界
 
-- 通用生命周期复用[任务引擎](../../../../../../docs/task-engine.md)，不新增 Regulation Host 或第二套状态机；同 Digest/Revision、同 subject 且执行条件兼容者可接续投入、共享成果并分别完成，不以 URI 判合流，不改写旧结果。
-- 等待期限只用 Task Deadline，移除独立治理时间配额和连续停滞限制；已启用资源额度合取，Token 不强制首版统计，共享 execution 无固定总上限。权限与业务资源竞争属于 Agent 执行环境，不另建全局资源锁。
-- 不全量迁移旧入口或正式发布；引擎仍管理 Worker 与退出清理证明，未知修复不自动重放，有可靠证明即可自动释放相应隔离，否则报告阻碍。动态请求不自授权，取消不承诺回滚，不承诺 exactly-once。
+- 通用生命周期遵守 [Axis](../../../../../../docs/axis/task-engine-responsibilities.md)：Bundle 按 CID 装载，无预注册；共享完整 Run 仍须满足 Input、scope 与匹配政策。Objective 的准确 Digest/Revision 是业务身份，不能替代 Bundle CID 或绕过共享条件；不同目标的结果不能借业务投影提前终结 Task。
+- 等待期限只用 Task Deadline，不因追加投入延长；已启用额度合取、首版不强制 Token、单次 Agent 限额与无固定共享 execution 总上限均属于业务策略。业务消息保留 Task 归属，投入不自授权；资源竞争由 Agent 环境处理，不新增 Engine prerequisites、周期状态机或全局资源锁。
+- 复用现有治理/Check 库但不恢复退役 check-task/probe-task，不全量迁移或正式发布；未知已启动修复不自动重演。取消、逻辑结果、宿主退出和物理回收分别证明，不将 AHP 断连或日志当作远端退出，不承诺回滚或 exactly-once。
 
 ## 验收标准
 
-- 独立消费者经同一 Server 提交治理请求，以准确 Objective 和真实 Probe 证据完成修复与重查，目标达成、资源耗尽和阻碍均可正常返回，与执行故障区分。
+- 独立消费者经当前 Server 提交 Bundle CID 请求，以准确 Objective 和真实新观察完成修复与重查；目标达成、资源耗尽和阻碍均是可靠业务结果，与执行故障区分。
 - 权限不足、配额耗尽、依赖未满足和并发请求均不会产生未授权或错误合并的副作用；修复完成不能替代新的达标观察。
-- 进展、结果和故障能经授权历史追溯；取消、资源清理和进程重启有真实证据，未知修复不静默重跑或伪装成已完成。
+- 进展、结果和故障能经授权历史追溯；共享与消息不改变 Task/Run 事实模型，取消、资源清理和重启有真实证据，未知修复不静默重跑或伪装成已完成。
