@@ -24,7 +24,10 @@ async function main() {
         "--host <127.0.0.1|localhost|::1>",
         "--port <0..65535>",
         "--database <path>",
-        "--ipfs-gateway-url <HTTP(S) Gateway base URL; required from an enabled source>",
+        '--ipfs-gateway-urls \'["https://primary.example","https://backup.example"]\'',
+        "--ipfs-gateway-url <root HTTP(S) Gateway URL; legacy single-source alias>",
+        "--ipfs-gateway-timeout-ms <total budget per missing block; default 30000>",
+        "--ipfs-gateway-attempt-timeout-ms <per-source budget; default 5000>",
         "--scope <local-scope>",
         "--ui",
         "--no-ui",
@@ -48,13 +51,15 @@ async function main() {
         port: 3000,
         database: "tasks.sqlite",
         scope: "local",
+        ipfsGatewayTimeoutMs: 30000,
+        ipfsGatewayAttemptTimeoutMs: 5000,
         ui: false,
         uiOptions: { host: "127.0.0.1", port: 4310, favoritesFile: "task-favorites.json" },
       },
       security:
         "No token; fixed loopback only (localhost becomes 127.0.0.1; ::1 supported). Caller local-cli is limited to the configured scope. Host/Origin/fetch-site, GET/POST and JSON writes are checked. Do not expose through a proxy. Other local users/processes are not isolated.",
       lifecycle:
-        "Foreground only. Stops only this invocation's Engine/UI on SIGINT/SIGTERM. Never starts, stops or manages Kubo. No UI unless --ui. Old .mjs configs must be manually migrated. Gateway-only: an explicit URL is required (no credentials/query/fragment); no default node or public Gateway. Base paths are appended with /ipfs/{cid}?format=raw. Raw blocks only, no redirects, 2 MiB/block and 30 s/read. No service RPC or transport selection/fallback; author publishing/pinning is unchanged.",
+        "Foreground only. Stops only this invocation's Engine/UI on SIGINT/SIGTERM. Never manages Kubo. No UI unless --ui. Gateway-only: 1..16 ordered trusted root HTTP(S) URLs required (no credentials/query/fragment/path prefix). No discovery, redirects or public fallback; each block is CID-verified. Each source is tried once within a shared per-block total budget; cancellation stops failover. Lists replace as a whole; the legacy single URL replaces the list across layers, but both forms in one layer fail. Request hints are not authorized by the service. No RPC/transport selection; publisher import/pin is optional and separate.",
     };
     console.log(
       parsed.options.format === "json"

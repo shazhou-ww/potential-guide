@@ -1,5 +1,9 @@
 # 任务引擎 Web 工作台
 
+普通消费设备不需要构建源码或安装本地 Kubo。使用已交付的 CID/Gateway 和精确包组合，
+按 [Node/npm 消费走查](task-consumer.md) 启动 Engine，可在服务配置启用 `ui: true`。
+下文 pnpm 与 fixture 流程用于仓库开发验证，不是普通消费者 prerequisite。
+
 Run 详情的独立 **Logs · 诊断日志** 支持跟随/暂停、历史分页、按序号续接与
 并发/切换隔离；浏览器保留最多 300 条 / 1 MiB，显示未知尾部、缺口、截断、
 过期、不支持和故障。详见 [Run Logs 与独立安装](task-run-logs.md)。

@@ -5,14 +5,26 @@ Install `@potential-guide/pguide-task-engine` beside `pguide`, with its
 It implements the existing `pguide-command-v1` discovery protocol. No automatic
 settings registration or user configuration writes occur.
 
+For ordinary Linux/macOS/Windows consumption, only Node.js 22.13+ and working
+npm are required on the device. Use a pre-delivered Bundle CID, usable Gateway
+and tested exact package combination; see [the consumer walkthrough](../../docs/task-consumer.md).
+Kubo and author/import/pin tools are optional publisher responsibilities.
+
 ```powershell
 pguide task-engine --no-global-config --port 0 --database .\new-tasks.sqlite --ipfs-gateway-url http://127.0.0.1:8080
 pguide-task-engine --config .\server.yaml --ui
 pguide task-engine --help --format json
 ```
 
-Provide an explicit read-only Trustless Gateway URL through CLI, the specified
-YAML/JSON file or `task-engine.ipfsGatewayUrl` in user settings. There is no default
+Provide ordered trusted root HTTP(S) Gateways through `--ipfs-gateway-urls`
+(JSON array), `ipfsGatewayUrls` in YAML/JSON or `task-engine.ipfsGatewayUrls` in
+user settings. The old single `ipfsGatewayUrl`/`--ipfs-gateway-url` remains an
+alias: either form replaces lower-layer sources; both in one layer fail.
+Per-block failover shares a total 30000 ms budget with a 5000 ms per-source cap,
+configurable through `ipfsGatewayTimeoutMs`/`ipfsGatewayAttemptTimeoutMs` and
+matching kebab-case flags. No path prefixes, duplicates, credentials, query or
+fragment are allowed. Request hints do not authorize network access.
+There is no default
 node or public Gateway, RPC selection or fallback. Author publishing/pinning is unchanged.
 **Breaking change:** remove `ipfsRpcUrl` / `ipfsTransport`, their `task-engine.`
 setting IDs and old flags; use `--ipfs-gateway-url` instead. Old fields in explicit

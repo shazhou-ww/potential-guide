@@ -214,6 +214,11 @@ The trusted UI proxy preserves bearer isolation and endpoint binding checks.
 
 ## Independent local pack/install/run (no npm publish)
 
+This section is repository implementation verification, not the ordinary
+consumer setup. For Node.js + working npm on Linux/macOS or Windows with a
+pre-delivered Bundle CID/Gateway (no local Kubo), use
+[the shared consumer walkthrough and Node verification script](task-consumer.md).
+
 All commands below run from this checkout; create owned directories under
 `.cache`, never a system temporary directory. Node 22.13+ / pnpm 11.22+ are
 required. Only third-party production dependencies may be downloaded.

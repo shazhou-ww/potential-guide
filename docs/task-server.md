@@ -15,6 +15,9 @@ entry opens no listener and installs no global signal handlers.
 
 ## Declarative local service
 
+For an independent Node.js + npm consumer using a pre-delivered CID and Gateway,
+start with [the consumer walkthrough](task-consumer.md). Kubo is not a consumer prerequisite.
+
 Install the command package alongside `pguide` and expose its binary on PATH or
 through existing `pguide.commandDirectories`. Both entries share one parser:
 
@@ -28,7 +31,11 @@ pguide task-engine --help --format json
 host: localhost
 port: 3000
 database: ./tasks.sqlite
-ipfsGatewayUrl: http://127.0.0.1:8080
+ipfsGatewayUrls:
+  - https://primary.example
+  - https://backup.example
+ipfsGatewayTimeoutMs: 30000
+ipfsGatewayAttemptTimeoutMs: 5000
 scope: local
 ui: true
 uiOptions:
@@ -46,9 +53,10 @@ and missing explicit files fail. No JavaScript config is imported.
 No project service values or environment service overrides are added.
 
 The user file uses complete setting IDs, for example
-`{"task-engine.port":3001,"task-engine.database":"./tasks.sqlite","task-engine.ipfsGatewayUrl":"http://127.0.0.1:8080"}`. Settings are
+`{"task-engine.port":3001,"task-engine.database":"./tasks.sqlite","task-engine.ipfsGatewayUrls":["https://primary.example","https://backup.example"]}`. Settings are
 `task-engine.host`, `.port`, `.database`,
-`.ipfsGatewayUrl`, `.scope`, `.ui` and
+`.ipfsGatewayUrls`, `.ipfsGatewayUrl` (legacy alias), `.ipfsGatewayTimeoutMs`,
+`.ipfsGatewayAttemptTimeoutMs`, `.scope`, `.ui` and
 `.uiOptions`; dots identify complete settings, not nested property paths.
 Other namespaces remain valid shared settings. Objects replace as a whole:
 `uiOptions` must contain exactly host, port and favoritesFile in every layer
@@ -56,27 +64,44 @@ that supplies it. CLI equivalent is `--ui-options '<complete JSON object>'`.
 Use `--ui` / `--no-ui` for an explicit boolean. No `ipfsEndpoint` or
 `ipfs.rpcUrl` aliases exist.
 
-The service is **Gateway-only**. An explicit `ipfsGatewayUrl` /
-`--ipfs-gateway-url` must be supplied by an enabled layer, for example:
+The service is **Gateway-only**. Supply 1..16 ordered trusted root HTTP(S)
+Gateways using `ipfsGatewayUrls` / `task-engine.ipfsGatewayUrls`, or CLI JSON:
 
-```yaml
-ipfsGatewayUrl: http://127.0.0.1:8080/content
+```sh
+pguide-task-engine --no-global-config --ipfs-gateway-urls '["https://primary.example","https://backup.example"]'
 ```
 
-Equivalent user settings are
-`{"task-engine.ipfsGatewayUrl":"http://127.0.0.1:8080/content"}`.
+The old `ipfsGatewayUrl`, full user setting and `--ipfs-gateway-url` remain
+single-source aliases. Both forms in one layer fail; either form in a higher
+layer replaces the complete lower-layer source selection, never appends.
+Duplicates after URL normalization and empty lists fail, even when overridden.
 There is no default node or public Gateway, RPC probe or fallback. Missing URLs
 fail before a database or listener is opened. URLs accept only HTTP(S) without
-credentials, query or fragment, even when overridden. Gateway
-base paths are preserved: `/content` and `/content/` both request
-`/content/ipfs/{cid}?format=raw` with Accept `application/vnd.ipld.raw`.
+credentials, query, fragment or path prefix, even when overridden.
+Earlier service docs promised base paths, but the existing official Helia broker
+does not support them. Configuration now rejects these before startup; expose
+the Gateway at its own origin rather than silently dropping a prefix.
+Requests use `/ipfs/{cid}?format=raw` with Accept `application/vnd.ipld.raw`.
 Gateway is an independent primary read backend: it never connects or falls back
 to RPC, including on failure. Non-200 status, wrong MIME, encoded bodies,
 redirects, corrupt CIDs and capacity violations fail explicitly.
-Responses are streamed with a 2 MiB/block limit and a 30-second timeout through
-body completion; preparation cancellation aborts reads. Existing verified UnixFS
+Responses have a 2 MiB/block limit. Each missing block tries sources in order,
+once per source, with a shared `ipfsGatewayTimeoutMs` total budget (default 30000)
+and `ipfsGatewayAttemptTimeoutMs` per-source cap (default 5000, capped by remaining
+time). CLI flags are `--ipfs-gateway-timeout-ms` and
+`--ipfs-gateway-attempt-timeout-ms`. Both are positive integer milliseconds up to
+2147483647. The new 5000 ms per-source default also applies to the legacy alias
+and string factory call; explicitly set the per-source budget to 30000 ms
+(`attemptTimeoutMs` in code) if relying on the former 30-second single-source wait.
+HTTP, redirect, body, capacity or CID verification failure can try the
+next configured source. Cancellation stops reads and further failover.
+All-failure diagnostics identify attempted sources and timeout/read-or-verification
+categories, without including response bodies. This is a per-block budget, not
+the separate Task deadline or a promise of full offline availability.
+Existing verified UnixFS
 export, DAG, file and total protection limits remain in force.
-No local Kubo executable or management API is required.
+No local Kubo executable or management API is required. Request hints are never
+automatically authorized; this service does not install an `allowGateway` policy.
 Authors still import/write/pin with RPC; Gateway does not publish or promise
 availability/persistence. Engine-only and optional UI use the same read backend.
 
@@ -136,7 +161,13 @@ authentication/callbacks must use the unchanged programmatic assembly below.
 
 Pass `authorize`, `resolveCaller`, and a caller-owned generic `ipfsClient`
 (for example `await createIpfsClient(rpcUrl)` or
-`createIpfsGatewayClient(gatewayUrl)` from `@potential-guide/task-engine`); optional
+`createIpfsGatewayClient([primaryUrl, backupUrl], { timeoutMs: 30000,
+attemptTimeoutMs: 5000 })` from `@potential-guide/task-engine`); the old single
+string call remains supported. `GatewayReadError` exposes `attempts` and
+`budgetExhausted` for programmatic diagnostics. An explicit `allowGateway(url)`
+policy retains request-hint fallback after configured sources, within the same
+per-block budget; it sees the actual block URL, not just its base.
+Optional
 `bundleLimits` and `bundleConcurrency` govern preparation. Registry options
 `types`, `currentVersions`, and `allocationLimits` are rejected.
 `resolveCaller` authenticates every HTTP request (including SSE reconnect);

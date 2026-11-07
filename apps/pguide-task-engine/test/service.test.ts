@@ -137,7 +137,7 @@ test("Gateway-only Engine and UI execute a Bundle without any RPC and retain sou
       database: join(directory, "prefix.sqlite"),
       ipfsGatewayUrl: `${url}/gateway`,
     }),
-    /Gateway base URL/,
+    /Invalid ipfsGatewayUrl/,
   );
   unavailable = true;
   const failed = await startService({

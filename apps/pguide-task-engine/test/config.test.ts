@@ -51,19 +51,19 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
   await writeFile(
     userPath,
     JSON.stringify({
-      "task-engine.ipfsGatewayUrl": "https://user.test/base",
+      "task-engine.ipfsGatewayUrl": "https://user.test/",
     }),
   );
-  assert.equal((await missing()).ipfsGatewayUrl, "https://user.test/base");
+  assert.equal((await missing()).ipfsGatewayUrl, "https://user.test/");
   await writeFile(
     config,
     JSON.stringify({
-      ipfsGatewayUrl: "https://file.test/base",
+      ipfsGatewayUrl: "https://file.test/",
     }),
   );
   assert.equal(
     (await resolveConfig(parseArguments(["--cwd", directory, "--config", config]))).ipfsGatewayUrl,
-    "https://file.test/base",
+    "https://file.test/",
   );
   const gateway = await resolveConfig(
     parseArguments([
@@ -72,10 +72,61 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
       "--config",
       config,
       "--ipfs-gateway-url",
-      "https://cli.test/base",
+      "https://cli.test/",
     ]),
   );
-  assert.equal(gateway.ipfsGatewayUrl, "https://cli.test/base");
+  assert.equal(gateway.ipfsGatewayUrl, "https://cli.test/");
+  await writeFile(
+    userPath,
+    JSON.stringify({
+      "task-engine.ipfsGatewayUrls": ["https://user-one.test", "https://user-two.test"],
+      "task-engine.ipfsGatewayTimeoutMs": 900,
+      "task-engine.ipfsGatewayAttemptTimeoutMs": 200,
+    }),
+  );
+  const ordered = await missing();
+  assert.deepEqual(ordered.ipfsGatewayUrls, ["https://user-one.test/", "https://user-two.test/"]);
+  assert.equal(ordered.ipfsGatewayUrl, undefined);
+  assert.equal(ordered.ipfsGatewayTimeoutMs, 900);
+  await writeFile(
+    config,
+    JSON.stringify({
+      ipfsGatewayUrls: ["https://file-one.test", "https://file-two.test"],
+    }),
+  );
+  const fileList = await resolveConfig(parseArguments(["--cwd", directory, "--config", config]));
+  assert.deepEqual(fileList.ipfsGatewayUrls, ["https://file-one.test/", "https://file-two.test/"]);
+  const singleOverride = await load(["--config", config]);
+  assert.equal(singleOverride.ipfsGatewayUrls, undefined);
+  assert.equal(singleOverride.ipfsGatewayUrl, "https://default.test/");
+  await writeFile(config, JSON.stringify({ ipfsGatewayUrl: "https://file.test" }));
+  const cliList = await resolveConfig(
+    parseArguments([
+      "--cwd",
+      directory,
+      "--config",
+      config,
+      "--ipfs-gateway-urls",
+      '["https://cli-one.test","https://cli-two.test"]',
+      "--ipfs-gateway-timeout-ms",
+      "700",
+      "--ipfs-gateway-attempt-timeout-ms",
+      "100",
+    ]),
+  );
+  assert.equal(cliList.ipfsGatewayUrl, undefined);
+  assert.deepEqual(cliList.ipfsGatewayUrls, ["https://cli-one.test/", "https://cli-two.test/"]);
+  assert.equal(cliList.ipfsGatewayTimeoutMs, 700);
+  assert.equal(cliList.ipfsGatewayAttemptTimeoutMs, 100);
+  await assert.rejects(load(["--ipfs-gateway-urls", '["https://other.test"]']), /conflicting/);
+  assert.throws(
+    () => parseArguments(["--ipfs-gateway-urls", "[]", "--ipfs-gateway-urls", "[]"]),
+    /Repeated/,
+  );
+  assert.throws(
+    () => parseArguments(["--ipfs-gateway-urls", "invalid"]),
+    /Invalid ipfsGatewayUrls/,
+  );
   for (const bad of [
     { ipfsGatewayUrl: 1 },
     { ipfsGatewayUrl: "file:///gateway" },
@@ -84,6 +135,15 @@ test("four layers, whole settings, paths, isolation and validation", async (t) =
     { ipfsGatewayUrl: "https://example.test/#fragment" },
     { ipfsGatewayUrl: "https://example.test/?" },
     { ipfsGatewayUrl: "https://example.test/#" },
+    { ipfsGatewayUrl: "https://example.test/path" },
+    { ipfsGatewayUrls: [] },
+    { ipfsGatewayUrls: ["https://example.test", "https://example.test/"] },
+    { ipfsGatewayUrls: ["https://example.test", "file:///gateway"] },
+    { ipfsGatewayUrls: Array(17).fill("https://example.test") },
+    { ipfsGatewayUrl: "https://example.test", ipfsGatewayUrls: ["https://backup.test"] },
+    { ipfsGatewayTimeoutMs: 0 },
+    { ipfsGatewayAttemptTimeoutMs: 1.5 },
+    { ipfsGatewayTimeoutMs: 2_147_483_648 },
   ]) {
     const override = ["--config", config];
     await writeFile(config, "{}");

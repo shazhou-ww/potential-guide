@@ -137,6 +137,10 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
       ),
     };
+    if (label === "task-service")
+      manifest.overrides = Object.fromEntries(
+        [...tarballs].map(([name, path]) => [name, pathToFileURL(path).href]),
+      );
     if (label === "bundle-authoring") {
       manifest.dependencies["@sinclair/typebox"] = "0.34.52";
       manifest.dependencies["@ipld/car"] = JSON.parse(
@@ -147,17 +151,20 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       ).version;
     }
     await writeFile(join(directory, "package.json"), JSON.stringify(manifest, null, 2));
-    await run(
-      "pnpm",
-      [
-        "install",
-        "--prefer-offline",
-        "--ignore-scripts",
-        "--no-frozen-lockfile",
-        "--reporter=append-only",
-      ],
-      directory,
-    );
+    if (label === "task-service")
+      await run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], directory);
+    else
+      await run(
+        "pnpm",
+        [
+          "install",
+          "--prefer-offline",
+          "--ignore-scripts",
+          "--no-frozen-lockfile",
+          "--reporter=append-only",
+        ],
+        directory,
+      );
     const closure = consumerVersions(manifests, entries);
     const graph = await verifyConsumerGraph(
       directory,

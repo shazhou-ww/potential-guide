@@ -12,7 +12,7 @@ import {
   validateBundleReference,
   validateTaskText,
 } from "@potential-guide/task-protocol";
-import { createIpfsGatewayClient, type IpfsClient, openContent } from "./content.js";
+import { GatewayReadError, type IpfsClient, openContent, withGatewayHints } from "./content.js";
 
 export type BundleLimits = TaskBundleFileLimits & {
   hints: number;
@@ -165,33 +165,7 @@ export class BundleCache {
         : typeof reference.hint === "string"
           ? [reference.hint]
           : reference.hint;
-    const fallbacks = new Map<string, IpfsClient>();
-    const client: IpfsClient = {
-      block: {
-        get: async (key, options) => {
-          let failure: unknown;
-          options?.signal?.throwIfAborted();
-          try {
-            return await this.options.ipfsClient.block.get(key, options);
-          } catch (error) {
-            failure = error;
-          }
-          for (const base of gateways) {
-            options?.signal?.throwIfAborted();
-            const target = new URL(`${base.replace(/\/+$/, "")}/ipfs/${key}?format=raw`);
-            if (!this.options.allowGateway?.(target)) continue;
-            try {
-              const candidate = fallbacks.get(base) ?? createIpfsGatewayClient(base);
-              fallbacks.set(base, candidate);
-              return await candidate.block.get(key, options);
-            } catch (error) {
-              failure = error;
-            }
-          }
-          throw failure;
-        },
-      },
-    };
+    const client = withGatewayHints(this.options.ipfsClient, gateways, this.options.allowGateway);
     const access = (signal: AbortSignal) => ({
       signal: AbortSignal.any([signal, this.lifetime.signal]),
       maxBlockBytes: 2 * 1024 * 1024,
@@ -322,7 +296,12 @@ export class BundleCache {
       if (error instanceof TaskError) throw error;
       if (error instanceof Error && /^IPFS .*capacity exceeded\.$/.test(error.message))
         throw new TaskError("capacity_exceeded", "IPFS acquisition exceeds host capacity.");
-      throw new TaskError("bundle_fetch_failed", "IPFS acquisition or CID verification failed.");
+      throw new TaskError(
+        "bundle_fetch_failed",
+        error instanceof GatewayReadError
+          ? error.message
+          : "IPFS acquisition or CID verification failed.",
+      );
     }
   }
   async evict(cid: string): Promise<boolean> {

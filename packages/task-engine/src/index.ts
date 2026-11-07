@@ -1,4 +1,10 @@
-export { createIpfsGatewayClient, type IpfsClient } from "./content.js";
+export {
+  createIpfsGatewayClient,
+  type GatewayAttempt,
+  type GatewayClientOptions,
+  GatewayReadError,
+  type IpfsClient,
+} from "./content.js";
 export {
   createTaskEngine,
   defaultEngineLimits,

@@ -66,7 +66,14 @@ export async function startService(raw: ServiceConfig) {
     host: config.host,
     port: config.port,
     database: config.database,
-    ipfsClient: createIpfsGatewayClient(config.ipfsGatewayUrl),
+    ipfsClient: createIpfsGatewayClient(config.ipfsGatewayUrls ?? config.ipfsGatewayUrl!, {
+      ...(config.ipfsGatewayTimeoutMs !== undefined
+        ? { timeoutMs: config.ipfsGatewayTimeoutMs }
+        : {}),
+      ...(config.ipfsGatewayAttemptTimeoutMs !== undefined
+        ? { attemptTimeoutMs: config.ipfsGatewayAttemptTimeoutMs }
+        : {}),
+    }),
     ...policy,
   });
   origin = server.url;

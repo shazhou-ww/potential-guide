@@ -392,6 +392,12 @@ type BundleReference =
 5. 内部可解析为 CID 与候选列表供获取层使用，但不能将解析结果回写原始 Request。
    Hint 不保证 gateway 可用、内容留存或获取成功，也不允许改用其他 CID 成功回退。
 
+生产 Gateway 工厂接受可信宿主配置的有序根 URL 列表，逐块在同一总预算内切换；
+每个来源返回的块均须校验后才能使用，来源顺序不改变上述内容身份或 Request 幂等规则。
+显式 `allowGateway` 策略允许的 hint 仅在可信来源后尝试，并共享剩余预算；
+没有策略时不访问 hint。普通服务的数据配置不能序列化或自动授予该策略。
+详见 [配置与迁移](../../task-server.md) 和 [Node/npm 消费走查](../../task-consumer.md)。
+
 ### 目录导入与内容身份
 
 1. Bundle 使用 IPFS UnixFS 目录模型，不将 tgz 文件作为 Bundle 根。

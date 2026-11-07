@@ -7,6 +7,10 @@ export async function checkTaskServiceConsumer(root, directory, run) {
     await readFile(join(root, "examples", "task-server", "echo-config.mjs")),
   );
   await writeFile(
+    join(directory, "verify-consumer.mjs"),
+    await readFile(join(root, "examples", "task-server", "verify-consumer.mjs")),
+  );
+  await writeFile(
     join(directory, "service-consumer.mjs"),
     `
 import assert from "node:assert/strict";
@@ -17,14 +21,16 @@ import {createServer} from "node:http";
 import {delimiter,resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
-import {createIpfsGatewayClient,newId} from "@potential-guide/task-engine";
+import {createIpfsGatewayClient} from "@potential-guide/task-engine";
 import {buildTaskBundle} from "@potential-guide/pguide-task-bundle/build";
 import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
 import {configureTaskServer} from "./echo-config.mjs";
+import {verifyConsumer} from "./verify-consumer.mjs";
 const cli=resolve("node_modules/@potential-guide/pguide-task-engine/dist/main.js");
 const pguide=resolve("node_modules/pguide/dist/bin.js");
 const settings=JSON.parse(await readFile(resolve("node_modules/@potential-guide/pguide-task-engine/settings.json"),"utf8"));
 assert.ok(settings.settings["task-engine.ipfsGatewayUrl"]);
+assert.ok(settings.settings["task-engine.ipfsGatewayUrls"]);
 assert.equal(settings.settings["task-engine.ipfsRpcUrl"],undefined);
 assert.equal(settings.settings["task-engine.ipfsTransport"],undefined);
 const home=resolve("home");
@@ -61,6 +67,10 @@ const gateway=createServer((request,response)=>{
 });
 gateway.listen(0,"127.0.0.1");await once(gateway,"listening");
 const gatewayUrl="http://127.0.0.1:"+gateway.address().port;
+let failedReads=0;
+const failedGateway=createServer((request,response)=>{failedReads++;response.writeHead(503).end();});
+failedGateway.listen(0,"127.0.0.1");await once(failedGateway,"listening");
+const trustedGateways=["http://127.0.0.1:"+failedGateway.address().port,gatewayUrl];
 try {
 process.env.IPFS_GATEWAY=gatewayUrl;
 assert.ok(await (await configureTaskServer({token:"fixture"})).ipfsClient.block.get(built.cid));
@@ -70,12 +80,12 @@ for(const combined of [false,true])for(const layer of ["user","file","cli","isol
  const database=(combined?"combined":"engine")+"-"+layer+".sqlite";
  await writeFile(resolve(home,"pguide/config.jsonc"),JSON.stringify(layer==="isolated"
   ?{"task-engine.ipfsTransport":"rpc","task-engine.ipfsRpcUrl":false}
-  :{"task-engine.ipfsGatewayUrl":layer==="user"?gatewayUrl:gatewayUrl+"/unused-user"}));
- await writeFile("server.json",JSON.stringify(layer==="file"?{ipfsGatewayUrl:gatewayUrl}
-  :layer==="cli"?{ipfsGatewayUrl:gatewayUrl+"/unused-file"}:{}));
+  :{"task-engine.ipfsGatewayUrls":layer==="user"?trustedGateways:["http://127.0.0.1:1"]}));
+ await writeFile("server.json",JSON.stringify(layer==="file"?{ipfsGatewayUrls:trustedGateways}
+  :layer==="cli"?{ipfsGatewayUrl:"http://127.0.0.1:1"}:{}));
  const child=spawn(process.execPath,[combined?pguide:resolve("signal-wrapper.mjs"),...(combined?["task-engine"]:[]),
   ...(layer==="isolated"?["--no-global-config"]:[]),"--config","server.json","--port","0","--database",database,
-  ...(["cli","isolated"].includes(layer)?["--ipfs-gateway-url",gatewayUrl]:[]),
+  ...(["cli","isolated"].includes(layer)?["--ipfs-gateway-urls",JSON.stringify(trustedGateways)]:[]),
   ...(combined?["--ui","--ui-options",JSON.stringify({host:"127.0.0.1",port:0,favoritesFile:"favorites.json"})]:[])],
   {env,stdio:combined?["ignore","pipe","pipe"]:["ignore","pipe","pipe","ipc"],windowsHide:true});
  let text="",errors="",pid,stopped=false;
@@ -90,20 +100,8 @@ for(const combined of [false,true])for(const layer of ["user","file","cli","isol
   assert.equal((await fetch(ready.url+"/tasks")).status,200);
   assert.equal((await fetch(ready.url+"/tasks",{headers:{origin:"https://evil.test"}})).status,403);
   await readFile(database);
-  const requestId=newId();
-  const submitted=await fetch(ready.url+"/tasks",{method:"POST",
-   headers:{"content-type":"application/json","Idempotency-Key":requestId},
-   body:JSON.stringify({bundle:built.cid,text:"packed",timeoutMs:10000})});
-  assert.equal(submitted.status,202,await submitted.text());
-  const status=await(await fetch(ready.url+"/requests/"+requestId+"/status?waitMs=10000")).json();
-  assert.equal(status.status,"accepted",JSON.stringify(status));
-  const deadline=Date.now()+15000;
-  for(;;){
-   const task=await(await fetch(ready.url+"/tasks/"+status.taskId)).json();
-   if(task.stage==="completed"){assert.deepEqual(task.result,{text:"packed"});break;}
-   assert.ok(Date.now()<deadline,JSON.stringify(task));
-   await new Promise(done=>setTimeout(done,10));
-  }
+  const verified=await verifyConsumer(ready.url,{bundle:built.cid,input:{text:"packed"},expectedResult:{text:"packed"}});
+  assert.equal(verified.bundle,built.cid);
   if(combined){
    assert.ok(ready.uiUrl);
    assert.match(await(await fetch(ready.uiUrl)).text(),/<html/);
@@ -124,8 +122,9 @@ for(const combined of [false,true])for(const layer of ["user","file","cli","isol
  }
 }
 assert.ok(reads>4);
-}finally{await new Promise(done=>gateway.close(done));}
-console.log("Packed task-service: both entries x user/file/CLI/disabled-user layers execute Gateway-only Bundles; Engine/UI HTTP assets, owned exit cleanup; no RPC.");
+assert.ok(failedReads>4);
+}finally{await Promise.all([new Promise(done=>gateway.close(done)),new Promise(done=>failedGateway.close(done))]);}
+console.log("Packed task-service: both entries x user/file/CLI/disabled-user layers execute same-CID trusted Gateway failover; shared consumer verification; Engine/UI HTTP assets and owned exit cleanup; no RPC.");
 `,
   );
   console.log(await run(process.execPath, ["service-consumer.mjs"], directory));

@@ -13,13 +13,27 @@ export interface ServiceConfig {
   host: string;
   port: number;
   database: string;
-  ipfsGatewayUrl: string;
+  ipfsGatewayUrl?: string;
+  ipfsGatewayUrls?: string[];
+  ipfsGatewayTimeoutMs?: number;
+  ipfsGatewayAttemptTimeoutMs?: number;
   scope: string;
   ui: boolean;
   uiOptions: { host: string; port: number; favoritesFile: string };
 }
 export class ConfigurationError extends Error {}
-const fields = new Set(["host", "port", "database", "ipfsGatewayUrl", "scope", "ui", "uiOptions"]);
+const fields = new Set([
+  "host",
+  "port",
+  "database",
+  "ipfsGatewayUrl",
+  "ipfsGatewayUrls",
+  "ipfsGatewayTimeoutMs",
+  "ipfsGatewayAttemptTimeoutMs",
+  "scope",
+  "ui",
+  "uiOptions",
+]);
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 function invalid(source: string, field: string): never {
@@ -52,6 +66,8 @@ export function validateLayer(
   source: string,
 ): Partial<ServiceConfig> {
   if (!object(value)) invalid(source, "configuration");
+  if (Object.hasOwn(value, "ipfsGatewayUrl") && Object.hasOwn(value, "ipfsGatewayUrls"))
+    invalid(source, "conflicting ipfsGatewayUrl/ipfsGatewayUrls");
   const result: Partial<ServiceConfig> = {};
   for (const [key, entry] of Object.entries(value)) {
     if (key === "ipfsRpcUrl" || key === "ipfsTransport") retired(source);
@@ -66,25 +82,45 @@ export function validateLayer(
       case "database":
         result.database = path(entry, base, source);
         break;
-      case "ipfsGatewayUrl": {
-        let url: URL;
-        try {
-          if (typeof entry !== "string") invalid(source, key);
-          url = new URL(entry);
-        } catch {
+      case "ipfsGatewayUrl":
+      case "ipfsGatewayUrls": {
+        const entries = key === "ipfsGatewayUrl" ? [entry] : entry;
+        if (!Array.isArray(entries) || entries.length === 0 || entries.length > 16)
           invalid(source, key);
-        }
-        if (
-          !["http:", "https:"].includes(url.protocol) ||
-          url.username ||
-          url.password ||
-          url.href.includes("?") ||
-          url.href.includes("#")
-        )
-          invalid(source, key);
-        result[key] = url.href;
+        const urls = entries.map((item) => {
+          let url: URL;
+          try {
+            if (typeof item !== "string") invalid(source, key);
+            url = new URL(item);
+          } catch {
+            invalid(source, key);
+          }
+          if (
+            !["http:", "https:"].includes(url.protocol) ||
+            url.username ||
+            url.password ||
+            url.href.includes("?") ||
+            url.href.includes("#") ||
+            url.pathname !== "/"
+          )
+            invalid(source, key);
+          return url.href;
+        });
+        if (new Set(urls).size !== urls.length) invalid(source, key);
+        if (key === "ipfsGatewayUrl") result.ipfsGatewayUrl = urls[0]!;
+        else result.ipfsGatewayUrls = urls;
         break;
       }
+      case "ipfsGatewayTimeoutMs":
+      case "ipfsGatewayAttemptTimeoutMs":
+        if (
+          !Number.isSafeInteger(entry) ||
+          (entry as number) <= 0 ||
+          (entry as number) > 2_147_483_647
+        )
+          invalid(source, key);
+        result[key] = entry as number;
+        break;
       case "scope":
         if (typeof entry !== "string" || !/^[a-zA-Z0-9_-]{1,64}$/.test(entry)) invalid(source, key);
         result.scope = entry;
@@ -122,6 +158,9 @@ export function parseArguments(argv: readonly string[]) {
     "--port": "port",
     "--database": "database",
     "--ipfs-gateway-url": "ipfsGatewayUrl",
+    "--ipfs-gateway-urls": "ipfsGatewayUrls",
+    "--ipfs-gateway-timeout-ms": "ipfsGatewayTimeoutMs",
+    "--ipfs-gateway-attempt-timeout-ms": "ipfsGatewayAttemptTimeoutMs",
     "--scope": "scope",
     "--ui-options": "uiOptions",
   };
@@ -147,10 +186,10 @@ export function parseArguments(argv: readonly string[]) {
     if (flag === "--config") configFile = resolve(options.cwd, value);
     else {
       const field = names[flag]!;
-      if (field === "port") {
+      if (["port", "ipfsGatewayTimeoutMs", "ipfsGatewayAttemptTimeoutMs"].includes(field)) {
         if (!/^\d+$/.test(value)) invalid("CLI", field);
         cli[field] = Number(value);
-      } else if (field === "uiOptions") {
+      } else if (field === "uiOptions" || field === "ipfsGatewayUrls") {
         try {
           cli[field] = JSON.parse(value);
         } catch {
@@ -171,6 +210,8 @@ export async function resolveConfig(
     port: 3000,
     database: resolve(cwd, "tasks.sqlite"),
     scope: "local",
+    ipfsGatewayTimeoutMs: 30_000,
+    ipfsGatewayAttemptTimeoutMs: 5_000,
     ui: false,
     uiOptions: {
       host: "127.0.0.1",
@@ -229,14 +270,21 @@ export async function resolveConfig(
     file = validateLayer(value, dirname(parsed.configFile), "service file");
   }
   const cli = validateLayer(parsed.cli, cwd, "CLI");
-  const final = { ...defaults, ...user, ...file, ...cli };
+  const final: Partial<ServiceConfig> = { ...defaults };
+  for (const layer of [user, file, cli]) {
+    if (layer.ipfsGatewayUrl !== undefined || layer.ipfsGatewayUrls !== undefined) {
+      delete final.ipfsGatewayUrl;
+      delete final.ipfsGatewayUrls;
+    }
+    Object.assign(final, layer);
+  }
   requireGateway(final);
   return validateLayer(final, cwd, "effective configuration") as ServiceConfig;
 }
 
 export function requireGateway(config: Partial<ServiceConfig>): void {
-  if (!config.ipfsGatewayUrl)
+  if (!config.ipfsGatewayUrl && !config.ipfsGatewayUrls?.length)
     throw new ConfigurationError(
-      "Service requires an explicit ipfsGatewayUrl; provide --ipfs-gateway-url or task-engine.ipfsGatewayUrl. No default Gateway is selected.",
+      "Service requires an explicit ipfsGatewayUrl or ipfsGatewayUrls; provide --ipfs-gateway-urls or task-engine.ipfsGatewayUrls (legacy --ipfs-gateway-url also supported). No default Gateway is selected.",
     );
 }

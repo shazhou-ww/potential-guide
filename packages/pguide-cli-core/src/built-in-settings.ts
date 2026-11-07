@@ -303,10 +303,39 @@ export const builtInSettings = [
           }
         },
         "task-engine.ipfsGatewayUrl": {
-          "description": "Required explicit read-only HTTP(S) Trustless Gateway base URL; no credentials, query or fragment. No default node.",
+          "description": "Legacy single Gateway alias. Root HTTP(S) URL only; cannot share a layer with ipfsGatewayUrls.",
           "schema": {
             "type": "string",
             "minLength": 1
+          }
+        },
+        "task-engine.ipfsGatewayUrls": {
+          "description": "Ordered trusted root HTTP(S) Gateways; whole-list replacement, no discovery. No credentials, query, fragment or path prefix.",
+          "schema": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "task-engine.ipfsGatewayTimeoutMs": {
+          "description": "Total failover budget per missing block, including authorized hints; default 30000 ms.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          }
+        },
+        "task-engine.ipfsGatewayAttemptTimeoutMs": {
+          "description": "Maximum time per source, capped by remaining total budget; default 5000 ms.",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
           }
         },
         "task-engine.scope": {
@@ -1559,10 +1588,186 @@ return errors === 0;
 }
 
 export const setting17 = validate27;
-const schema28 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
-const pattern12 = new RegExp("^[a-zA-Z0-9_-]{1,64}$", "u");
+const schema28 = {"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"type":"string","minLength":1}};
 
 function validate27(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(Array.isArray(data)){
+if(data.length > 16){
+const err0 = {instancePath,schemaPath:"#/maxItems",keyword:"maxItems",params:{limit: 16},message:"must NOT have more than 16 items"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if(data.length < 1){
+const err1 = {instancePath,schemaPath:"#/minItems",keyword:"minItems",params:{limit: 1},message:"must NOT have fewer than 1 items"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+const len0 = data.length;
+for(let i0=0; i0<len0; i0++){
+let data0 = data[i0];
+if(typeof data0 === "string"){
+if(func2(data0) < 1){
+const err2 = {instancePath:instancePath+"/" + i0,schemaPath:"#/items/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+}
+else {
+const err3 = {instancePath:instancePath+"/" + i0,schemaPath:"#/items/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err3];
+}
+else {
+vErrors.push(err3);
+}
+errors++;
+}
+}
+let i1 = data.length;
+let j0;
+if(i1 > 1){
+const indices0 = {};
+for(;i1--;){
+let item0 = data[i1];
+if(typeof item0 !== "string"){
+continue;
+}
+if(typeof indices0[item0] == "number"){
+j0 = indices0[item0];
+const err4 = {instancePath,schemaPath:"#/uniqueItems",keyword:"uniqueItems",params:{i: i1, j: j0},message:"must NOT have duplicate items (items ## "+j0+" and "+i1+" are identical)"};
+if(vErrors === null){
+vErrors = [err4];
+}
+else {
+vErrors.push(err4);
+}
+errors++;
+break;
+}
+indices0[item0] = i1;
+}
+}
+}
+else {
+const err5 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "array"},message:"must be array"};
+if(vErrors === null){
+vErrors = [err5];
+}
+else {
+vErrors.push(err5);
+}
+errors++;
+}
+validate27.errors = vErrors;
+return errors === 0;
+}
+
+export const setting18 = validate28;
+const schema29 = {"type":"integer","minimum":1,"maximum":2147483647};
+
+function validate28(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(!(((typeof data == "number") && (!(data % 1) && !isNaN(data))) && (isFinite(data)))){
+const err0 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if((typeof data == "number") && (isFinite(data))){
+if(data > 2147483647 || isNaN(data)){
+const err1 = {instancePath,schemaPath:"#/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+if(data < 1 || isNaN(data)){
+const err2 = {instancePath,schemaPath:"#/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+}
+validate28.errors = vErrors;
+return errors === 0;
+}
+
+export const setting19 = validate29;
+const schema30 = {"type":"integer","minimum":1,"maximum":2147483647};
+
+function validate29(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+let vErrors = null;
+let errors = 0;
+if(!(((typeof data == "number") && (!(data % 1) && !isNaN(data))) && (isFinite(data)))){
+const err0 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "integer"},message:"must be integer"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if((typeof data == "number") && (isFinite(data))){
+if(data > 2147483647 || isNaN(data)){
+const err1 = {instancePath,schemaPath:"#/maximum",keyword:"maximum",params:{comparison: "<=", limit: 2147483647},message:"must be <= 2147483647"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+if(data < 1 || isNaN(data)){
+const err2 = {instancePath,schemaPath:"#/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+}
+}
+validate29.errors = vErrors;
+return errors === 0;
+}
+
+export const setting20 = validate30;
+const schema31 = {"type":"string","pattern":"^[a-zA-Z0-9_-]{1,64}$"};
+const pattern12 = new RegExp("^[a-zA-Z0-9_-]{1,64}$", "u");
+
+function validate30(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(typeof data === "string"){
@@ -1587,14 +1792,14 @@ vErrors.push(err1);
 }
 errors++;
 }
-validate27.errors = vErrors;
+validate30.errors = vErrors;
 return errors === 0;
 }
 
-export const setting18 = validate28;
-const schema29 = {"type":"boolean"};
+export const setting21 = validate31;
+const schema32 = {"type":"boolean"};
 
-function validate28(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+function validate31(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(typeof data !== "boolean"){
@@ -1607,14 +1812,14 @@ vErrors.push(err0);
 }
 errors++;
 }
-validate28.errors = vErrors;
+validate31.errors = vErrors;
 return errors === 0;
 }
 
-export const setting19 = validate29;
-const schema30 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
+export const setting22 = validate32;
+const schema33 = {"type":"object","additionalProperties":false,"required":["host","port","favoritesFile"],"properties":{"host":{"enum":["127.0.0.1","localhost","::1"]},"port":{"type":"integer","minimum":0,"maximum":65535},"favoritesFile":{"type":"string","minLength":1}}};
 
-function validate29(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
+function validate32(data, {instancePath="", parentData, parentDataProperty, rootData=data}={}){
 let vErrors = null;
 let errors = 0;
 if(data && typeof data == "object" && !Array.isArray(data)){
@@ -1663,7 +1868,7 @@ errors++;
 if(data.host !== undefined){
 let data0 = data.host;
 if(!(((data0 === "127.0.0.1") || (data0 === "localhost")) || (data0 === "::1"))){
-const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema30.properties.host.enum},message:"must be equal to one of the allowed values"};
+const err4 = {instancePath:instancePath+"/host",schemaPath:"#/properties/host/enum",keyword:"enum",params:{allowedValues: schema33.properties.host.enum},message:"must be equal to one of the allowed values"};
 if(vErrors === null){
 vErrors = [err4];
 }
@@ -1744,7 +1949,7 @@ vErrors.push(err10);
 }
 errors++;
 }
-validate29.errors = vErrors;
+validate32.errors = vErrors;
 return errors === 0;
 }
 
@@ -1766,7 +1971,10 @@ export const builtInValidators = {
   "task-engine.port": setting14,
   "task-engine.database": setting15,
   "task-engine.ipfsGatewayUrl": setting16,
-  "task-engine.scope": setting17,
-  "task-engine.ui": setting18,
-  "task-engine.uiOptions": setting19,
+  "task-engine.ipfsGatewayUrls": setting17,
+  "task-engine.ipfsGatewayTimeoutMs": setting18,
+  "task-engine.ipfsGatewayAttemptTimeoutMs": setting19,
+  "task-engine.scope": setting20,
+  "task-engine.ui": setting21,
+  "task-engine.uiOptions": setting22,
 };
