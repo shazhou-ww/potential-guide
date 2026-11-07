@@ -13,6 +13,12 @@ Pinboard 使用用户指定的 `https://pinboard.shazhou.work`。先以当前 En
 备用来源按用户授权使用本次自有的只读 Node HTTP Gateway，供应从 Pinboard
 读取并逐块校验的同一完整 DAG；不声称存在第二个公共 Gateway，不使用本地 Kubo。
 
+本轮使用用户交付的重建根：
+
+- tools：`bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a`
+- directories：`bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe`
+- network：`bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si`
+
 ### D-S02: 走查无本地 Kubo 的消费路径
 
 在独立 Linux/macOS 消费环境安装已交付包，配置多 Gateway，
