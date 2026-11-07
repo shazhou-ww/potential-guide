@@ -1,0 +1,229 @@
+{
+  "origin": "https://pinboard.shazhou.work",
+  "timestamp": "2026-11-07T08:53:14.534Z",
+  "node": "v24.12.0",
+  "bundles": [
+    {
+      "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+      "blocks": [
+        {
+          "cid": "bafybeigpnzao2lgpmx2ajfdu4w6uzzd3ovo7rf6gfrdv4dyuwwwepr6oca",
+          "bytes": 219
+        },
+        {
+          "cid": "bafybeiar7ho2idkm6sefhevkeqre5udysljzxsfrza6zvrbswtbsypw2hm",
+          "bytes": 114
+        },
+        {
+          "cid": "bafybeif7v36ocnktz5k7in6cpfpxq3ojgp4g3v6mw5pwtjywev6fvrgkbe",
+          "bytes": 156
+        },
+        {
+          "cid": "bafkreigxyj3pkftayo3kocpur3sddketcd22wm3l6dioga22edr6uu4m2q",
+          "bytes": 612
+        },
+        {
+          "cid": "bafkreicbpx3bulqn4ee2v3iujh2pmhceh44rkzavoc2vuktsy7txximv74",
+          "bytes": 16207
+        },
+        {
+          "cid": "bafkreihiq4s6qwtz5fyf7zttcafyxhkxyclumd6ilmuqzhtw72kuv4747q",
+          "bytes": 504
+        },
+        {
+          "cid": "bafybeieeimmmiedeputkujntdzcpqo46xkigqxlc24x3h7e6n4rc4xghkm",
+          "bytes": 51
+        },
+        {
+          "cid": "bafkreiawxinyx4f34dh5y7bdjpsrbdjzfgldxw5isjhe5le4xp4kfniesy",
+          "bytes": 1472
+        },
+        {
+          "cid": "bafkreie7vwb2xlso2xbdk4e3bykurijyzp57r3g5xjy72y2ijhefqnw7ny",
+          "bytes": 1732
+        },
+        {
+          "cid": "bafkreiekluxonhdztp6palkigvcmdfchzpxzc5sqbeyqrwgevunhjbt3ja",
+          "bytes": 64
+        },
+        {
+          "cid": "bafybeidqiqdfpgfwfpvvhboooh7ivyp4tizfyavdkc3th2av7b3xeaxufi",
+          "bytes": 110
+        },
+        {
+          "cid": "bafkreih57lqjfmau5apsvw6jqc7awizmyjm7o6de2vxvo3xhaomxn3vkxu",
+          "bytes": 1046
+        },
+        {
+          "cid": "bafybeiehkjlqqjjmtlkukjem4wt2mpzeusavup3xn26agl5ap5xqmy4lfi",
+          "bytes": 190
+        },
+        {
+          "cid": "bafkreida67t7ysi2ygdfkn4a63jmthduvu2ffbp2grmqwrexbelx4oevxy",
+          "bytes": 342
+        },
+        {
+          "cid": "bafkreibzhyity5hz7ob6sqx65udcfhqfsctwdzh4mf3i5ptph4uo2rjbve",
+          "bytes": 400
+        },
+        {
+          "cid": "bafkreicoikjyt426hrhj5h5ugfaboaeqkied5uqg4pxx5uha24swquwway",
+          "bytes": 392
+        }
+      ],
+      "bytes": 23611,
+      "admissionError": {
+        "code": "invalid_bundle",
+        "message": "Task Bundle has no exact binary manifest. Rebuild with the current Task Bundle authoring tools and use the new CID."
+      }
+    },
+    {
+      "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+      "blocks": [
+        {
+          "cid": "bafybeihyo3ujmjh7jgtlfwmi6inowbcub4xdi2amj2m23rbv7ik3mzhdbi",
+          "bytes": 219
+        },
+        {
+          "cid": "bafybeihdo4ogelok2ihs4fux4n2eozjblzt53mktyj4gnlx424lhfxftnm",
+          "bytes": 114
+        },
+        {
+          "cid": "bafybeihzaj6y76ul42lxro4q4ga6yi6ztycoboogsk5swneajqfkkluwte",
+          "bytes": 156
+        },
+        {
+          "cid": "bafkreibv2hljdzgcxq64h7ziogvdubpxgzuldnexxlhupsa57sz3vndnby",
+          "bytes": 564
+        },
+        {
+          "cid": "bafkreiaqdmqxx4srrgmxg2jogb4eyrjb2fwoj3rmhwmw3q4cdjv5espvne",
+          "bytes": 13648
+        },
+        {
+          "cid": "bafkreia3qfub552texiueoutz4ntrlx5zgahiv6yrdyrazpmqd6lkbbrm4",
+          "bytes": 415
+        },
+        {
+          "cid": "bafybeihcarz5odsxdixxl4smrgmfrveeahwpnwmd2556wcknteadg57y6m",
+          "bytes": 51
+        },
+        {
+          "cid": "bafkreido6iy3lbwb7a237karjl3d6cz35qmhmy6lgqg5yt3eu7l5av43je",
+          "bytes": 1109
+        },
+        {
+          "cid": "bafkreiaxieweutp3vpg6vb5jb3l4ojjg6otsajvxlwuvoxhjz22op7qdka",
+          "bytes": 1610
+        },
+        {
+          "cid": "bafkreiekluxonhdztp6palkigvcmdfchzpxzc5sqbeyqrwgevunhjbt3ja",
+          "bytes": 64
+        },
+        {
+          "cid": "bafybeialpoxnsnz2knpjwgoeuhxnyteo2j7yq64f7re7eyz3sa5a46ew5a",
+          "bytes": 110
+        },
+        {
+          "cid": "bafkreiaejjb2yrwqs7pbjrxtwztpo2zdzqeyrodju2go6bl4er3ut7t26y",
+          "bytes": 876
+        },
+        {
+          "cid": "bafybeia3ia76jtg44u2u6u6uye5fy7wd5ngyhrsichof67x5shxmfggy4y",
+          "bytes": 131
+        },
+        {
+          "cid": "bafkreifba56wg5jbzfn6tvc7kgukywp5cst6bw2ygf2vubrkvtssuwvoqi",
+          "bytes": 471
+        },
+        {
+          "cid": "bafkreiavikottggiiucs7jcaq76hhbshbwelfc6dmndlkpsaigrrflwcjy",
+          "bytes": 273
+        }
+      ],
+      "bytes": 19811,
+      "admissionError": {
+        "code": "invalid_bundle",
+        "message": "Task Bundle has no exact binary manifest. Rebuild with the current Task Bundle authoring tools and use the new CID."
+      }
+    },
+    {
+      "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+      "blocks": [
+        {
+          "cid": "bafybeieqcbsrb4xfnstoc5fmlhhjefyylpgruk4nfgk36kcuxf2mj6xota",
+          "bytes": 219
+        },
+        {
+          "cid": "bafybeihk32dyg43bbxwtufbpf35hgxbwkxu6vn2iie4vu2co7xjrqytoju",
+          "bytes": 114
+        },
+        {
+          "cid": "bafybeidn5hu2vrrw4jz4xc5q6hdsormpmptfmsvpo6yl4n2ecg6mei5bxy",
+          "bytes": 156
+        },
+        {
+          "cid": "bafkreihiuoc6ua4f3k2ygahur2ukku7nj7wnyf3lqahdeqcdsxza7xju54",
+          "bytes": 665
+        },
+        {
+          "cid": "bafkreihgzubus4bfl7wdsvysyv6ascw7cp7lrtvsna4334b2ct2ttmrth4",
+          "bytes": 15287
+        },
+        {
+          "cid": "bafkreifowng2rfj35azb6sll6kuhdoqapmp3a3saxsrswp5dzanx3lv5dq",
+          "bytes": 604
+        },
+        {
+          "cid": "bafybeid7dkfbirnl3tnobttl5k46vrq2m4soqdftodytfluthv5amkn5se",
+          "bytes": 51
+        },
+        {
+          "cid": "bafkreiekkkxyjrcpcx2ejmobmzrw7gzg47ooe2lvs23ctqewplrfhtt5m4",
+          "bytes": 1063
+        },
+        {
+          "cid": "bafkreih4d6mmnawqem4dpvmfexrlk6v5jfmkj5gku24egnqku4wrs6m5jy",
+          "bytes": 1857
+        },
+        {
+          "cid": "bafkreiekluxonhdztp6palkigvcmdfchzpxzc5sqbeyqrwgevunhjbt3ja",
+          "bytes": 64
+        },
+        {
+          "cid": "bafybeidl5ner7uxhhm7fvbbwjuj4fl2qt6xrwd6nyyd45mjhbq4rl4c4yy",
+          "bytes": 110
+        },
+        {
+          "cid": "bafkreihtov7rwvtzso42guhmiw2b723232mttpme4hmqpfwso5fohkso6a",
+          "bytes": 979
+        },
+        {
+          "cid": "bafybeigccyaqzrcocowgdvdffujfrxg5xpbhwqqfm66bzyt2jlwx2fitde",
+          "bytes": 252
+        },
+        {
+          "cid": "bafkreihnkccdpbtiwyocd4vhmyaoiemgflzzttqrexc75mqcxmpl3qdmg4",
+          "bytes": 333
+        },
+        {
+          "cid": "bafkreiftiktyxknve4aluf274igz4ixz5h55ilmjexsw77otku5dpdd52q",
+          "bytes": 351
+        },
+        {
+          "cid": "bafkreig4bgpianp5pg2xbukwz7u4xa4zabepjjiuubeathdwbzwxmexe6u",
+          "bytes": 325
+        },
+        {
+          "cid": "bafkreih2v365bl2zlanpkwctsqkkz2eqerv7qj6ttz7o4bqvrshdh43ufe",
+          "bytes": 367
+        }
+      ],
+      "bytes": 22797,
+      "admissionError": {
+        "code": "invalid_bundle",
+        "message": "Task Bundle has no exact binary manifest. Rebuild with the current Task Bundle authoring tools and use the new CID."
+      }
+    }
+  ]
+}
