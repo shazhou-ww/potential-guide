@@ -10,7 +10,8 @@
 
 ### D-S02: 验证独立消费者
 
-在独立消费者环境中获取完整闭包、物化并执行 Probe，检查有效文档与原始 Check 文档的可读取性。
+在独立消费者环境中获取完整闭包、验证物化，并将 Objective Bundle 作为普通 Task
+提交执行 Probe，检查有效文档与原始 Check 文档的可读取性。
 
 ## Acceptance criteria
 

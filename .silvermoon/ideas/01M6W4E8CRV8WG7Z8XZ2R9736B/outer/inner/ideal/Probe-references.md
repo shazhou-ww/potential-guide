@@ -6,8 +6,10 @@
 ## Probe 是 Objective 对应的业务动作
 
 Check 独立执行产生原始事实与原始文档引用。
-Probe 根据 Objective subject 和有序阶段运行 Check，装配目标阶段与失败检查项，
-并在结果中直接给出已应用 Override 的文档引用。通用 Engine 不解释这些规则。
+Objective Task 的 Worker 执行 Probe，根据 input 和有序阶段运行 Check，
+装配目标阶段与失败检查项，并直接给出已应用 Override 的文档引用。
+通用 Engine 仍只解释 Task 协议，不解释这些业务规则。
+Worker 与 contract 由[两阶段构建](Objective-build.md)的同一份生成元数据约束。
 
 成功的 Probe 调用不一定表示目标已完成：
 首个有失败 Check 的阶段是当前目标，全部阶段通过才是 `terminal`。
@@ -19,27 +21,27 @@ Check 执行错误、取消、非法输出或映射错误是调用失败，不�
 {
   "objective": "<Objective-root-CID>",
   "documentation": {
-    "zh-CN": "ipfs://<Objective-root-CID>/references/zh-CN/objective.md"
+    "en": "ipfs://<Objective-root-CID>/resources/references/en/objective.md"
   },
   "currentLevel": {
     "id": "prepare-environment",
     "documentation": {
-      "zh-CN": "ipfs://<Objective-root-CID>/references/zh-CN/levels/prepare-environment.md"
+      "en": "ipfs://<Objective-root-CID>/resources/references/en/levels/prepare-environment.md"
     }
   },
   "checks": [
     {
       "id": "tools",
       "documentation": {
-        "zh-CN": "ipfs://<Objective-root-CID>/references/zh-CN/checks/tools/check.md"
+        "en": "ipfs://<Objective-root-CID>/resources/references/en/checks/tools/check.md"
       },
       "problems": [
         {
           "target": "node",
-          "code": "missing",
-          "actual": null,
+          "code": "tool-version",
+          "actual": "18.0.0",
           "documentation": {
-            "zh-CN": "ipfs://<Check-root-CID>/resources/references/zh-CN/problems/missing.md"
+            "en": "ipfs://<Check-root-CID>/resources/references/en/problems/tool-version.md"
           }
         }
       ]
@@ -48,7 +50,9 @@ Check 执行错误、取消、非法输出或映射错误是调用失败，不�
 }
 ```
 
-例中覆盖了 `tools` 概述，但没有覆盖 `missing` Problem，故两页来自不同根 CID。
+例中覆盖了 `tools` 概述，但没有覆盖 `tool-version` Problem，故两页来自不同根 CID；
+成品 `resources/objective.json` 中的 `tool-missing` Override 只影响那个 code，
+不覆盖所有 Problems。
 每个文档映射包含 Objective 声明的全部语言，URI 是可独立消费的完整地址。
 `checks` 只列当前阶段有业务问题的逻辑引用，不列通过项；
 该阶段所有 Checks 应被聚合，而不是只返回第一个失败 Check。
@@ -65,7 +69,7 @@ Probe 层复制业务事实并装配有效文档；原始结果、Check 子树 C
 ## Override 的作用域
 
 Override 绑定 Objective 内的逻辑 Check 引用，而不是 Check 全局身份或物理 Bundle 名。
-例如 `tools` 与 `network` 共享同一 Check 根时，覆盖 `tools` 不影响 `network`，
+例如 `tools` 与 `project-tools` 共享同一 Check 根时，覆盖 `tools` 不影响 `project-tools`，
 不改变嵌入 Check 的字节、CID、problemCodes 或其他 Objective 的引用。
 
 第一版覆盖面：
@@ -131,12 +135,37 @@ Markdown 正文、任意链接、锚点和循环检查不因本 idea 自动新�
 - 每个节点可脱离父节点直接读取自己的文档，不需要 code/index 二次查找。
 - 原 Check 文档始终保留在嵌入子树中；Override 不销毁原文或建立全局可变覆盖层。
 
+父身份与 Check SDK 一样来自 Task SDK 的 `context.bundle.cid`，
+不是 input 或作者常量。业务描述通过 `context.bundle.read("resources/objective.json")`
+等 Bundle 资源接口读取，不依赖 cwd、__dirname 或物化路径。
+资源读取/解析失败是 Probe 调用错误；文档 URI 装配不读取 Markdown 正文。
+子 CID 来自已验证的子树绑定，子独立执行时由其自己的 Task context 提供身份。
+
 相对链接和图片以实际选中页面的位置为基址：
-Override 页面使用 Objective 自己的资源目录；
+Override 页面使用 Objective 自己的 `resources/references/<language>/…` 目录；
 继承页面使用 Check 原始根与原始目录。
 生成覆盖页路径时必须保留作者资源布局或显式改写受支持引用，
-不能只移动页面并声称相对资源仍可用。候选作者配置使用显式 resources 映射保留布局，
-不要求复制继承页面到 Override 目录。
+不能只移动页面并声称相对资源仍可用。
+候选格式与 Check 一样不解析/改写 Markdown 正文；作者按最终页面路径编写相对链接，
+使用显式 resources 映射收录对应目标，不保证作者目录的任意相对链接自动保留含义。
+例如成品概述 `resources/references/en/objective.md` 引用
+`../../assets/environment.svg`，对应成品 `resources/assets/environment.svg`；
+更深层的覆盖页必须按自己的位置计算。无需复制继承页面到 Override 目录。
+
+## 与 Check 结果的同构边界
+
+静态定义都使用 `references` 表示逐语言相对页面映射；
+运行结果都使用 `documentation` 表示逐语言完整 URI，
+不另起 `docs`、`referenceUrl` 或返回 Markdown 正文的变体。
+Problem 事实继续使用 `target/code/actual`，不改称 `id/message/parameters`。
+Check 的 `problemCodes` 是可报告问题集合，Objective 不重复声明另一份：
+只按已验证的 Check 元数据校验 `references.<language>.checks.<ref>.problems`。
+
+Probe 的 `checks[].id` 是逻辑调用归属，`currentLevel.id` 是目标阶段；
+它们不是 Check 的 `kind`、CID 或 Problem code。
+Probe 有阶段推进语义，因此不直接别名为 CheckResult；
+不为追求表面一致引入与 `currentLevel/terminal` 重复的独立 `pass` 判定。
+两者真正共享的是文档装配、问题事实和错误边界，而非强行相同的顶层 JSON。
 
 需要人工查看原始文档时，可以沿嵌入 Check 的既有页面和原始结果访问；
 是否在 Probe 有效节点上增加 `originalDocumentation` 不属于本轮确定字段。

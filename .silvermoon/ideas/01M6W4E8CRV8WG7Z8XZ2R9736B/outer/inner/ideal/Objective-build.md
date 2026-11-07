@@ -1,143 +1,225 @@
-# 作者 Build YAML 与依赖固化
+# Objective 作者 YAML 与两阶段构建
 
-本文服务于 [Idea](Idea.md)，补充 [成品格式](Objective-format.md)。
-以下是作者配置候选，不是现有 CLI 可执行配置。来源解析器与正式机器 Schema 待实施落实。
+本文服务于 [Idea](Idea.md)，补充 [成品结构](Objective-format.md)。
+所有 Objective API 名称是候选；已存在的是 Check 准备器和通用 Task 编译器。
 
-## 三层边界
+## 与 Check 相同的两阶段
 
-1. 作者描述：普通作者工程中的 `objective.build.yaml`，声明选择哪些 Check 和如何组合。
-2. 构建解析：将来源固定为精确 Check 根 CID，获取、验证并组装完整内容。
-3. 不可变成品：仅包含内部引用、目标声明和完整闭包，运行时不再查询 publication。
+```text
+Check:
+  <kind>.check.build.yaml
+    → prepareCheck
+    → 固化源文件/definitions/resources + task.build.yaml
+    → buildTask
+    → task.yaml + worker.cjs + schemas + resources → CAR/CID
+    → verifyCheckResources → 接受成品
 
-作者不需要预先物化 Check、维护本地 IPFS 节点或运行 Kubo；
-构建器必须能获取全部内容块，仅获知 CID 不足以完成自包含交付。
-普通 publication URL 是可变的选择入口，不是内容身份。
+Objective:
+  <kind>.objective.build.yaml
+    → prepareObjective
+    → 固化源文件/definitions/resources/Check 子树 + task.build.yaml
+    → 同一个 buildTask
+    → task.yaml + worker.cjs + schemas + resources → CAR/CID
+    → verifyObjectiveResources → 接受成品
+```
 
-## objective.build.yaml 候选
+第一阶段是业务准备，不编译 Worker、不自行生成最终 CAR，也不调用另一套 Bundle 编译器。
+第二阶段是通用 Task 编译，不查询 publication，不重新选择 Check 版本。
+成品验证是接受门槛，不是第三套编译流程。上传与 pin 是独立外部操作。
+
+## 作者 objective.build.yaml 候选
+
+字段平铺，与 Check 一样使用 `name/kind/source/languages/referenceRoot/references/resources/binary`。
+Objective 专属新增 `bundles/checks/levels`；没有额外 `objective` 包装层。
 
 ```yaml
 name: Development Environment
-languages: [zh-CN]
+kind: development-environment
+source:
+  root: src
+  entry: src/main.ts
+  contract: src/contract.ts
+languages: [en]
 
 bundles:
-  environment:
+  tools:
     source:
       kind: publication
-      url: https://example.test/publications/environment-check
-  project:
-    source:
-      kind: ipfs
-      cid: <Check-root-CID>
+      url: https://example.test/publications/environment-tools-check
 
-objective:
-  subjectSchema:
-    $ref: schemas/subject.json
-  checks:
-    tools:
-      bundle: environment
-      inputMapping: '{"root": root, "kind": "tools"}'
-    network:
-      bundle: environment
-      inputMapping: '{"root": root, "kind": "network"}'
-    project:
-      bundle: project
-      inputMapping: '{"root": root}'
-  levels:
-    - id: prepare-environment
-      checks: [tools, network]
-    - id: verify-project
-      checks: [project]
+checks:
+  tools:
+    bundle: tools
+    inputMapping: environment
+  project-tools:
+    bundle: tools
+    inputMapping: project
 
-schemas:
-  - from: ./contracts/subject.json
-    to: schemas/subject.json
+levels:
+  - id: prepare-environment
+    checks: [tools]
+  - id: prepare-project-tools
+    checks: [project-tools]
 
-referenceRoot: ./docs
+referenceRoot: references
 references:
-  zh-CN:
-    objective: objective.md
+  en:
+    objective: references/en/objective.md
     levels:
-      prepare-environment: levels/prepare-environment.md
-      verify-project: levels/verify-project.md
-      terminal: levels/terminal.md
+      prepare-environment: references/en/levels/prepare-environment.md
+      prepare-project-tools: references/en/levels/prepare-project-tools.md
+      terminal: references/en/levels/terminal.md
     checks:
       tools:
-        check: tools/check.md
+        check: references/en/checks/tools/check.md
         problems:
-          missing: tools/problems/missing.md
+          tool-missing: references/en/checks/tools/problems/tool-missing.md
 
 resources:
-  - from: ./docs/assets/environment.svg
-    to: references/assets/environment.svg
+  - from: assets/environment.svg
+    to: resources/assets/environment.svg
+binary: []
 ```
 
-`example.test` URL 和 CID 是占位，不代表已验证的 Pinboard API。
-作者 YAML 不需要自己的最终 CID，也不包含 Objective Worker、Node 入口或 contract 模块。
-对象 Schema 可以内联；需要外部作者文件时，显式文件映射将它收录到成品根内。
+`example.test` 是 publication 占位，不代表已验证的 Pinboard API。
+也可以用精确根 CID 替换来源对象：
 
-### 作者字段如何生成成品
+```yaml
+source:
+  kind: ipfs
+  cid: <Check-root-CID>
+```
 
-| 作者字段 | 含义与成品投影 |
-| --- | --- |
-| `name`、`languages` | 投影为成品展示名和支持语言。 |
-| `bundles` | 作者侧制品绑定表；每项解析一次并嵌入 `checks/<binding>`。 |
-| `source.kind: ipfs` | 直接使用精确 CID；具体传输 endpoint 属于构建配置，不是内容身份。 |
-| `source.kind: publication` | 通过支持的渠道解析确定发布版本和 CID，非任意网页内容下载。 |
-| `objective.checks` | 逻辑引用及映射；`bundle` 从绑定名改写为根内 `checks/<binding>` 路径。 |
-| `objective.levels` | 按原顺序投影，遵守新的目标阶段语义。 |
-| `schemas` | 显式快照作者文件并放入成品，不保留依赖作者工程路径的 `$ref`。 |
-| `referenceRoot`、`references` | 作者文件相对 root 选择；生成成品中规范的逐语言页面路径。 |
-| `resources` | 收录显式支持资源，保持页面相对链接所需的目录关系。 |
+作者不需要本地 IPFS 节点或预存子 Bundle；准备器必须获取并验证全部内容，
+仅解析到 CID 不足以提供自包含构建输入。
 
-两条逻辑引用可绑定同一份制品。未使用的制品绑定应报错，避免意外扩大执行闭包。
-若两个绑定解析到同一 CID，底层块可以去重；是否合并作者绑定名不改变逻辑引用语义，
-无需为此自动改写用户的命名。
+### 源文件与契约
 
-当前候选采用独立 `bundles` 表，避免作者制品名与逻辑 Check 名混淆，
-也避免先前示意中顶层 `checks` 与 `objective.checks` 的同名歧义。
-这是本次整理的字段建议，不代表已冻结的格式。
+`source.root/entry/contract` 与 Check 同义：准备器快照 root 内源文件，
+entry/contract 必须在该源集合中，路径以作者 YAML 所在目录为基准。
+entry 使用 Task SDK 的 `runTask` 启动 Probe 业务回调；
+通用阶段把它连同业务依赖编译成唯一 `worker.cjs`。
 
-## 构建顺序与失败边界
+作者 contract 用 TypeBox 定义一次 `input`，并通过 Probe 契约工厂生成 result/message。
+`environment` 与 `project` 两个字段各自满足 tools Check 的 `{checkTimeoutMs,tools}` 输入；
+不能套用旧示意里的 `{root,kind}`。
+准备器从 YAML/已验证子 Check 生成语言、实际阶段（含 terminal）及按逻辑引用归属的
+Problem codes 等 definitions，供 contract 与 Worker 同源使用。
+`initial` 是别名，不作为结果 union 的真实状态。
+Probe 契约/回调工厂的候选命名为 `createProbeContract` / `createProbeTask`，
+不是已存在的 API，具体签名留待实施。
 
-1. 验证作者配置、精确路径、阶段引用和页面声明；快照作者文件。
-2. 解析每个来源，获得精确发布版本与 Check 根 CID；一次构建只解析一次同一来源。
-3. 获取完整 DAG，验证所有块哈希、可达性及 Check Bundle 声明/资源契约。
-4. 根据 Check 元数据验证逻辑引用、Problem Override 和各语言有效页面覆盖。
-5. 生成成品 YAML、Schema、References 和资源；引用已验证的原 Check 子树。
-6. 导出并验证完整 Objective CAR，得到根 CID；成功后才接受成品和固化记录。
+与 Check 一样，输入契约最终成为 `task.yaml.inputSchema`；
+作者 YAML 不重复手写 `inputSchema/subjectSchema/resultSchema/messageSchema`。
+生成 definitions 发生在 TypeScript 检查与通用编译之前，不修改历史 Check 的 definitions。
 
-发布入口没有明确内容身份、内容缺失、哈希不符、格式不支持、无权访问、
-映射错误或文档覆盖不完整均显式失败。不执行 Check 来发现静态契约，
-不重新编译、不安装其依赖，不用可变 URL 的下一版本补救失败。
-失败不能替换上次已接受的成品或锁定记录。
+## 第一阶段：prepareObjective
 
-Pinboard 是预期支持的来源渠道，但需按实际 publication API 证明
-“发布版本到完整 Bundle 根 CID”的解析规则。不得假定普通页面 URL、附件 CID、
-下载文件 CID 与 Check Bundle 根 CID 相同。授权与 credential 不写入可恢复成品或锁文件。
+1. 验证 YAML、阶段/绑定关系、规范路径与 Reference frontmatter，快照作者源文件和自有资源。
+2. 对每个来源解析一次：固定发布版本及 Check 根 CID，获取完整 DAG，
+   验证块哈希、Task/Check 契约、完整资源与语言/Problem 元数据。
+3. 验证稀疏 Override 与所有声明语言的有效页面覆盖，生成唯一的
+   `resources/objective.json`、规范页面路径和 definitions。
+4. 将原 Check 放入准备的 `resources/checks/<binding>/` 内容集合；
+   保留已验证块/根身份与子清单，生成通用 `task.build.yaml`。
 
-## 固化与可复现
-
-固定的 Objective 根天然锁定本次依赖。相同作者 YAML 引用移动 publication 时，
-再次解析可能得到不同 Check，因此“成品不可变”不等于“作者输入可复现”。
-
-建议构建同时输出独立解析记录或 lock，按绑定记录：
+准备结果组织为：
 
 ```text
-作者来源 → 确定发布版本（如有） → 已验证 Check 根 CID
+dist/
+├─ definitions/<kind>.js
+├─ definitions/<kind>.d.ts
+└─ staging/<kind>/
+   ├─ task.build.yaml
+   ├─ src/…
+   ├─ dist/definitions/<kind>.{js,d.ts}
+   └─ resources/
+      ├─ objective.json
+      ├─ references/…
+      ├─ assets/…
+      └─ checks/<binding>/…          # 完整已验证 Check 内容
 ```
 
-该记录不把 Objective 根 CID写回自身文件树。完整成品根 CID可写入根外的构建凭据。
-更新模式重新选择来源并生成新的候选记录；锁定模式仅使用已有精确 CID，
-内容不可用即失败，不查询 latest 代替。
-具体锁文件名、CLI 更新操作、source fingerprint 与 snapshot 格式留待实施细化；
-锁定来源的变化必须显式识别，不能继续使用与当前作者声明不匹配的旧记录。
+引用的 CID、元数据与实际子树必须一致；准备后的源和内容是固定快照，
+后续不能重新打开可变作者来源或查询 publication 代替这些输入。
+作者来源、锁记录与接受凭据可以在成品外保留，不把 credential 写入成品。
 
-固定作者快照、精确依赖和同一规范 UnixFS 组装策略应得到同一根；
-重新物化后用不同上传默认值构建，不构成复现保证。
+生成的通用 YAML 使用既有字段；下例显示普通文件输入部分，`include` 是准备器
+根据完整资源集合生成的映射，示意中使用通用工具已支持的 glob 简写。
+实际输出沿 Check 的精确资源映射做法，不让作者手写或维护展开列表。
 
-## 成品中不保留作者运行依赖
+```yaml
+$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json
+name: Development Environment
+runtime:
+  minVersion: "22.13.0"
+source:
+  entry: src/main.ts
+  contract: src/contract.ts
+  mode: explicit
+include:
+  - from: resources/**/*
+    to: resources/
+outDirectory: bundle
+binary: []
+```
 
-消费者不需要 `objective.build.yaml`、作者工程、发布服务或锁文件来验证和解释成品。
-成品包含 `objective.yaml`、收录文件和全部 Check 子树。
-来源 URL 如用于 provenance，只能是被动记录，不成为运行时获取代码的入口。
-固定闭包上传与 pin 是独立渠道操作，构建 CAR 成功不等于已发布或持续可用。
+`binary: []` 仅代表本例父子资源都为文本；一般情况由自有 binary 选择与
+子 Bundle 精确 binary 加前缀合成，不能漏掉子二进制文件。
+现有文件接口不等于已支持原 DAG 接枝；如需要额外通用子树输入，
+必须显式定义并测试该扩展，不能把它隐藏在未支持的 YAML 字段中。
+
+## 第二阶段：buildTask 与接受验证
+
+通用编译器从准备好的 contract 生成 Schema，从 entry 生成 Worker，
+生成唯一 `task.yaml`，完整 include/binary，执行通用文本规范化并导出 UnixFS CAR。
+不要求 Engine 理解 Objective 元数据，也不生成独立 `objective.yaml`。
+
+业务接受器先使用通用 `readTaskArtifact` 验证整个成品，再验证：
+
+- 实际自有资源集与已准备快照匹配，业务 JSON、页面和 binary 列表没有遗漏或额外内容。
+- 父 include 覆盖全部文件；每个子 Bundle 的 include/binary 相对其自身根仍然有效。
+- 每个实际子树根等于第一阶段固定的 Check CID，内容没有被重编译、规范化或替换。
+- 父根涵盖所有子树的完整 DAG，Result Schema/definitions 与阶段、语言、Problem 元数据一致。
+
+仅复制文件后用另一组 UnixFS 参数导入可能改变子 CID；
+不能以文件字节相同替代上述子树验证。
+现有通用编译器主要接收文件并重新构树；在适用的规范布局下须证明其子 CID 保持，
+不适用时明确失败，或扩展通用编译/内容层接受已验证子树。
+无论采用哪种实现，仍保留两阶段与同一个通用编译入口，不复制 Objective 专用打包后门。
+
+全部检查通过才替换已接受成品/索引和锁记录；
+准备失败、编译失败或验证失败都不能破坏上次接受的输出。
+
+## 作者路径与资源一致性
+
+- `referenceRoot` 和 Reference 映射都以 Build YAML 所在目录为基准。
+  `referenceRoot: references` 时映射必须是 `references/en/objective.md`，
+  不是 `objective.md`，也不是相对 referenceRoot 再解析一次。
+- 页面严格按 `<referenceRoot>/<language>/<suffix>` 选择，suffix 为
+  `objective.md`、`levels/<id>.md`、`checks/<ref>/check.md` 或
+  `checks/<ref>/problems/<code>.md`；成品统一为 `resources/references/<language>/…`。
+- 拒绝未知/未选择的 Reference 文件、重复映射、非法语言、越界与符号链接。
+  assets 位于 referenceRoot 外，通过 `resources` 显式选择。
+- `resources: [{from,to}]` 是与 Check 一致的精确映射，不使用 glob，to 在 resources 下。
+  `binary` 才使用最终路径 portable glob；它不能覆盖 generated objective.json，
+  也不能选取 `resources/checks/` 子内容。子 binary 只能从子契约自动派生。
+- 普通资源不能覆盖生成的页面、业务 JSON、Schema、Worker 或子树。
+  作者路径不使用 `./`、`..`、绝对路径或反斜线。
+- 自有非二进制文件验证 UTF-8 并只将 CRLF/孤立 CR 转 LF，保留其余字节；
+  binary 保留原字节，Reference 仍必须通过文本与 frontmatter 验证。
+  子 Bundle 只验证，不重新改写。
+
+## Publication、锁定与可复现
+
+Pinboard 是预期的可变选择入口，需要按真实 API 证明发布版本对应完整 Check 根，
+不能把页面地址、附件 CID 或 CAR 文件 CID 当作 Bundle 根。
+构建后的消费者不查询该入口；版本变化不会改变既有 Objective。
+
+建议记录 `来源 → 确定发布版本（如有） → 已验证根 CID`。
+更新模式重新解析并生成候选锁，锁定模式只接受匹配当前作者声明的精确记录；
+内容缺失时失败，不回退到 latest。同一次准备中同一来源只解析一次。
+
+可复现需同时固定作者源快照、子 Check、构建工具链与 UnixFS 策略，
+不只是固定 publication 或 YAML。父 CID 和构建凭据保存在根外，避免自引用。
+消费者只需要最终 Bundle；不需要作者工程、锁文件、publication 或现场构建。
