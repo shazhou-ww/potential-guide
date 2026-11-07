@@ -1,7 +1,8 @@
-# Objective 作者 YAML 与两阶段构建
+# Probe 作者 YAML、资源推导与两阶段构建
 
 本文服务于 [Idea](Idea.md)，补充 [成品结构](Objective-format.md)。
-所有 Objective API 名称是候选；已存在的是 Check 准备器和通用 Task 编译器。
+所有 Probe API 名称是候选；已存在的是 Check 准备器和通用 Task 编译器。
+业务定义仍称 Objective，作者入口和执行制品按动作命名为 Probe。
 
 ## 与 Check 相同的两阶段
 
@@ -14,23 +15,26 @@ Check:
     → task.yaml + worker.cjs + schemas + resources → CAR/CID
     → verifyCheckResources → 接受成品
 
-Objective:
-  <kind>.objective.build.yaml
-    → prepareObjective
+Probe:
+  <kind>.probe.build.yaml
+    → prepareProbe
     → 固化源文件/definitions/resources/Check 子树 + task.build.yaml
     → 同一个 buildTask
     → task.yaml + worker.cjs + schemas + resources → CAR/CID
-    → verifyObjectiveResources → 接受成品
+    → verifyProbeResources → 接受成品
 ```
 
 第一阶段是业务准备，不编译 Worker、不自行生成最终 CAR，也不调用另一套 Bundle 编译器。
 第二阶段是通用 Task 编译，不查询 publication，不重新选择 Check 版本。
 成品验证是接受门槛，不是第三套编译流程。上传与 pin 是独立外部操作。
 
-## 作者 objective.build.yaml 候选
+## 作者 probe.build.yaml 候选
 
-字段平铺，与 Check 一样使用 `name/kind/source/languages/referenceRoot/references/resources/binary`。
-Objective 专属新增 `bundles/checks/levels`；没有额外 `objective` 包装层。
+目标作者格式与简化后的 Check 一样使用
+`name/kind/source/languages/referenceRoot`，额外资源可选使用 `resources/binary`。
+Probe 专属新增 `bundles/checks/levels`，没有额外 `objective` 包装层。
+作者不声明逐页 `references`、展开的嵌入文件集或最终 `include`；
+这些由第一阶段推导并固化，不能误删成品中的显式索引和清单。
 
 ```yaml
 name: Development Environment
@@ -62,24 +66,20 @@ levels:
     checks: [project-tools]
 
 referenceRoot: references
-references:
-  en:
-    objective: references/en/objective.md
-    levels:
-      prepare-environment: references/en/levels/prepare-environment.md
-      prepare-project-tools: references/en/levels/prepare-project-tools.md
-      terminal: references/en/levels/terminal.md
-    checks:
-      tools:
-        check: references/en/checks/tools/check.md
-        problems:
-          tool-missing: references/en/checks/tools/problems/tool-missing.md
+```
 
+上例完整展示不带额外资源的作者格式。需要额外图片或数据时才添加：
+
+```yaml
 resources:
   - from: assets/environment.svg
     to: resources/assets/environment.svg
 binary: []
 ```
+
+`resources` 不是全部资源清单，只声明不能由业务结构推导的附加文件；
+`binary` 是附加的字节处理规则，不是文件发现入口。没有它们时使用空选择，
+但业务推导出的文档、定义与 Check 内容仍必须全部进入成品。
 
 `example.test` 是 publication 占位，不代表已验证的 Pinboard API。
 也可以用精确根 CID 替换来源对象：
@@ -113,12 +113,14 @@ Probe 契约/回调工厂的候选命名为 `createProbeContract` / `createProbe
 作者 YAML 不重复手写 `inputSchema/subjectSchema/resultSchema/messageSchema`。
 生成 definitions 发生在 TypeScript 检查与通用编译之前，不修改历史 Check 的 definitions。
 
-## 第一阶段：prepareObjective
+## 第一阶段：prepareProbe
 
-1. 验证 YAML、阶段/绑定关系、规范路径与 Reference frontmatter，快照作者源文件和自有资源。
+1. 验证 YAML、阶段/绑定关系与规范路径；从 `languages/levels` 推导必需页面，
+   快照作者源文件和显式附加资源。
 2. 对每个来源解析一次：固定发布版本及 Check 根 CID，获取完整 DAG，
    验证块哈希、Task/Check 契约、完整资源与语言/Problem 元数据。
-3. 验证稀疏 Override 与所有声明语言的有效页面覆盖，生成唯一的
+3. 在受限 Reference 目录中发现合法稀疏 Override，验证必需页、frontmatter
+   与全部语言的有效覆盖，生成唯一的
    `resources/objective.json`、规范页面路径和 definitions。
 4. 将原 Check 放入准备的 `resources/checks/<binding>/` 内容集合；
    保留已验证块/根身份与子清单，生成通用 `task.build.yaml`。
@@ -136,7 +138,7 @@ dist/
    └─ resources/
       ├─ objective.json
       ├─ references/…
-      ├─ assets/…
+      ├─ assets/…                   # 仅在显式选择附加资源时存在
       └─ checks/<binding>/…          # 完整已验证 Check 内容
 ```
 
@@ -191,19 +193,83 @@ binary: []
 全部检查通过才替换已接受成品/索引和锁记录；
 准备失败、编译失败或验证失败都不能破坏上次接受的输出。
 
-## 作者路径与资源一致性
+## 根据业务结构推导资源
 
-- `referenceRoot` 和 Reference 映射都以 Build YAML 所在目录为基准。
-  `referenceRoot: references` 时映射必须是 `references/en/objective.md`，
-  不是 `objective.md`，也不是相对 referenceRoot 再解析一次。
-- 页面严格按 `<referenceRoot>/<language>/<suffix>` 选择，suffix 为
-  `objective.md`、`levels/<id>.md`、`checks/<ref>/check.md` 或
-  `checks/<ref>/problems/<code>.md`；成品统一为 `resources/references/<language>/…`。
-- 拒绝未知/未选择的 Reference 文件、重复映射、非法语言、越界与符号链接。
+`referenceRoot` 相对于 Build YAML 所在目录；页面路径由它、语言和业务 ID 唯一推导。
+作者不再维护映射。准备器只遍历这个受限目录验证允许的页面，不扫描整个作者工程，
+不解析 Markdown 的任意链接来隐式收集依赖。
+
+| 内容 | 由什么推导 | 缺失或异常处理 |
+| --- | --- | --- |
+| Objective 概述 | 每个语言的 `objective.md` | 必需，缺失失败。 |
+| 阶段页面 | `levels[].id` → `levels/<id>.md` | 每个语言都必需，缺失失败。 |
+| 完成页面 | 固定 `levels/terminal.md` | 每个语言都必需；不为 initial 建页。 |
+| 原 Check 内容 | `levels → checks → bundles` 的引用闭包及来源 | 依赖绑定、来源、输入映射仍显式声明；内容必须完整可验证。 |
+| Check 概述 Override | `checks/<ref>/check.md` | 允许不存在，存在则验证并收录。 |
+| Problem Override | `checks/<ref>/problems/<code>.md`，code 来自已验证子 Check | 允许不存在，未知 ref/code 或非法文件失败。 |
+| 附加图片/数据 | 可选 `resources: [{from,to}]` | 不从 levels/Markdown 猜测；显式选择的文件缺失失败。 |
+
+例如上述作者 YAML 配合下面的 Reference 文件，生成
+[成品描述](Objective-format.md)中的逐语言 `references` 索引：
+
+```text
+references/en/
+├─ objective.md
+├─ levels/
+│  ├─ prepare-environment.md
+│  ├─ prepare-project-tools.md
+│  └─ terminal.md
+└─ checks/tools/
+   ├─ check.md
+   └─ problems/tool-missing.md
+```
+
+构建前没有某个可选 Override 文件，表示继承子 Check 的同语言文档。
+已发现文件读取失败、非法 frontmatter 或快照后文件/块缺失都必须失败，
+不能当作“不存在 Override”处理。未知语言、路径和 Problem 必须报错，
+不能通过忽略拼错的文件名使构建成功。
+没有显式映射后，工具无法识别“作者忘记创建一个本来想覆盖的页面”；
+未提供的合法可选路径就按继承解释，不推断作者意图。
+
+### Check 作者配置同步简化
+
+当前 Check 工具仍要求显式 `references` 并校验路径恰好等于约定值。
+本 idea 的实施范围包括移除这一重复作者字段并同步仓库作者配置、Schema、测试和文档；
+不能只让 Probe 简化、Check 长期维持另一套作者规则。
+
+新的 Check 作者配置示例：
+
+```yaml
+name: Nonempty text check
+kind: text
+source:
+  root: src
+  entry: src/main.ts
+  contract: src/contract.ts
+languages: [en]
+problemCodes: [text-empty]
+referenceRoot: references
+```
+
+准备器从语言与 `problemCodes` 要求 `references/en/check.md` 和
+`references/en/problems/text-empty.md`，不需要逐页列表。
+零 Problem codes 仍要求 Check 概述，但不要求 Problem 页。
+Check 生成的 `resources/check.json.references` 与现有规范保持一致；
+不因此改变结果协议、历史 Bundle 或 consumer-side 验证。
+
+作者格式是显式迁移：仓库例子统一删除冗余字段，更新后的作者 Schema 拒绝旧字段，
+不引入“有时按映射、有时按目录”的隐式双模式。已发布不可变 Bundle 不受影响；
+同样的源、页面与固定编译环境下应证明去掉冗余配置不改变生成资源内容。
+
+### 共同的路径与资源约束
+
+- 页面严格按 `<referenceRoot>/<language>/<suffix>` 推导，成品为
+  `resources/references/<language>/<suffix>`；suffix 由相应业务类型定义。
+- 拒绝未知页面、非法语言、越界、链接、特殊文件和大小写/路径冲突；
   assets 位于 referenceRoot 外，通过 `resources` 显式选择。
 - `resources: [{from,to}]` 是与 Check 一致的精确映射，不使用 glob，to 在 resources 下。
   `binary` 才使用最终路径 portable glob；它不能覆盖 generated objective.json，
-  也不能选取 `resources/checks/` 子内容。子 binary 只能从子契约自动派生。
+    也不能选取 `resources/checks/` 子内容。子 binary 只能从子契约自动派生。
 - 普通资源不能覆盖生成的页面、业务 JSON、Schema、Worker 或子树。
   作者路径不使用 `./`、`..`、绝对路径或反斜线。
 - 自有非二进制文件验证 UTF-8 并只将 CRLF/孤立 CR 转 LF，保留其余字节；
@@ -214,7 +280,7 @@ binary: []
 
 Pinboard 是预期的可变选择入口，需要按真实 API 证明发布版本对应完整 Check 根，
 不能把页面地址、附件 CID 或 CAR 文件 CID 当作 Bundle 根。
-构建后的消费者不查询该入口；版本变化不会改变既有 Objective。
+构建后的消费者不查询该入口；版本变化不会改变既有 Probe Task Bundle。
 
 建议记录 `来源 → 确定发布版本（如有） → 已验证根 CID`。
 更新模式重新解析并生成候选锁，锁定模式只接受匹配当前作者声明的精确记录；

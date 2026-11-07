@@ -4,8 +4,8 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 定义并验证新格式
-- [ ] **I-S02:** 构建完整 UnixFS 组合
+- [ ] **I-S01:** 验证组合与子调用边界
+- [ ] **I-S02:** 实现两阶段准备与资源推导
 - [ ] **I-S03:** 装配 Probe 与回归验证
 
 ### Implementation acceptance criteria
@@ -18,7 +18,7 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 交付代表性 Objective
+- [ ] **D-S01:** 交付代表性 Probe Task Bundle
 - [ ] **D-S02:** 验证独立消费者
 
 ### Deployment acceptance criteria

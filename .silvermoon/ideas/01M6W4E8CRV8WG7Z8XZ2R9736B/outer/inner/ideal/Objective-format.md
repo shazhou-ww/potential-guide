@@ -1,27 +1,32 @@
-# Objective Task 的描述结构与成品 YAML
+# Probe Task Bundle 的结构与 Objective 描述
 
 本文服务于 [Idea](Idea.md)。这是待实施的业务设计，不是已实现的新 API。
-本次按明确要求校准方案：Objective 与 Check 都是 Task 特化，都采用
+本次按明确要求校准方案：Probe 与 Check 都是 Task 特化，都采用
 “业务准备 → 通用 Task 编译”两阶段构建，不保留独立数据 Bundle 编译路线。
 
 ## 角色与唯一入口
 
-- Check Task 执行一次 Check；Objective Task 执行一次 Probe。
+- Check Task 执行一次 Check；Probe Task 执行一次针对 Objective 的 Probe。
 - 两者的唯一运行声明均是 `task.yaml`，唯一 Worker 均是 `worker.cjs`。
 - Engine 只理解通用 Task 声明与协议；阶段、逻辑引用、Override 由 Probe 业务实现解释。
 - Check 的业务描述位于 `resources/check.json`；
-  Objective 的对应描述位于 `resources/objective.json`。
-- 作者只维护 `<kind>.objective.build.yaml` 与源文件，不手写另一份运行 `objective.yaml`、
+  Probe 中承载的 Objective 描述位于 `resources/objective.json`。
+- 作者只维护 `<kind>.probe.build.yaml` 与源文件，不手写另一份运行 `objective.yaml`、
   `task.yaml` 或业务 JSON。准备器和通用编译器分别生成各自负责的产物。
 
-Objective 根 CID 绑定 Probe Worker、输入/结果契约、组合规则、文档和全部 Check 内容。
-它不再仅表示纯数据规则；更新 Probe 实现同样会得到新的 Objective CID。
+正式区分：Objective 是目标定义，Probe 是动作，交付制品是 Probe Task Bundle。
+不要再将同一个可执行制品交替称为 Objective Bundle 或 Objective Task。
+`resources/objective.json` 与 `objective.md` 描述业务对象，保留 Objective 命名，
+不因动作名称改变而机械改成 probe.json/probe.md。
+
+Probe Bundle 根 CID 绑定 Worker、输入/结果契约、组合规则、文档和全部 Check 内容。
+它不再仅表示纯数据规则；更新 Probe 实现同样会得到新的 Probe Bundle CID。
 `name` 是展示名，`kind` 是作者定义/业务元数据标记，两者都不替代内容身份。
 
 ## 成品结构
 
 ```text
-objective-task/
+probe-task/
 ├─ task.yaml
 ├─ worker.cjs
 ├─ schemas/                         # 通用编译器按契约需要生成
@@ -39,7 +44,7 @@ objective-task/
    │        └─ tools/
    │           ├─ check.md
    │           └─ problems/tool-missing.md
-   ├─ assets/
+   ├─ assets/                        # 可选的显式附加资源
    │  └─ environment.svg
    └─ checks/
       └─ tools/                     # 原样保留的完整 Check Bundle
@@ -83,7 +88,7 @@ messageSchema: false
 - `binary` 是父根下完整精确资源列表；子 Bundle 的 binary 路径加子树前缀后并入。
   普通自有资源 glob 不能修改子 Bundle 的二进制归属。
 
-根声明只由通用编译器生成。Objective 业务适配器不绕过完整 Task 验证，
+根声明只由通用编译器生成。Probe 业务适配器不绕过完整 Task 验证，
 不手工覆盖编译结果中的声明、Worker 或 Schema。
 
 ## resources/objective.json 候选
@@ -145,7 +150,12 @@ Objective 的 `environment` 与 `project` 输入各自是符合该契约的对�
 | `bundles` | 物理子 Bundle 绑定，每项保存内部路径和准备器解析得到的精确 CID，不保存可变来源。 |
 | `checks` | 逻辑调用名到制品绑定与确定性输入映射；允许不同调用共享一个 Bundle。 |
 | `levels` | 非空有序目标阶段，每项有唯一业务 `id` 和逻辑 Check 名数组。 |
-| `references` | 与 Check 索引相同的逐语言相对路径结构，新增 Objective/Level 与稀疏 Override。 |
+| `references` | 准备器从目录约定生成的逐语言相对路径索引，包含 Objective/Level 与发现的稀疏 Override，不是作者维护的字段。 |
+
+资源推导只发生在第一阶段。消费者读取这里已固化的索引，不扫描文件来猜测业务结构；
+未列入 Override 索引的页面继承原 Check 同语言索引，实际选择规则见
+[Probe 与 Reference](Probe-references.md)。无额外资源时省略 assets 目录，
+但生成的 include 仍覆盖全部推导出的页面和嵌入内容。
 
 子 CID 可以写入父内容，因为它不是父根的自引用。
 这是供独立 Check 调用使用的固化元数据，不是可随意相信的身份声明：
@@ -183,7 +193,7 @@ initial（别名）→ prepare-environment → prepare-project-tools → termina
 
 ## 完整性与身份
 
-Objective 的 UnixFS 资源目录项真实链接到 Check 子树，完整 CAR 包含所有可达块，
+Probe Task Bundle 的 UnixFS 资源目录项真实链接到 Check 子树，完整 CAR 包含所有可达块，
 而不只是包含 CID 的 JSON。完整下载后可离线验证与物化成普通目录，无需符号链接。
 存储可按块去重；父根 CID 同时绑定代码、Schema、业务定义、Override 与子 Check。
 
@@ -199,14 +209,17 @@ Objective 的 UnixFS 资源目录项真实链接到 Check 子树，完整 CAR �
 自包含不包含 Node、外部工具、被检查对象或网络服务。
 CID 不证明来源可信、执行授权或持续可用；构建成功也不意味着已发布/pin。
 
-## 实施前须解决的关键证明
+## 实施首步须完成的关键证明
 
 1. 通用构建器如何在完整 include/binary 规则下收录已验证子 Bundle 并保持 CID；
-   需要扩展时应扩展通用内容组合能力，不复制第二套 Objective 编译器。
+   需要扩展时应扩展通用内容组合能力，不复制第二套 Probe 编译器。
 2. Probe 如何通过明确的业务执行装配验证子根并调用独立 Check，
    而不在通用 Engine 中硬编码 Objective。
 3. 业务资源 Schema、输入映射 profile、资源预算与迁移边界。
    历史不可变 Objective/Check 制品不自动改成这套语义。
+
+这些是实施验证项，不是本轮已证明存在的能力；
+构想可以进入实施，完整交付必须等待这些验证及全部验收项通过。
 
 两阶段作者流程见 [Build YAML](Objective-build.md)，输出见
 [Probe 与 Reference](Probe-references.md)，对照依据见 [Check 对齐](Check-alignment.md)。
