@@ -59,7 +59,7 @@ Windows，Node.js v24.12.0，npm 11.6.2，pnpm 11.22.0。
 Engine/Protocol/SDK/Bundle/Web UI 为各自的 `0.1.0-rc.1`。
 这只是本地候选组合，不是 npm 发布或外部部署事实。
 
-### 全仓检查的明确阻塞
+### 全仓检查的历史阻塞（已由后续原生 Linux 验证解除）
 
 `pnpm check` 未整体通过：Windows 在既有
 `packages/pguide-task-bundle/test/car-files.test.ts` 与 `test/init.test.ts`
@@ -101,6 +101,53 @@ pnpm install --offline --frozen-lockfile --store-dir /mnt/d/Code/potential-guide
 遇到该失败后没有重试或 registry 轮询；installer 自然退出，自有副本已清理。
 原始输出保留在 `.cache/multi-gateway-explicit-store-check.log`；
 I-AC03 继续未勾选，其他实现与配置未改动。
+
+### 最新源码的独立原生 Linux 全量验证（2026-11-07）
+
+在当前工作树同步到 `65022b59107227be66757eed22b3d659e2c36349` 后，
+仅从该工作树 `HEAD` 导出全部 1941 个受跟踪文件，创建本次会话和本 Idea
+专用的 WSL Ubuntu 原生 Linux 验证项目
+`/home/lyweiwei/silvermoon-validation-01M6TBMWDDTR4KK4N1KXXENBWJ-0bd1dfac`。
+没有读取其他工作树或复用其他会话的源码、依赖目录和验证结果。
+项目的 `source` 是独立初始化的 Git 仓库，旁边 `.cache` 承担测试运行目录与
+显式指定的 pnpm store；不把源码放在 Windows 挂载盘，不使用系统临时目录。
+
+验证环境为 Node.js **v24.14.1**、npm **11.11.0**、pnpm **11.22.0**。
+只在当前子进程设置干净 Linux `PATH`、`CI=true` 和项目自有的
+`TMPDIR=<项目>/.cache`。常规
+`pnpm install --frozen-lockfile --store-dir <项目>/.cache/pnpm-store`
+成功，587 个包下载完成，既有共享供应链校验缓存通过正常 pnpm 机制使用；
+没有关闭策略、修改用户配置/权限或修复共享 store。安装时尚未构建的工作区
+binary 产生 ENOENT 警告，后续正常构建及全量检查通过。
+第一次误用 `pnpm --store-dir <路径> check` 被 CLI 以不支持的选项拒绝，
+未进入检查；随后使用原样 `pnpm check`，不把前者计为成功。
+
+原样 **`pnpm check` 退出 0**：来源检查、构建/分层、格式、全仓 lint、
+工作区及测试类型检查、全部工作区测试、脚本测试和打包结构检查全部通过。
+工作区测试图为 **70 successful, 70 total**；脚本测试为
+**76 pass, 0 fail**。没有添加排除项、修补源码或放宽安全断言；
+仓库原有 opt-in 测试仍遵循其默认条件，没有授权或执行 Kubo 写入。
+
+源代码完整性通过 Git tree 核对，而非仅抽查相关包：
+原工作树 `HEAD^{tree}` 与原生副本 `git write-tree` 均为
+`af11d36c1a630dd675c6e59189da19c800a350a2`。
+检查结束后原生仓库 `git status --short` 为空且 `git diff --exit-code` 通过，
+再次读取 tree 仍一致。导出 tar 的 SHA-256 为
+`fe7c1e62f2330c817e33eb080b52e68ff35e29e658665c89bebd5b84c44dae11`。
+
+本工作树保留完整本地日志：
+
+- `.cache/multi-gateway-native-check.log`：精确 tree、环境、安装与误用选项记录；
+  SHA-256 `15b4361a29d62e392b9c891dca815f864f4ca935f6580499bb31b7fe15120cb8`。
+- `.cache/multi-gateway-native-check-full.log`：原样全量检查成功输出；
+  SHA-256 `de84eaf9ba8cfcb2cb6597f17be85e20ff6b8d07fbd5c4a5ed074819ba27468c`。
+
+取回日志及 hash 后清理本次会话专用的原生验证项目与源码归档，
+不删除其他用户或会话目录。结合前述隔离 npm tarball 消费者成功证据，
+此前唯一缺失的全仓检查现已补齐，故 I-AC03 标记完成。
+本轮只更新 Inner 证据及对应 ledger；没有 commit、push、生命周期事件、
+远程主机操作、npm 发布或 Kubo/pin 操作。此结果仍不是外部部署证据，
+不完成任何 D 项，也不代替父 Agent 的生命周期审批。
 
 ## 外部证据边界
 
