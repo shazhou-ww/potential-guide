@@ -17,6 +17,7 @@ import { binding } from "./binding.js";
 
 export interface TaskContext<Message extends Json = never> extends RunContext<Message> {
   readonly bundle: {
+    readonly cid: string;
     read(path: string, options?: { signal?: AbortSignal }): ReadableStream<Uint8Array>;
   };
 }
@@ -460,7 +461,7 @@ export function runTask<Input = Json, Result = Json, Message extends Json = neve
       scope: envelope.scope,
       signal: controller.signal,
       messages: inbox,
-      bundle: Object.freeze({ read: readBundle }),
+      bundle: Object.freeze({ cid: config.bundle.cid, read: readBundle }),
       progress: (value: RunProgress) => enqueue("progress", value),
       checkpoint: (value: Json) => enqueue("checkpoint", value),
       log,

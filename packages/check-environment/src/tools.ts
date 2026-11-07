@@ -1,6 +1,13 @@
-import { problemCodes } from "../dist/definitions/tools.js";
+import { languages, problemCodes } from "../dist/definitions/tools.js";
 import { executeCommand } from "./command.js";
-import { type CheckContext, type CheckItem, problems, result, timeoutValue } from "./result.js";
+import {
+  type CheckContext,
+  type CheckResultContext,
+  type CheckItem,
+  problems,
+  result,
+  timeoutValue,
+} from "./result.js";
 
 export interface ToolInput {
   tools: { command: string; args: string[]; minimumVersion: string }[];
@@ -48,8 +55,11 @@ export async function inspectTools(input: ToolInput, context: CheckContext = {})
   return problems(checks);
 }
 
-export async function checkTools(input: ToolInput, context: CheckContext = {}) {
-  return result(problemCodes, await inspectTools(input, context));
+export async function checkTools(input: ToolInput, context: CheckResultContext) {
+  return result(problemCodes, await inspectTools(input, context), {
+    cid: context.bundle.cid,
+    languages,
+  });
 }
 
 export default checkTools;

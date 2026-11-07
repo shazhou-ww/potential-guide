@@ -1,6 +1,13 @@
-import { problemCodes } from "../dist/definitions/network.js";
+import { languages, problemCodes } from "../dist/definitions/network.js";
 import { executeCommand } from "./command.js";
-import { type CheckContext, type CheckItem, problems, result, timeoutValue } from "./result.js";
+import {
+  type CheckContext,
+  type CheckItem,
+  type CheckResultContext,
+  problems,
+  result,
+  timeoutValue,
+} from "./result.js";
 
 export interface NetworkInput {
   dns: string[];
@@ -90,8 +97,11 @@ export async function inspectNetwork(input: NetworkInput, context: CheckContext 
   return problems(checks);
 }
 
-export async function checkNetwork(input: NetworkInput, context: CheckContext = {}) {
-  return result(problemCodes, await inspectNetwork(input, context));
+export async function checkNetwork(input: NetworkInput, context: CheckResultContext) {
+  return result(problemCodes, await inspectNetwork(input, context), {
+    cid: context.bundle.cid,
+    languages,
+  });
 }
 
 export default checkNetwork;

@@ -6,6 +6,10 @@ export interface CheckContext {
   signal?: AbortSignal;
 }
 
+export interface CheckResultContext extends CheckContext {
+  bundle: { readonly cid: string };
+}
+
 export interface CheckItem<Code extends string = string> {
   target: string;
   ok: boolean;

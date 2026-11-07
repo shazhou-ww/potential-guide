@@ -2,21 +2,30 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { executeCommand } from "../src/command.js";
 import {
-  checkDirectories,
-  checkNetwork,
-  checkTools,
+  checkDirectories as runDirectories,
+  checkNetwork as runNetwork,
+  checkTools as runTools,
   compareVersions,
   parseToolVersion,
   probeDirectoryWrite,
 } from "../src/index.js";
+import type { CheckContext, DirectoryInput, NetworkInput, ToolInput } from "../src/index.js";
+
+const bundle = { cid: "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3gyz5l2v4vtwqgxx5lhh3mfxe" };
+const checkTools = (input: ToolInput, context: CheckContext = {}) =>
+  runTools(input, { ...context, bundle });
+const checkDirectories = (input: DirectoryInput, context: CheckContext = {}) =>
+  runDirectories(input, { ...context, bundle });
+const checkNetwork = (input: NetworkInput, context: CheckContext = {}) =>
+  runNetwork(input, { ...context, bundle });
 
 async function workspace(run: (directory: string) => Promise<void>) {
-  const directory = await mkdtemp(join(tmpdir(), "check-environment-"));
+  await mkdir(resolve(".cache"), { recursive: true });
+  const directory = await mkdtemp(join(resolve(".cache"), "check-environment-"));
   try {
     await run(directory);
   } finally {
@@ -126,10 +135,13 @@ test("network checks cover DNS, HTTP status, redirects, timeout and cancellation
     });
     assert.equal(output.pass, false);
     if (output.pass) throw new Error("Expected HTTP problems.");
-    assert.deepEqual(output.problems, [
-      { target: `${base}/bad`, code: "http-status", actual: "503" },
-      { target: `${base}/redirect`, code: "http-status", actual: "302" },
-    ]);
+    assert.deepEqual(
+      output.problems.map(({ documentation: _, ...problem }) => problem),
+      [
+        { target: `${base}/bad`, code: "http-status", actual: "503" },
+        { target: `${base}/redirect`, code: "http-status", actual: "302" },
+      ],
+    );
     await assert.rejects(
       checkNetwork({ dns: [], http: [endpoint("/hang")], checkTimeoutMs: 100 }),
       /timed out/,

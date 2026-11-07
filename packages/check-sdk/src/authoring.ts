@@ -242,9 +242,11 @@ export async function prepareCheck(buildFile: string): Promise<PreparedCheck> {
     if (!source.has(path)) fail(`source not in source root: ${path}`);
   const definitions = `dist/definitions/${config.kind}`;
   const literal = JSON.stringify(config.problemCodes);
-  const definitionJs = Buffer.from(`export const problemCodes = Object.freeze(${literal});\n`);
+  const definitionJs = Buffer.from(
+    `export const problemCodes = Object.freeze(${literal});\nexport const languages = Object.freeze(${JSON.stringify(config.languages)});\n`,
+  );
   const definitionTypes = Buffer.from(
-    `export declare const problemCodes: readonly [${config.problemCodes.map((code) => JSON.stringify(code)).join(", ")}];\n`,
+    `export declare const problemCodes: readonly [${config.problemCodes.map((code) => JSON.stringify(code)).join(", ")}];\nexport declare const languages: readonly [${config.languages.map((language) => JSON.stringify(language)).join(", ")}];\n`,
   );
   source.set(`${definitions}.js`, definitionJs);
   source.set(`${definitions}.d.ts`, definitionTypes);

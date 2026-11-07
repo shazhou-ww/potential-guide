@@ -2,8 +2,15 @@ import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { access, lstat, readFile, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
-import { problemCodes } from "../dist/definitions/directories.js";
-import { type CheckContext, type CheckItem, errorCode, problems, result } from "./result.js";
+import { languages, problemCodes } from "../dist/definitions/directories.js";
+import {
+  type CheckContext,
+  type CheckItem,
+  type CheckResultContext,
+  errorCode,
+  problems,
+  result,
+} from "./result.js";
 
 export interface DirectoryInput {
   directories: { path: string; requirements: ("exists" | "read" | "write")[] }[];
@@ -65,8 +72,11 @@ export async function inspectDirectories(input: DirectoryInput, context: CheckCo
   return problems(checks);
 }
 
-export async function checkDirectories(input: DirectoryInput, context: CheckContext = {}) {
-  return result(problemCodes, await inspectDirectories(input, context));
+export async function checkDirectories(input: DirectoryInput, context: CheckResultContext) {
+  return result(problemCodes, await inspectDirectories(input, context), {
+    cid: context.bundle.cid,
+    languages,
+  });
 }
 
 export default checkDirectories;

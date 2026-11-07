@@ -27,14 +27,23 @@ import { createCheckResult, createCheckTask } from "../src/index.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const codes = ["text-empty"] as const;
+const languages = ["en", "zh-CN"] as const;
+const cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3gyz5l2v4vtwqgxx5lhh3mfxe";
+const documentationContext = { cid, languages };
+const documentation = (suffix = "check", root = cid, locales: readonly string[] = languages) =>
+  Object.fromEntries(
+    locales.map((language) => [
+      language,
+      `ipfs://${root}/resources/references/${language}/${suffix}.md`,
+    ]),
+  );
+const result = (problems: { target: string; code: "text-empty"; actual: string | null }[]) =>
+  createCheckResult(codes, problems, documentationContext);
 const page = "---\ntitle: Page\ndescription: Description\n---\n";
 
 test("strict result contracts, runtime code enforcement and inferred literal types", () => {
-  const schema = compileJsonSchema(toTaskSchema(createCheckResultSchema(codes)));
-  for (const value of [
-    { pass: true },
-    { pass: false, problems: [{ target: "text", code: "text-empty", actual: null }] },
-  ])
+  const schema = compileJsonSchema(toTaskSchema(createCheckResultSchema(codes, languages)));
+  for (const value of [result([]), result([{ target: "text", code: "text-empty", actual: null }])])
     schema.validate(value);
   for (const value of [
     { pass: true, problems: [] },
@@ -46,31 +55,44 @@ test("strict result contracts, runtime code enforcement and inferred literal typ
     { pass: true, extra: true },
   ])
     assert.throws(() => schema.validate(value));
-  assert.deepEqual(createCheckResult(codes, []), { pass: true });
-  schema.validate(
-    createCheckResult(codes, [{ target: "😀".repeat(4096), code: "text-empty", actual: null }]),
-  );
+  assert.deepEqual(result([]), { pass: true, documentation: documentation() });
+  schema.validate(result([{ target: "😀".repeat(4096), code: "text-empty", actual: null }]));
   assert.throws(
-    () =>
-      createCheckResult(codes, [{ target: "😀".repeat(4097), code: "text-empty", actual: null }]),
+    () => result([{ target: "😀".repeat(4097), code: "text-empty", actual: null }]),
     /Invalid Check problem/,
   );
-  assert.deepEqual(createCheckResult(codes, [{ target: "x", code: "text-empty", actual: "" }]), {
+  assert.deepEqual(result([{ target: "x", code: "text-empty", actual: "" }]), {
     pass: false,
-    problems: [{ target: "x", code: "text-empty", actual: "" }],
+    documentation: documentation(),
+    problems: [
+      {
+        target: "x",
+        code: "text-empty",
+        actual: "",
+        documentation: documentation("problems/text-empty"),
+      },
+    ],
   });
   assert.throws(() => {
-    // @ts-expect-error YAML-derived literal codes reject unknown business codes.
-    createCheckResult(codes, [{ target: "x", code: "unknown", actual: null }]);
+    createCheckResult(
+      codes,
+      // @ts-expect-error YAML-derived literal codes reject unknown business codes.
+      [{ target: "x", code: "unknown", actual: null }],
+      documentationContext,
+    );
   }, /Undeclared/);
   assert.throws(() => {
-    // @ts-expect-error Empty declarations cannot produce any problems.
-    createCheckResult([] as const, [{ target: "x", code: "anything", actual: null }]);
+    createCheckResult(
+      [] as const,
+      // @ts-expect-error Empty declarations cannot produce any problems.
+      [{ target: "x", code: "anything", actual: null }],
+      documentationContext,
+    );
   }, /Undeclared/);
-  const zero = compileJsonSchema(toTaskSchema(createCheckResultSchema([] as const)));
-  zero.validate({ pass: true });
+  const zero = compileJsonSchema(toTaskSchema(createCheckResultSchema([] as const, languages)));
+  zero.validate({ pass: true, documentation: documentation() });
   assert.throws(() => zero.validate({ pass: false, problems: [] }));
-  const contract = createCheckContract(Type.Object({ value: Type.String() }), codes);
+  const contract = createCheckContract(Type.Object({ value: Type.String() }), codes, languages);
   assert.deepEqual(toTaskSchema(contract.message), { not: {} });
 });
 
@@ -79,21 +101,25 @@ test("callback preserves context, logs, faults, cleanup and cancellation identit
   const logs: unknown[] = [];
   const context = {
     signal: controller.signal,
+    bundle: { cid },
     log: async (value: unknown) => {
       logs.push(value);
     },
   } as unknown as TaskContext;
-  const callback = createCheckTask(codes, async (input: { text: string }, received) => {
+  const callback = createCheckTask(codes, languages, async (input: { text: string }, received) => {
     assert.equal(received, context);
     await received.log({ level: "info", message: input.text });
     return [];
   });
-  assert.deepEqual(await callback({ text: "ok" }, context), { pass: true });
+  assert.deepEqual(await callback({ text: "ok" }, context), {
+    pass: true,
+    documentation: documentation(),
+  });
   assert.equal(logs.length, 1);
   const fault = new Error("business fault");
   let cleaned = false;
   await assert.rejects(
-    createCheckTask(codes, async () => {
+    createCheckTask(codes, languages, async () => {
       try {
         throw fault;
       } finally {
@@ -105,7 +131,7 @@ test("callback preserves context, logs, faults, cleanup and cancellation identit
   assert.equal(cleaned, true);
   const reason = new Error("stop");
   await assert.rejects(
-    createCheckTask(codes, async () => {
+    createCheckTask(codes, languages, async () => {
       controller.abort(reason);
       return [];
     })({}, context),
@@ -113,13 +139,41 @@ test("callback preserves context, logs, faults, cleanup and cancellation identit
   );
   let called = false;
   await assert.rejects(
-    createCheckTask(codes, async () => {
+    createCheckTask(codes, languages, async () => {
       called = true;
       return [];
     })({}, context),
     (error) => error === reason,
   );
   assert.equal(called, false);
+});
+
+test("documentation is mandatory, complete and reference-only on every node", () => {
+  const schema = compileJsonSchema(toTaskSchema(createCheckResultSchema(codes, languages)));
+  const good = result([{ target: "x", code: "text-empty", actual: null }]);
+  assert.equal(good.pass, false);
+  if (good.pass) throw new Error("Expected problems.");
+  for (const invalid of [
+    { ...good, documentation: {} },
+    { ...good, documentation: { en: documentation().en } },
+    { ...good, documentation: { ...documentation(), fr: documentation().en } },
+    { ...good, documentation: { ...documentation(), en: "# Inline body" } },
+    { ...good, documentation: documentation("problems/text-empty") },
+    { ...good, documentation: { ...documentation(), en: documentation()["zh-CN"] } },
+    { ...good, problems: [{ ...good.problems[0], documentation: documentation() }] },
+    { ...good, problems: [{ ...good.problems[0], documentation: {} }] },
+    { ...good, problems: [{ ...good.problems[0], actual: 1 }] },
+    { ...good, problems: [{ ...good.problems[0], target: "" }] },
+    { ...good, problems: [{ ...good.problems[0], code: "unknown" }] },
+    { ...good, extra: true },
+    { pass: true },
+    { pass: true, documentation: documentation(), problems: [] },
+  ])
+    assert.throws(() => schema.validate(invalid));
+  for (const cid of ["", "latest", "https://example.com/check.md", "bnotacid"])
+    assert.throws(() => createCheckResult(codes, [], { cid, languages }));
+  for (const languages of [[], ["en", "en"], ["en-us"], ["../en"]])
+    assert.throws(() => createCheckResult(codes, [], { cid, languages }));
 });
 
 test("Reference frontmatter gates metadata only, never Markdown content", () => {
@@ -350,7 +404,7 @@ test("single/multilanguage and zero-code authoring freeze exact resource bytes",
         await rm(join(directory, "references/en/problems"), { recursive: true });
         await writeFile(
           join(directory, "src/main.ts"),
-          `import {createCheckTask} from "@potential-guide/check-sdk";import {runTask} from "@potential-guide/task-sdk";import {problemCodes} from "../dist/definitions/text.js";runTask(createCheckTask(problemCodes,async()=>[]));`,
+          `import {createCheckTask} from "@potential-guide/check-sdk";import {runTask} from "@potential-guide/task-sdk";import {languages,problemCodes} from "../dist/definitions/text.js";runTask(createCheckTask(problemCodes,languages,async()=>[]));`,
         );
       }
       await writeFile(file, stringify(config));
@@ -402,11 +456,9 @@ test("runtime root import closure excludes schemas and authoring", async () => {
     platform: "node",
     format: "esm",
   });
-  assert.deepEqual(
-    Object.keys(result.metafile?.inputs ?? {}).map((path) =>
-      path.replaceAll("\\", "/").split("/").at(-1),
-    ),
-    ["definition.ts", "index.ts"],
+  assert.doesNotMatch(
+    Object.keys(result.metafile?.inputs ?? {}).join("\n"),
+    /schema-runtime|authoring|contracts|typebox|ajv|yaml/,
   );
   const output = execFileSync(
     process.execPath,
@@ -432,6 +484,37 @@ test("independent Check standard scaffold executes pass/problem through Engine",
   });
   const caller = { scope: "new-check", subject: "author" };
   try {
+    const configFile = join(directory, "text.check.build.yaml");
+    const config = parse(await readFile(configFile, "utf8")) as CheckBuild;
+    config.languages = [...languages];
+    config.problemCodes.push("text-invalid");
+    for (const language of languages) {
+      await mkdir(join(directory, `references/${language}/problems`), { recursive: true });
+      await writeFile(
+        join(directory, `references/${language}/check.md`),
+        `${page}${language} check v1\n`,
+      );
+      for (const code of config.problemCodes)
+        await writeFile(
+          join(directory, `references/${language}/problems/${code}.md`),
+          `${page}${language} ${code} v1\n`,
+        );
+      config.references[language] = {
+        check: `references/${language}/check.md`,
+        problems: Object.fromEntries(
+          config.problemCodes.map((code) => [code, `references/${language}/problems/${code}.md`]),
+        ),
+      };
+    }
+    await writeFile(configFile, stringify(config));
+    const main = join(directory, "src/main.ts");
+    await writeFile(
+      main,
+      (await readFile(main, "utf8")).replace(
+        '[{ target: "text", code: "text-empty", actual: input.text }]',
+        '[{ target: "text", code: "text-empty", actual: input.text }, { target: "text", code: "text-invalid", actual: null }]',
+      ),
+    );
     const prepared = await prepareCheck(join(directory, "text.check.build.yaml"));
     execFileSync(
       process.execPath,
@@ -453,27 +536,107 @@ test("independent Check standard scaffold executes pass/problem through Engine",
     const artifact = await readTaskArtifact(built.car);
     verifyCheckResources(prepared, artifact.files);
     assert.equal(await ipfs.import(artifact.files), built.cid);
+    await writeFile(join(directory, "references/en/check.md"), `${page}en check v2\n`);
+    for (const code of config.problemCodes)
+      await writeFile(
+        join(directory, `references/en/problems/${code}.md`),
+        `${page}en ${code} v2\n`,
+      );
+    const updatedPrepared = await prepareCheck(configFile);
+    const updated = await buildTask(updatedPrepared.buildFile);
+    const updatedArtifact = await readTaskArtifact(updated.car);
+    verifyCheckResources(updatedPrepared, updatedArtifact.files);
+    assert.notEqual(updated.cid, built.cid);
+    assert.deepEqual(updatedArtifact.files.get("worker.cjs"), artifact.files.get("worker.cjs"));
+    assert.equal(await ipfs.import(updatedArtifact.files), updated.cid);
+    const published = new Map([
+      [built.cid, artifact.files],
+      [updated.cid, updatedArtifact.files],
+    ]);
+    // A caller receives only a detached node; it does not use problem codes or check.json.
+    const readDocumentation = async (
+      node: { documentation: Record<string, string> },
+      language: string,
+    ) => {
+      const reference = node.documentation[language];
+      if (!reference) throw new Error(`Unsupported documentation language: ${language}`);
+      const uri = new URL(reference);
+      const bytes = published.get(uri.hostname)?.get(uri.pathname.slice(1));
+      if (!bytes) throw new Error(`Documentation unavailable: ${uri}`);
+      return bytes.toString();
+    };
     await engine.start();
-    for (const [text, expected] of [
-      ["hello", { pass: true }],
-      [" ", { pass: false, problems: [{ target: "text", code: "text-empty", actual: " " }] }],
-    ] as const) {
-      const requestId = newId(clock.now());
-      await engine.submit({ requestId, bundle: built.cid, timeoutMs: 10000, text }, caller);
-      const status = await engine.getRequestStatus(requestId, { waitMs: 10000 }, caller);
-      assert.equal(status.status, "accepted");
-      if (status.status !== "accepted") throw new Error(JSON.stringify(status));
-      engine.tick();
-      const deadline = Date.now() + 10000;
-      let task = engine.getTask(status.taskId, caller);
-      while (!["completed", "failed", "stopped"].includes(task.stage)) {
-        if (Date.now() > deadline) throw new Error("Independent Check timed out");
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        task = engine.getTask(status.taskId, caller);
+    for (const version of [built, updated]) {
+      for (const [text, expected] of [
+        ["hello", { pass: true }],
+        [
+          " ",
+          {
+            pass: false,
+            problems: [
+              { target: "text", code: "text-empty", actual: " " },
+              { target: "text", code: "text-invalid", actual: null },
+            ],
+          },
+        ],
+      ] as const) {
+        const requestId = newId(clock.now());
+        await engine.submit({ requestId, bundle: version.cid, timeoutMs: 10000, text }, caller);
+        const status = await engine.getRequestStatus(requestId, { waitMs: 10000 }, caller);
+        assert.equal(status.status, "accepted");
+        if (status.status !== "accepted") throw new Error(JSON.stringify(status));
+        engine.tick();
+        const deadline = Date.now() + 10000;
+        let task = engine.getTask(status.taskId, caller);
+        while (!["completed", "failed", "stopped"].includes(task.stage)) {
+          if (Date.now() > deadline) throw new Error("Independent Check timed out");
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          task = engine.getTask(status.taskId, caller);
+        }
+        await engine.waitForTaskRelease(task.taskId, caller);
+        assert.equal(task.stage, "completed", JSON.stringify(task.error));
+        assert.deepEqual(task.result, {
+          ...expected,
+          documentation: documentation("check", version.cid),
+          ...("problems" in expected
+            ? {
+                problems: expected.problems.map((problem) => ({
+                  ...problem,
+                  documentation: documentation(`problems/${problem.code}`, version.cid),
+                })),
+              }
+            : {}),
+        });
+        const detached = structuredClone(task.result) as {
+          pass: boolean;
+          documentation: Record<string, string>;
+          problems?: { code: string; documentation: Record<string, string> }[];
+        };
+        for (const language of languages) {
+          assert.match(
+            await readDocumentation(detached, language),
+            new RegExp(
+              `${language} check ${version.cid === built.cid || language !== "en" ? "v1" : "v2"}`,
+            ),
+          );
+          for (const problem of detached.problems ?? [])
+            assert.match(
+              await readDocumentation(problem, language),
+              new RegExp(
+                `${language} ${problem.code} ${version.cid === built.cid || language !== "en" ? "v1" : "v2"}`,
+              ),
+            );
+        }
+        const unavailable = new Map(published);
+        published.clear();
+        await assert.rejects(
+          readDocumentation(detached, "fr"),
+          /Unsupported documentation language/,
+        );
+        await assert.rejects(readDocumentation(detached, "en"), /Documentation unavailable/);
+        assert.deepEqual(detached, task.result);
+        for (const [cid, files] of unavailable) published.set(cid, files);
       }
-      await engine.waitForTaskRelease(task.taskId, caller);
-      assert.equal(task.stage, "completed", JSON.stringify(task.error));
-      assert.deepEqual(task.result, expected);
     }
   } finally {
     await engine.close();

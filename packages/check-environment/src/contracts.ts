@@ -1,7 +1,4 @@
-import { createCheckResultSchema } from "@potential-guide/check-sdk/contracts";
-import { problemCodes as directories } from "../dist/definitions/directories.js";
-import { problemCodes as network } from "../dist/definitions/network.js";
-import { problemCodes as tools } from "../dist/definitions/tools.js";
+import { Type } from "@sinclair/typebox";
 import directoriesContract from "./tasks/directories/contract.js";
 import networkContract from "./tasks/network/contract.js";
 import toolsContract from "./tasks/tools/contract.js";
@@ -11,4 +8,8 @@ export const inputSchemas = {
   directories: directoriesContract.input,
   network: networkContract.input,
 };
-export const resultSchema = createCheckResultSchema([...tools, ...directories, ...network]);
+export const resultSchema = Type.Union([
+  toolsContract.result,
+  directoriesContract.result,
+  networkContract.result,
+]);

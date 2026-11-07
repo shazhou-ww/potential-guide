@@ -72,11 +72,14 @@ is not restored, and no old Host command, registration or compatibility forwardi
 is provided. Import/pin the emitted CAR and submit its root CID to the Engine;
 do not submit an npm package name or an old Checker digest as a Bundle.
 
-The library exports (`checkTools`, `checkDirectories`, `checkNetwork`, version
-helpers and the directory write probe) remain shared implementations, not legacy
-task entry points. Existing Objective Workers still consume them without child
-Task scheduling. Removing them would break those consumers rather than migrate
-an old runner. This scope does not migrate `pnpm check`, repository/package
+The library exports remain shared implementations, not legacy task entry points.
+`checkTools`, `checkDirectories`, and `checkNetwork` now require a second context
+argument containing `bundle: {cid}` for the verified executing artifact;
+`signal` remains optional. Generated languages are supplied internally.
+Standalone callers are responsible for this identity; use the Task Bundles for
+Engine-verified identity. Existing Objective Workers consume only version helpers
+and the directory write probe, whose signatures are unchanged.
+This scope does not migrate `pnpm check`, repository/package
 standardization, devbox-health or setup/self-check Objectives.
 
 ## Inputs
@@ -147,7 +150,10 @@ accept business messages. Request/Run cancellation still works through the SDK.
 A passing check returns exactly:
 
 ```json
-{"pass": true}
+{
+  "pass": true,
+  "documentation": {"en": "ipfs://<CID>/resources/references/en/check.md"}
+}
 ```
 
 A completed check with unmet requirements returns only actual problems:
@@ -155,8 +161,12 @@ A completed check with unmet requirements returns only actual problems:
 ```json
 {
   "pass": false,
+  "documentation": {"en": "ipfs://<CID>/resources/references/en/check.md"},
   "problems": [
-    {"target": "node", "code": "tool-version", "actual": "20.0.0"}
+    {
+      "target": "node", "code": "tool-version", "actual": "20.0.0",
+      "documentation": {"en": "ipfs://<CID>/resources/references/en/problems/tool-version.md"}
+    }
   ]
 }
 ```
@@ -165,6 +175,12 @@ Passing items are omitted. Each problem includes `target`, `code`, and nullable
 `actual`. Failure results require a nonempty `problems` array; passing results
 have no `problems` field. Neither variant includes `checks` or `ok`. Invocation
 faults still fail the Run, not return a check result.
+`<CID>` is the actual admitted executing root, automatically supplied through
+the Task SDK. All declared languages appear at each node (these three checks
+currently declare `en`). Consumers choose a language and resolve the URI directly;
+no problem-code index join or inline Markdown is needed. Reading is separate
+from execution: unavailable content is an explicit reader error, not a new
+problem or a changed conclusion. URI availability depends on pinning/distribution.
 
 Per-item verbose diagnostics do not belong in Result. The Task SDK supports
 separate bounded Run diagnostics through `context.log`; see

@@ -46,11 +46,18 @@ not simply acknowledge every frame. Authors may import their own validators;
 those business dependencies remain bundled and are separately attributable.
 
 The host owns CID parsing, supported codec/hash checks, DAG verification and
-Bundle-relative path resolution. The Worker treats the host-verified CID as an
+Bundle-relative path resolution. The SDK treats the host-verified CID as an
 opaque, nonempty string of at most 256 characters and echoes it in the ready
-handshake; it does not import a CID parser. Declaration equality is still checked
-against the build-locked binding, and the host must match the handshake against
+handshake; the SDK itself does not import a CID parser. Declaration equality is
+still checked against the build-locked binding, and the host must match the handshake against
 its verified Bundle before dispatching a Run.
+
+`context.bundle.cid` exposes that host-verified executing root as a readonly
+property on the frozen Bundle context. It is not taken from task input or
+compiled into the hashed worker. Wrappers can use it for independently
+resolvable immutable resource URIs without a self-referential build identity.
+Custom hosts must supply the actual admitted root through the existing trusted
+Worker configuration and enforce the ready handshake; this is not author attestation.
 
 `context.log({level, message, fields?})` provides async typed diagnostic receipts,
 independent of business outputs. The sole **v1** declaration includes its dedicated

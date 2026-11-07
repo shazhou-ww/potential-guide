@@ -32,7 +32,8 @@ duplicate mappings and escaping paths, and snapshots inputs under
 **only** nonempty `title` and `description` (at most 200 Unicode code points).
 Bodies, sections, translations, links and anchors are not parsed or validated.
 All generated inputs are under `dist/`; definitions at
-`dist/definitions/<kind>.{js,d.ts}` are derived from YAML and imported by both
+`dist/definitions/<kind>.{js,d.ts}` export frozen `problemCodes` and `languages`
+derived from YAML and imported by both
 business code and its contract. Run preparation before TypeScript.
 
 Call the ordinary `buildTask(prepared.buildFile)` from
@@ -51,3 +52,32 @@ Bundle references are available at
 `ipfs://<CID>/resources/references/<language>/problems/<code>.md`.
 `resources/check.json` maps languages and codes to these Bundle-relative paths.
 This is a Check convention, not automatic Engine document presentation.
+
+## Result documentation
+
+Use `createCheckContract(input, problemCodes, languages)` and
+`createCheckTask(problemCodes, languages, inspect)` with those generated tuples.
+`inspect` returns `CheckObservation[]` (only target/code/actual). The shared
+adapter adds `documentation: { "<language>": "ipfs://<CID>/..." }` to **every**
+result, including passes, and to each problem. No Markdown bodies are returned.
+Consumers choose a declared language and resolve the complete URI from that node;
+they need neither the parent result nor a code/index lookup. There is no implicit
+language fallback. Missing content, transport failures and unsupported languages
+must be reported by the reader, without changing the saved check result.
+
+The Task SDK supplies the verified executing identity in `context.bundle.cid`.
+It comes from the Engine's admitted Bundle, not author input. Assembly never
+reads documentation during execution, so document availability cannot change
+the finding. The final CID cannot be embedded in the hashed Bundle itself:
+generated definitions contain only language/code metadata, and the callback adds
+the trusted root at runtime. The generic Engine never interprets problem codes.
+
+For non-Task use, `createCheckResult(problemCodes, observations, {cid, languages})`
+requires an explicit, validated Bundle root and the generated languages. The
+caller must supply the identity of the verified artifact actually being used;
+the helper cannot attest an arbitrary caller's identity. Missing/invalid identity
+is an error, never a relative or moving reference.
+
+This is a breaking result/API change: rebuild contracts and workers together,
+then distribute the new CAR/CID. Existing immutable Bundles and historical
+Check/Objective payloads retain their original contracts; no migration is implied.

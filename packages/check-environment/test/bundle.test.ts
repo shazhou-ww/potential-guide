@@ -151,7 +151,27 @@ test("all three CAR bundles preserve results, faults and cancellation through th
       ]) {
         const task = await finished(await submit(kind, input));
         assert.equal(task.stage, "completed", JSON.stringify(task.error));
-        assert.deepEqual(task.result, expected);
+        const reference = refs[kind];
+        assert.ok(reference);
+        const cid = reference.cid;
+        const documentation = (suffix: string) => ({
+          en: `ipfs://${cid}/resources/references/en/${suffix}.md`,
+        });
+        const problems = expected.problems as
+          | { target: string; code: string; actual: string | null }[]
+          | undefined;
+        assert.deepEqual(task.result, {
+          ...expected,
+          documentation: documentation("check"),
+          ...(problems
+            ? {
+                problems: problems.map((problem) => ({
+                  ...problem,
+                  documentation: documentation(`problems/${problem.code}`),
+                })),
+              }
+            : {}),
+        });
         compileJsonSchema(toTaskSchema(resultSchema)).validate(task.result);
         const files = await readdir(join(bundles, kind));
         assert.deepEqual(files.sort(), ["resources", "schemas", "task.yaml", "worker.cjs"]);
@@ -266,10 +286,21 @@ test("bundle input contracts reject missing fields, unknown fields and invalid b
 
 test("result contract accepts only the exact pass or nonempty-problems variants", () => {
   const contract = compileJsonSchema(toTaskSchema(resultSchema));
-  contract.validate({ pass: true });
+  const documentation = {
+    en: "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3gyz5l2v4vtwqgxx5lhh3mfxe/resources/references/en/check.md",
+  };
+  contract.validate({ pass: true, documentation });
   contract.validate({
     pass: false,
-    problems: [{ target: "node", code: "tool-version", actual: "20.0.0" }],
+    documentation,
+    problems: [
+      {
+        target: "node",
+        code: "tool-version",
+        actual: "20.0.0",
+        documentation: { en: documentation.en.replace("check.md", "problems/tool-version.md") },
+      },
+    ],
   });
   for (const invalid of [
     { pass: true, problems: [] },

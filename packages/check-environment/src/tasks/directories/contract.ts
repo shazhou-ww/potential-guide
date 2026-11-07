@@ -1,6 +1,6 @@
 import { createCheckContract } from "@potential-guide/check-sdk/contracts";
 import { Type } from "@sinclair/typebox";
-import { problemCodes } from "../../../dist/definitions/directories.js";
+import { languages, problemCodes } from "../../../dist/definitions/directories.js";
 import { objectOptions, text } from "../inputs.js";
 
 export default createCheckContract(
@@ -23,4 +23,5 @@ export default createCheckContract(
     objectOptions,
   ),
   problemCodes,
+  languages,
 );
