@@ -1,0 +1,44 @@
+[
+  {
+    "name": "@potential-guide/cli-core",
+    "version": "0.3.0-rc.0",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-cli-core-0.3.0-rc.0.tgz",
+    "sha256": "09498be807e126fb8c46fff7a46bd6db45977f531535634da3db02c26aa24af7"
+  },
+  {
+    "name": "@potential-guide/task-protocol",
+    "version": "0.1.0-rc.1",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-task-protocol-0.1.0-rc.1.tgz",
+    "sha256": "7d93d3573e08d3665ec8db50702dd467630c11cb506da6f5af731d6833983e62"
+  },
+  {
+    "name": "@potential-guide/task-sdk",
+    "version": "0.1.0-rc.1",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-task-sdk-0.1.0-rc.1.tgz",
+    "sha256": "c6fd701d7381528dcebe6673c5be37e5c75e1d6438de9a4142e6cc2695ba4c40"
+  },
+  {
+    "name": "@potential-guide/pguide-task-bundle",
+    "version": "0.1.0-rc.1",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-pguide-task-bundle-0.1.0-rc.1.tgz",
+    "sha256": "a19d81009aadd597efcd7ff6d8abcb070f41c7540882b9e84d7b5694d17845b2"
+  },
+  {
+    "name": "@potential-guide/task-engine",
+    "version": "0.1.0-rc.1",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-task-engine-0.1.0-rc.1.tgz",
+    "sha256": "e67508f86e2303b6031d25712e05940226f9788ebd4affc77243d5e036a033a6"
+  },
+  {
+    "name": "@potential-guide/check-sdk",
+    "version": "0.2.0-rc.0",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-check-sdk-0.2.0-rc.0.tgz",
+    "sha256": "10e13b19f689245cc54b91e2efcb9e107dea73f3b2f752b53faf4f8e1bc6485d"
+  },
+  {
+    "name": "@potential-guide/check-environment",
+    "version": "0.2.0-rc.0",
+    "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\packs\\potential-guide-check-environment-0.2.0-rc.0.tgz",
+    "sha256": "7ae536aa7239944378165451ea7fcdcae2eb177a79bd611f9cf1e50fe3334fc5"
+  }
+]

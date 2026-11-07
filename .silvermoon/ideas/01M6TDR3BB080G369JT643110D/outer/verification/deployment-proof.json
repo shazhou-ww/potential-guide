@@ -1,0 +1,721 @@
+{
+  "startedAt": "2026-11-07T08:23:47.136Z",
+  "api": "http://127.0.0.1:55713",
+  "enginePath": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\runtime\\node_modules\\.pnpm\\@potential-guide+task-engin_2f0a487f73bb26f00a7f90d55819b15f\\node_modules\\@potential-guide\\task-engine\\dist\\index.js",
+  "provenance": {
+    "repository": "D:\\Code\\potential-guide.worktrees\\check-task-output-standards-discussion",
+    "sourceRevision": "2a8798d85ed0e9cba2a06fdd1e6f5c3460c3132d",
+    "implementationCommit": "5a1684d75ee92720a76daa3e0b0cf1e7abcb4c61",
+    "implementationRevision": "d4afe07fe4dd7fd4791ddcfb403958bc190d52b6"
+  },
+  "imports": [
+    {
+      "name": "tools",
+      "expectedRoot": "bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a",
+      "response": [
+        {
+          "Root": {
+            "Cid": {
+              "/": "bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a"
+            },
+            "PinErrorMsg": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "directories",
+      "expectedRoot": "bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe",
+      "response": [
+        {
+          "Root": {
+            "Cid": {
+              "/": "bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe"
+            },
+            "PinErrorMsg": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "network",
+      "expectedRoot": "bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si",
+      "response": [
+        {
+          "Root": {
+            "Cid": {
+              "/": "bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si"
+            },
+            "PinErrorMsg": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "textA",
+      "expectedRoot": "bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u",
+      "response": [
+        {
+          "Root": {
+            "Cid": {
+              "/": "bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u"
+            },
+            "PinErrorMsg": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "textB",
+      "expectedRoot": "bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe",
+      "response": [
+        {
+          "Root": {
+            "Cid": {
+              "/": "bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe"
+            },
+            "PinErrorMsg": ""
+          }
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "label": "tools/pass",
+      "bundle": "tools",
+      "request": {
+        "tools": [
+          {
+            "command": "C:\\Program Files\\nodejs\\node.exe",
+            "args": [
+              "--version"
+            ],
+            "minimumVersion": "22.13.0"
+          }
+        ],
+        "requestId": "01M6THPJW7H50Q4A0H7DQ9K3TE",
+        "bundle": "bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPK1FPK9R7JNP9K39ZXNF",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": true,
+        "documentation": {
+          "en": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/check.md"
+        }
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/check.md",
+          "body": "---\ntitle: Tool versions\ndescription: Check explicit commands and minimum numeric versions without installing or repairing tools.\n---\n\n# Tool versions\n\nInput `tools` lists `command`, `args` and `minimumVersion`; optional\n`checkTimeoutMs` defaults to 5000 (100–300000). Commands run without a shell.\nThe host must allow subprocess creation. Versions are dot-separated decimal\nnumbers, compared numerically; the first recognizable output version is used.\nThe result is `{pass:true}` or only failing `target`, `code`, `actual` entries.\n`target` is the command and `actual` is the parsed version or null.\n\nProblems: [missing](problems/tool-missing.md),\n[unusable](problems/tool-unusable.md),\n[unparseable](problems/version-unparseable.md),\n[too old](problems/tool-version.md).\nTimeout, output overflow, unexpected launch errors and cleanup failures are\nexecution faults, not problems. Cancellation propagates after physical process\ncleanup. No installation or repair is performed.\n"
+        }
+      ]
+    },
+    {
+      "label": "tools/fail",
+      "bundle": "tools",
+      "request": {
+        "tools": [
+          {
+            "command": "C:\\Program Files\\nodejs\\node.exe",
+            "args": [
+              "-e",
+              "console.log('v20.0.0')"
+            ],
+            "minimumVersion": "22.13.0"
+          }
+        ],
+        "requestId": "01M6THPK6AKZWCFDY0PETFYQHP",
+        "bundle": "bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPK6CX1XYQ1J0881GGJHZ",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": false,
+        "documentation": {
+          "en": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/check.md"
+        },
+        "problems": [
+          {
+            "target": "C:\\Program Files\\nodejs\\node.exe",
+            "code": "tool-version",
+            "actual": "20.0.0",
+            "documentation": {
+              "en": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/problems/tool-version.md"
+            }
+          }
+        ]
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/check.md",
+          "body": "---\ntitle: Tool versions\ndescription: Check explicit commands and minimum numeric versions without installing or repairing tools.\n---\n\n# Tool versions\n\nInput `tools` lists `command`, `args` and `minimumVersion`; optional\n`checkTimeoutMs` defaults to 5000 (100–300000). Commands run without a shell.\nThe host must allow subprocess creation. Versions are dot-separated decimal\nnumbers, compared numerically; the first recognizable output version is used.\nThe result is `{pass:true}` or only failing `target`, `code`, `actual` entries.\n`target` is the command and `actual` is the parsed version or null.\n\nProblems: [missing](problems/tool-missing.md),\n[unusable](problems/tool-unusable.md),\n[unparseable](problems/version-unparseable.md),\n[too old](problems/tool-version.md).\nTimeout, output overflow, unexpected launch errors and cleanup failures are\nexecution faults, not problems. Cancellation propagates after physical process\ncleanup. No installation or repair is performed.\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "en",
+          "uri": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/problems/tool-version.md",
+          "body": "---\ntitle: Tool version too old\ndescription: The parsed tool version is below the requested minimum version.\n---\n\n`target` is the command; `actual` is its parsed numeric version. Compare the\nrequested minimum, select a suitable executable or upgrade separately.\nThe check performs no upgrade. See [tool checks](../check.md).\n"
+        }
+      ]
+    },
+    {
+      "label": "directories/pass",
+      "bundle": "directories",
+      "request": {
+        "directories": [
+          {
+            "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\runtime\\probe-directory",
+            "requirements": [
+              "exists",
+              "read",
+              "write"
+            ]
+          }
+        ],
+        "requestId": "01M6THPKAHC440BY654GZ375EP",
+        "bundle": "bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPKE7H3EERH75CGKZ4AHN",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": true,
+        "documentation": {
+          "en": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/check.md"
+        }
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/check.md",
+          "body": "---\ntitle: Directory access\ndescription: Check absolute directory paths and explicit exists, read or write requirements.\n---\n\n# Directory access\n\nInput `directories` lists absolute `path` and nonempty `requirements` from\n`exists`, `read`, `write`. Symlinks are not accepted as directories.\nRead uses host access checks. Write creates an exclusive probe file, reads it\nback and deletes it in `finally`; it does not modify existing files.\nThe Engine host must have the requested permissions.\n\nResults contain only failures: [not-directory](problems/not-directory.md) or\n[directory-unusable](problems/directory-unusable.md). `target` is the absolute\npath; `actual` is the filesystem error code or null. Invalid input, unexpected\nfilesystem errors, readback mismatch and cleanup errors remain execution\nfaults. Cancellation propagates after probe cleanup. No repair is performed.\n"
+        }
+      ]
+    },
+    {
+      "label": "directories/fail",
+      "bundle": "directories",
+      "request": {
+        "directories": [
+          {
+            "path": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\runtime\\probe-directory\\absent",
+            "requirements": [
+              "exists"
+            ]
+          }
+        ],
+        "requestId": "01M6THPKHMH0C5RNRJGJZFTCYZ",
+        "bundle": "bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPKHQJFECNJ82QAAWQACF",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": false,
+        "documentation": {
+          "en": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/check.md"
+        },
+        "problems": [
+          {
+            "target": "C:\\Users\\Wei\\.copilot\\session-state\\964c50f6-6c32-477d-a919-5f6bfe7be4de\\files\\check-documentation-deployment\\independent-consumer\\runtime\\probe-directory\\absent",
+            "code": "directory-unusable",
+            "actual": "ENOENT",
+            "documentation": {
+              "en": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/problems/directory-unusable.md"
+            }
+          }
+        ]
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/check.md",
+          "body": "---\ntitle: Directory access\ndescription: Check absolute directory paths and explicit exists, read or write requirements.\n---\n\n# Directory access\n\nInput `directories` lists absolute `path` and nonempty `requirements` from\n`exists`, `read`, `write`. Symlinks are not accepted as directories.\nRead uses host access checks. Write creates an exclusive probe file, reads it\nback and deletes it in `finally`; it does not modify existing files.\nThe Engine host must have the requested permissions.\n\nResults contain only failures: [not-directory](problems/not-directory.md) or\n[directory-unusable](problems/directory-unusable.md). `target` is the absolute\npath; `actual` is the filesystem error code or null. Invalid input, unexpected\nfilesystem errors, readback mismatch and cleanup errors remain execution\nfaults. Cancellation propagates after probe cleanup. No repair is performed.\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "en",
+          "uri": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/problems/directory-unusable.md",
+          "body": "---\ntitle: Directory unavailable\ndescription: The directory is missing or requested access failed with a recognized filesystem error.\n---\n\n`target` is the absolute directory path; `actual` is ENOENT, ENOTDIR, EACCES,\nEPERM, EROFS, ENOSPC or EDQUOT. Check path, permissions, filesystem capacity and\nmount state. Resolve the cause separately; no repair is attempted.\nUnexpected errors and cleanup failures are faults, not this problem.\nSee [directory checks](../check.md).\n"
+        }
+      ]
+    },
+    {
+      "label": "network/pass",
+      "bundle": "network",
+      "request": {
+        "dns": [
+          "localhost"
+        ],
+        "http": [
+          {
+            "url": "http://127.0.0.1:63521/ok",
+            "expectedStatus": [
+              200
+            ],
+            "followRedirects": false
+          }
+        ],
+        "requestId": "01M6THPKMNPMY3APDKDYPYBR41",
+        "bundle": "bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPKRG7PB6MYQEWZESSDE7",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": true,
+        "documentation": {
+          "en": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/check.md"
+        }
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/check.md",
+          "body": "---\ntitle: Network reachability\ndescription: Check explicit DNS names and HTTP status expectations with bounded resource lifetimes.\n---\n\n# Network reachability\n\nInput contains `dns` names and `http` entries with `url`, `expectedStatus`,\n`followRedirects`; at least one check is required. Optional `checkTimeoutMs`\ndefaults to 5000 (100–300000). The host requires DNS/network access and Node\nsubprocess support. HTTP(S) URLs cannot contain credentials.\nDNS runs in a bounded subprocess; HTTP response bodies are cancelled.\n\nProblems: [DNS unavailable](problems/dns-unavailable.md),\n[unexpected HTTP status](problems/http-status.md),\n[HTTP unavailable](problems/http-unavailable.md).\nResults contain only failures; `target` is the DNS name or URL, `actual` is\nthe DNS error/address, status string or fetch diagnostic.\nTimeouts, invalid inputs, unexpected subprocess faults and cleanup failures\nremain execution faults. Cancellation propagates and physical resources are\nreleased. This is a point-in-time probe, not a network repair or guarantee.\n"
+        }
+      ]
+    },
+    {
+      "label": "network/fail",
+      "bundle": "network",
+      "request": {
+        "dns": [
+          "localhost"
+        ],
+        "http": [
+          {
+            "url": "http://127.0.0.1:63521/bad",
+            "expectedStatus": [
+              200
+            ],
+            "followRedirects": false
+          }
+        ],
+        "requestId": "01M6THPKXRBSRFYY0E5S8QCG07",
+        "bundle": "bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPKXTVP4BY4TWPKH2QBFJ",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": false,
+        "documentation": {
+          "en": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/check.md"
+        },
+        "problems": [
+          {
+            "target": "http://127.0.0.1:63521/bad",
+            "code": "http-status",
+            "actual": "503",
+            "documentation": {
+              "en": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/problems/http-status.md"
+            }
+          }
+        ]
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/check.md",
+          "body": "---\ntitle: Network reachability\ndescription: Check explicit DNS names and HTTP status expectations with bounded resource lifetimes.\n---\n\n# Network reachability\n\nInput contains `dns` names and `http` entries with `url`, `expectedStatus`,\n`followRedirects`; at least one check is required. Optional `checkTimeoutMs`\ndefaults to 5000 (100–300000). The host requires DNS/network access and Node\nsubprocess support. HTTP(S) URLs cannot contain credentials.\nDNS runs in a bounded subprocess; HTTP response bodies are cancelled.\n\nProblems: [DNS unavailable](problems/dns-unavailable.md),\n[unexpected HTTP status](problems/http-status.md),\n[HTTP unavailable](problems/http-unavailable.md).\nResults contain only failures; `target` is the DNS name or URL, `actual` is\nthe DNS error/address, status string or fetch diagnostic.\nTimeouts, invalid inputs, unexpected subprocess faults and cleanup failures\nremain execution faults. Cancellation propagates and physical resources are\nreleased. This is a point-in-time probe, not a network repair or guarantee.\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "en",
+          "uri": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/problems/http-status.md",
+          "body": "---\ntitle: Unexpected HTTP status\ndescription: The HTTP response did not satisfy status and redirect expectations.\n---\n\n`target` is the requested URL; `actual` is the decimal response status.\nCheck expectedStatus and followRedirects, endpoint health and authentication.\nA redirect fails when following redirects is disabled, even when listed as an\nexpected status. See [network checks](../check.md).\n"
+        }
+      ]
+    },
+    {
+      "label": "textA/pass",
+      "bundle": "textA",
+      "request": {
+        "text": "healthy",
+        "requestId": "01M6THPM2NPKV4E74XXGMZX4C6",
+        "bundle": "bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPM7591ZACVANVA4XJW78",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": true,
+        "documentation": {
+          "en": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+          "zh-CN": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/check.md"
+        }
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+          "body": "---\ntitle: Text check A\ndescription: Independent consumer verification.\n---\n\n# Text check A\n\n<!-- deployment:A:en:check -->\n"
+        },
+        {
+          "node": "result",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/check.md",
+          "body": "---\ntitle: 文本说明 check A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 check A\n\n<!-- deployment:A:zh-CN:check -->\n"
+        }
+      ]
+    },
+    {
+      "label": "textA/fail",
+      "bundle": "textA",
+      "request": {
+        "text": " ",
+        "requestId": "01M6THPMAB6G12R8ZFHZZ3QV1E",
+        "bundle": "bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPMAFCXW0AX1QGJG9A6SF",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": false,
+        "documentation": {
+          "en": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+          "zh-CN": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/check.md"
+        },
+        "problems": [
+          {
+            "target": "text",
+            "code": "text-empty",
+            "actual": " ",
+            "documentation": {
+              "en": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-empty.md",
+              "zh-CN": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/problems/text-empty.md"
+            }
+          },
+          {
+            "target": "text",
+            "code": "text-short",
+            "actual": "1",
+            "documentation": {
+              "en": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-short.md",
+              "zh-CN": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/problems/text-short.md"
+            }
+          }
+        ]
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+          "body": "---\ntitle: Text check A\ndescription: Independent consumer verification.\n---\n\n# Text check A\n\n<!-- deployment:A:en:check -->\n"
+        },
+        {
+          "node": "result",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/check.md",
+          "body": "---\ntitle: 文本说明 check A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 check A\n\n<!-- deployment:A:zh-CN:check -->\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "en",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-empty.md",
+          "body": "---\ntitle: Text text-empty A\ndescription: Independent consumer verification.\n---\n\n# Text text-empty A\n\n<!-- deployment:A:en:text-empty -->\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/problems/text-empty.md",
+          "body": "---\ntitle: 文本说明 text-empty A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 text-empty A\n\n<!-- deployment:A:zh-CN:text-empty -->\n"
+        },
+        {
+          "node": "problem:1",
+          "language": "en",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-short.md",
+          "body": "---\ntitle: Text text-short A\ndescription: Independent consumer verification.\n---\n\n# Text text-short A\n\n<!-- deployment:A:en:text-short -->\n"
+        },
+        {
+          "node": "problem:1",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/problems/text-short.md",
+          "body": "---\ntitle: 文本说明 text-short A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 text-short A\n\n<!-- deployment:A:zh-CN:text-short -->\n"
+        }
+      ]
+    },
+    {
+      "label": "textB/pass",
+      "bundle": "textB",
+      "request": {
+        "text": "healthy",
+        "requestId": "01M6THPMDCQZ109QCH5M29D6Z8",
+        "bundle": "bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPMHP7SHKW253KSJDWF3Z",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": true,
+        "documentation": {
+          "en": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/check.md",
+          "zh-CN": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/check.md"
+        }
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/check.md",
+          "body": "---\ntitle: Text check B\ndescription: Independent consumer verification.\n---\n\n# Text check B\n\n<!-- deployment:B:en:check -->\n"
+        },
+        {
+          "node": "result",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/check.md",
+          "body": "---\ntitle: 文本说明 check B\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 check B\n\n<!-- deployment:B:zh-CN:check -->\n"
+        }
+      ]
+    },
+    {
+      "label": "textB/fail",
+      "bundle": "textB",
+      "request": {
+        "text": " ",
+        "requestId": "01M6THPMKQ1ZNGTERTA52T0JTR",
+        "bundle": "bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe",
+        "timeoutMs": 30000
+      },
+      "taskId": "01M6THPMKVREW3EY6NBGEG7JPH",
+      "stage": "completed",
+      "released": true,
+      "result": {
+        "pass": false,
+        "documentation": {
+          "en": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/check.md",
+          "zh-CN": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/check.md"
+        },
+        "problems": [
+          {
+            "target": "text",
+            "code": "text-empty",
+            "actual": " ",
+            "documentation": {
+              "en": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/problems/text-empty.md",
+              "zh-CN": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/problems/text-empty.md"
+            }
+          },
+          {
+            "target": "text",
+            "code": "text-short",
+            "actual": "1",
+            "documentation": {
+              "en": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/problems/text-short.md",
+              "zh-CN": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/problems/text-short.md"
+            }
+          }
+        ]
+      },
+      "reads": [
+        {
+          "node": "result",
+          "language": "en",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/check.md",
+          "body": "---\ntitle: Text check B\ndescription: Independent consumer verification.\n---\n\n# Text check B\n\n<!-- deployment:B:en:check -->\n"
+        },
+        {
+          "node": "result",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/check.md",
+          "body": "---\ntitle: 文本说明 check B\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 check B\n\n<!-- deployment:B:zh-CN:check -->\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "en",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/problems/text-empty.md",
+          "body": "---\ntitle: Text text-empty B\ndescription: Independent consumer verification.\n---\n\n# Text text-empty B\n\n<!-- deployment:B:en:text-empty -->\n"
+        },
+        {
+          "node": "problem:0",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/problems/text-empty.md",
+          "body": "---\ntitle: 文本说明 text-empty B\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 text-empty B\n\n<!-- deployment:B:zh-CN:text-empty -->\n"
+        },
+        {
+          "node": "problem:1",
+          "language": "en",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/problems/text-short.md",
+          "body": "---\ntitle: Text text-short B\ndescription: Independent consumer verification.\n---\n\n# Text text-short B\n\n<!-- deployment:B:en:text-short -->\n"
+        },
+        {
+          "node": "problem:1",
+          "language": "zh-CN",
+          "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/zh-CN/problems/text-short.md",
+          "body": "---\ntitle: 文本说明 text-short B\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 text-short B\n\n<!-- deployment:B:zh-CN:text-short -->\n"
+        }
+      ]
+    }
+  ],
+  "unavailable": [
+    {
+      "label": "tools/pass",
+      "uri": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "tools/fail",
+      "uri": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "tools/fail",
+      "uri": "ipfs://bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a/resources/references/en/problems/tool-version.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "directories/pass",
+      "uri": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "directories/fail",
+      "uri": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "directories/fail",
+      "uri": "ipfs://bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe/resources/references/en/problems/directory-unusable.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "network/pass",
+      "uri": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "network/fail",
+      "uri": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "network/fail",
+      "uri": "ipfs://bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si/resources/references/en/problems/http-status.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textA/pass",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textA/fail",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textA/fail",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-empty.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textA/fail",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-short.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textB/pass",
+      "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textB/fail",
+      "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/check.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textB/fail",
+      "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/problems/text-empty.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    },
+    {
+      "label": "textB/fail",
+      "uri": "ipfs://bafybeicnqosy4yfdndt2wtdcdxb7cqz2wibyfuiydqiled7i6ysmn6hvoe/resources/references/en/problems/text-short.md",
+      "error": "Kubo cat: HTTP 503: Controlled documentation transport outage"
+    }
+  ],
+  "oldVersionRereads": [
+    {
+      "node": "result",
+      "language": "en",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+      "body": "---\ntitle: Text check A\ndescription: Independent consumer verification.\n---\n\n# Text check A\n\n<!-- deployment:A:en:check -->\n"
+    },
+    {
+      "node": "result",
+      "language": "zh-CN",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/check.md",
+      "body": "---\ntitle: 文本说明 check A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 check A\n\n<!-- deployment:A:zh-CN:check -->\n"
+    },
+    {
+      "node": "result",
+      "language": "en",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/check.md",
+      "body": "---\ntitle: Text check A\ndescription: Independent consumer verification.\n---\n\n# Text check A\n\n<!-- deployment:A:en:check -->\n"
+    },
+    {
+      "node": "result",
+      "language": "zh-CN",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/check.md",
+      "body": "---\ntitle: 文本说明 check A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 check A\n\n<!-- deployment:A:zh-CN:check -->\n"
+    },
+    {
+      "node": "problem:0",
+      "language": "en",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-empty.md",
+      "body": "---\ntitle: Text text-empty A\ndescription: Independent consumer verification.\n---\n\n# Text text-empty A\n\n<!-- deployment:A:en:text-empty -->\n"
+    },
+    {
+      "node": "problem:0",
+      "language": "zh-CN",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/problems/text-empty.md",
+      "body": "---\ntitle: 文本说明 text-empty A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 text-empty A\n\n<!-- deployment:A:zh-CN:text-empty -->\n"
+    },
+    {
+      "node": "problem:1",
+      "language": "en",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/en/problems/text-short.md",
+      "body": "---\ntitle: Text text-short A\ndescription: Independent consumer verification.\n---\n\n# Text text-short A\n\n<!-- deployment:A:en:text-short -->\n"
+    },
+    {
+      "node": "problem:1",
+      "language": "zh-CN",
+      "uri": "ipfs://bafybeifu63sjbf2q2zzihh6s4a7tsuzitxrt6etcjepky7hn6t6cqkkr4u/resources/references/zh-CN/problems/text-short.md",
+      "body": "---\ntitle: 文本说明 text-short A\ndescription: 独立调用方的文档消费验证。\n---\n\n# 文本说明 text-short A\n\n<!-- deployment:A:zh-CN:text-short -->\n"
+    }
+  ],
+  "kuboVersion": {
+    "Version": "0.43.1",
+    "Commit": "acc53c093",
+    "Repo": "18",
+    "System": "amd64/windows",
+    "Golang": "go1.26.5"
+  },
+  "success": true,
+  "cleanupErrors": [],
+  "finishedAt": "2026-11-07T08:23:49.219Z"
+}
