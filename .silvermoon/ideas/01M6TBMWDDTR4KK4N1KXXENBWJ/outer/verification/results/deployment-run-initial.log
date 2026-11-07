@@ -1,0 +1,17 @@
+{"name":"pinboard-full-dag-cid-mime-installed-client-admission","pass":true}
+{"name":"first-source-failure-live-pinboard-same-root","pass":true}
+{"name":"first-source-failure-backup-full-same-three-dags","pass":true}
+{"name":"invalid-raw-cid-rejected-then-valid-backup","pass":true}
+{"name":"all-sources-fail-explicit-bounded-source-diagnostics","pass":true}
+{"name":"total-budget-stall-no-late-backup","pass":true}
+{"name":"caller-cancellation-no-late-source-or-network-attempt","pass":true}
+{"name":"shared-example-basic-tools-check-public-http","pass":true}
+{"name":"installed-engine-directories-check-pass","pass":true}
+{"name":"installed-engine-network-check-pass","pass":true}
+{"name":"installed-engine-tools-business-fail-completed","pass":true}
+{"name":"installed-engine-directories-business-fail-completed","pass":true}
+{"name":"installed-engine-network-business-fail-completed","pass":true}
+{"name":"same-request-identical-body-same-task-no-extra-run","pass":true}
+{"name":"graceful-same-db-restart-http-identity-history-unchanged","pass":true}
+{"name":"installed-service-all-sources-fail-rejected-http","pass":true}
+{"counts":{"pass":16,"fail":0},"cleanup":[{"kind":"service","name":"installed-engine-initial","pid":152372,"graceful":true,"exit":{"code":0,"signal":null}},{"kind":"service","name":"installed-engine-restarted","pid":152488,"graceful":true,"exit":{"code":0,"signal":null}},{"kind":"service","name":"installed-engine-all-fail","pid":152541,"graceful":true,"exit":{"code":0,"signal":null}},{"kind":"http-helper","name":"pinboard-verified-read-only-backup","closed":true},{"kind":"http-helper","name":"owned-503","closed":true},{"kind":"http-helper","name":"owned-404","closed":true},{"kind":"http-helper","name":"owned-stall","closed":true},{"kind":"http-helper","name":"owned-corrupt-raw","closed":true},{"kind":"http-helper","name":"owned-business-http","closed":true}]}

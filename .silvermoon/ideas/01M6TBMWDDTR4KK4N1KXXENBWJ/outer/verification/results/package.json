@@ -1,0 +1,15 @@
+{
+  "name": "owned-silvermoon-deployment-consumer",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@potential-guide/pguide-task-engine": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-pguide-task-engine-0.1.0-rc.3.tgz",
+    "@potential-guide/task-engine": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-0.1.0-rc.1.tgz",
+    "@potential-guide/cli-core": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-cli-core-0.3.0-rc.0.tgz",
+    "@potential-guide/task-engine-server": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-server-0.1.0-rc.2.tgz",
+    "@potential-guide/task-engine-webui": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-webui-0.1.0-rc.1.tgz",
+    "@potential-guide/task-protocol": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-protocol-0.1.0-rc.1.tgz",
+    "@potential-guide/task-engine-http": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-http-0.1.0-rc.1.tgz",
+    "@potential-guide/task-engine-storage": "file:/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-storage-0.1.0-rc.1.tgz"
+  }
+}

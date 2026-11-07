@@ -1,0 +1,14 @@
+node:internal/fs/promises:859
+  return await PromisePrototypeThen(
+         ^
+
+Error: EEXIST: file already exists, mkdir 'owned-directory'
+    at async mkdir (node:internal/fs/promises:859:10)
+    at async file:///home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/consumer/deploy-consumer.mjs:18:1 {
+  errno: -17,
+  code: 'EEXIST',
+  syscall: 'mkdir',
+  path: 'owned-directory'
+}
+
+Node.js v24.14.1

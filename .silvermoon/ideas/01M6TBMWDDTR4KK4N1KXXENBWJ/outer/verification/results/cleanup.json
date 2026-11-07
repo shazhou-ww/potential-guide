@@ -1,0 +1,230 @@
+{
+  "checkedAt": "2026-11-07T15:49:16.262Z",
+  "finalCounts": {
+    "pass": 16,
+    "fail": 0
+  },
+  "earlierCounts": {
+    "initial": {
+      "pass": 16,
+      "fail": 0
+    },
+    "prelint": {
+      "pass": 16,
+      "fail": 0
+    }
+  },
+  "verifiedProvenanceFiles": 36,
+  "sourceArchiveRemoved": true,
+  "nativeOwnedRootRemoved": true,
+  "nativeLaunchCommandsAbsent": true,
+  "nativeOwnedRoot": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107",
+  "relay": {
+    "pid": 17420,
+    "port": 50554,
+    "processAbsent": true,
+    "httpUnavailable": true,
+    "node": "v24.12.0"
+  },
+  "cliProcesses": [
+    {
+      "run": "final",
+      "name": "installed-engine-initial",
+      "pid": 154013,
+      "absent": true
+    },
+    {
+      "run": "final",
+      "name": "installed-engine-restarted",
+      "pid": 154133,
+      "absent": true
+    },
+    {
+      "run": "final",
+      "name": "installed-engine-all-fail",
+      "pid": 154141,
+      "absent": true
+    },
+    {
+      "run": "initial-run",
+      "name": "installed-engine-initial",
+      "pid": 152372,
+      "absent": true
+    },
+    {
+      "run": "initial-run",
+      "name": "installed-engine-restarted",
+      "pid": 152488,
+      "absent": true
+    },
+    {
+      "run": "initial-run",
+      "name": "installed-engine-all-fail",
+      "pid": 152541,
+      "absent": true
+    },
+    {
+      "run": "prelint-run",
+      "name": "installed-engine-initial",
+      "pid": 153037,
+      "absent": true
+    },
+    {
+      "run": "prelint-run",
+      "name": "installed-engine-restarted",
+      "pid": 153153,
+      "absent": true
+    },
+    {
+      "run": "prelint-run",
+      "name": "installed-engine-all-fail",
+      "pid": 153161,
+      "absent": true
+    }
+  ],
+  "finalHttpHelpers": [
+    {
+      "name": "pinboard-verified-read-only-backup",
+      "url": "http://127.0.0.1:46380",
+      "closed": true,
+      "httpUnavailable": true
+    },
+    {
+      "name": "owned-503",
+      "url": "http://127.0.0.1:45584",
+      "closed": true,
+      "httpUnavailable": true
+    },
+    {
+      "name": "owned-404",
+      "url": "http://127.0.0.1:45074",
+      "closed": true,
+      "httpUnavailable": true
+    },
+    {
+      "name": "owned-stall",
+      "url": "http://127.0.0.1:46408",
+      "closed": true,
+      "httpUnavailable": true
+    },
+    {
+      "name": "owned-corrupt-raw",
+      "url": "http://127.0.0.1:46422",
+      "closed": true,
+      "httpUnavailable": true
+    },
+    {
+      "name": "owned-business-http",
+      "url": "http://127.0.0.1:46114",
+      "closed": true,
+      "httpUnavailable": true
+    }
+  ],
+  "deploymentSha256": "38fa586827e50aae96d846c46724528e83324e31e092e5ea1c3f12ce72e0b7b8",
+  "provenanceSha256": "9343e46287120d7ab0a8360881f6f3a061c3850a42e663ee0e1398d7e03759e7",
+  "lockfileSha256": "564644f97fa0ec87fc95aaffcef5b49863154ccfa1d70eb4c3bf575a353d915d",
+  "executedScriptSha256": "3f0c943cfc5f7efd264058f23f3e8942d83027fc4c57aa46641af2a1f2389225",
+  "retainedAuditScriptSha256": "3b5780faad22fbb77ad4264b471d1c25612de8c4426e54480b293cabe153d87b",
+  "supplementalHashes": [
+    {
+      "path": "build.log",
+      "bytes": 13434,
+      "sha256": "e41e679a97a29a7091ea6aaa1c709ba249f58177e0af5d6733f5ffefc452c293"
+    },
+    {
+      "path": "deployment-run-initial.log",
+      "bytes": 1897,
+      "sha256": "26faa95791eaa930d770647df973c19ee61e5c8f0014b3345476b70c96860cf1"
+    },
+    {
+      "path": "deployment-run-prelint.log",
+      "bytes": 1897,
+      "sha256": "9e347d3ebad276a2812f72a2d6a0b9ee927388c1f300fb1812bcd8276c8e4c8b"
+    },
+    {
+      "path": "deployment-run-setup-error.log",
+      "bytes": 401,
+      "sha256": "b0e9e92d392b7b21aff2f5fab4c74d13be75fb12b1eebe8610dcb26b65e9e151"
+    },
+    {
+      "path": "deployment-run.log",
+      "bytes": 1897,
+      "sha256": "02bb26c82d1338ed8260759b85ade7a2b6028d7ce91cd5405bf0bbf6ec86a6fa"
+    },
+    {
+      "path": "install-alternative.log",
+      "bytes": 1035,
+      "sha256": "aea69c9d80047bc09ebd111d69959aefa97b4f961ee71d9644719c8b6128b470"
+    },
+    {
+      "path": "install-relay.log",
+      "bytes": 13557,
+      "sha256": "c32b8496d9fbe1d10ed65fb497ac94360d05c63128913f410bea5a50e0635894"
+    },
+    {
+      "path": "install.log",
+      "bytes": 326446,
+      "sha256": "11a8e5f699fe8b360fb4dd63de5054fb0aef42562e574d292b57eb7d8e99e350"
+    },
+    {
+      "path": "installed-engine-all-fail.stderr.log",
+      "bytes": 170,
+      "sha256": "c0b07bc06d16fe0f341d08a6df904af7047846aba795afa36c97c6d563839816"
+    },
+    {
+      "path": "installed-engine-all-fail.stdout.log",
+      "bytes": 81,
+      "sha256": "a4a5111403c56ec28277d15add97df3975fad64c3c8bb6055aecae8b445fe76f"
+    },
+    {
+      "path": "installed-engine-initial.stderr.log",
+      "bytes": 170,
+      "sha256": "3fb58ec68a2642fd61107f04b66d4bde84c3eac749f228a8fba7d9a2ec93c7b7"
+    },
+    {
+      "path": "installed-engine-initial.stdout.log",
+      "bytes": 81,
+      "sha256": "8122a14587fc4d083cbb5954b2beaeb127e20754317dac29386d295572849cc9"
+    },
+    {
+      "path": "installed-engine-restarted.stderr.log",
+      "bytes": 170,
+      "sha256": "0d029e72a702d5a4c3713a2482337b843b376c8b92a8bd0bf7d8d434aaecba87"
+    },
+    {
+      "path": "installed-engine-restarted.stdout.log",
+      "bytes": 81,
+      "sha256": "1ba8390e4c93b58d5c523c5528582a2ac6cd32533f96da75ac9d5412fb46e8cf"
+    },
+    {
+      "path": "npm-install.log",
+      "bytes": 238,
+      "sha256": "9bdad08d8fb70f73361a6e62878a2514184bc7f37953081de5e1f3c59dc9e27f"
+    },
+    {
+      "path": "pack.log",
+      "bytes": 169,
+      "sha256": "190877bcbc0676e275a5296e87848e0cf0a961f6b4d52bb5de9b6a994eff1e7f"
+    },
+    {
+      "path": "retained-audit-lint.log",
+      "bytes": 256,
+      "sha256": "837e03e72787209162ae874aed097dddcd0eec19764b9589b12cf617faefab96"
+    },
+    {
+      "path": "verifier-format-check.log",
+      "bytes": 43,
+      "sha256": "17df0e44ac32bb8a9b666379a3f513666b68954573d1abc67966c157e0f1904b"
+    },
+    {
+      "path": "verifier-format.log",
+      "bytes": 44,
+      "sha256": "e1c02d37953427e6a794811fd2a12f0b7b1a3ddcf1bd3c9457b6428a58da17c8"
+    },
+    {
+      "path": "verifier-lint.log",
+      "bytes": 8515,
+      "sha256": "f41a2f98ba47193415f6f72b2f8e4443a16e42695894b36436db6821f5cb7a35"
+    }
+  ]
+}

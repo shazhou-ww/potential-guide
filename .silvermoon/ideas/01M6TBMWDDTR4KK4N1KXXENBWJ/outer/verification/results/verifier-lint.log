@@ -1,0 +1,194 @@
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/collect-proof.mjs:54:3 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    52 │ await writeFile(
+    53 │   join(destination, "provenance.json"),
+  > 54 │   JSON.stringify(
+       │   ^^^^^^^^^^^^^^^
+  > 55 │     {
+        ...
+  > 88 │     2,
+  > 89 │   ) + "\n",
+       │   ^^^^^^^^
+    90 │ );
+    91 │ console.log(
+  
+  i Unsafe fix: Use a template literal.
+  
+    52 52 │   await writeFile(
+    53 53 │     join(destination, "provenance.json"),
+    54    │ - ··JSON.stringify(
+       54 │ + ··`${JSON.stringify(
+    55 55 │       {
+    56 56 │         sourceCommit: "5b02ee0cd4c12d1cf0c0700171d8f4d8dbcba424",
+    ····· │ 
+    87 87 │       null,
+    88 88 │       2,
+    89    │ - ··)·+·"\n",
+       89 │ + ··)}\n`,
+    90 90 │   );
+    91 91 │   console.log(
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/deploy-consumer.mjs:57:55 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    55 │ const services = [];
+    56 │ async function persist() {
+  > 57 │   await writeFile(resolve(output, "deployment.json"), JSON.stringify(proof, null, 2) + "\n");
+       │                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    58 │ }
+    59 │ async function test(name, action) {
+  
+  i Unsafe fix: Use a template literal.
+  
+     55  55 │   const services = [];
+     56  56 │   async function persist() {
+     57     │ - ··await·writeFile(resolve(output,·"deployment.json"),·JSON.stringify(proof,·null,·2)·+·"\n");
+         57 │ + ··await·writeFile(resolve(output,·"deployment.json"),·`${JSON.stringify(proof,·null,·2)}\n`);
+     58  58 │   }
+     59  59 │   async function test(name, action) {
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/deploy-consumer.mjs:198:30 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    196 │   assert.deepEqual(service.exit, { code: 0, signal: null });
+    197 │   assert.match(service.stdout, /"event":"closed"/);
+  > 198 │   await assert.rejects(fetch(service.url + "/tasks", { signal: AbortSignal.timeout(1000) }));
+        │                              ^^^^^^^^^^^^^^^^^^^^^^
+    199 │   service.stopped = true;
+    200 │   proof.cleanup.push({
+  
+  i Unsafe fix: Use a template literal.
+  
+    196 196 │     assert.deepEqual(service.exit, { code: 0, signal: null });
+    197 197 │     assert.match(service.stdout, /"event":"closed"/);
+    198     │ - ··await·assert.rejects(fetch(service.url·+·"/tasks",·{·signal:·AbortSignal.timeout(1000)·}));
+        198 │ + ··await·assert.rejects(fetch(`${service.url}/tasks`,·{·signal:·AbortSignal.timeout(1000)·}));
+    199 199 │     service.stopped = true;
+    200 200 │     proof.cleanup.push({
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/deploy-consumer.mjs:452:8 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    450 │     assert.deepEqual(
+    451 │       error.attempts.map((attempt) => attempt.source),
+  > 452 │       [failed.url + "/", missing.url + "/"],
+        │        ^^^^^^^^^^^^^^^^
+    453 │     );
+    454 │     return {
+  
+  i Unsafe fix: Use a template literal.
+  
+    450 450 │       assert.deepEqual(
+    451 451 │         error.attempts.map((attempt) => attempt.source),
+    452     │ - ······[failed.url·+·"/",·missing.url·+·"/"],
+        452 │ + ······[`${failed.url}/`,·missing.url·+·"/"],
+    453 453 │       );
+    454 454 │       return {
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/deploy-consumer.mjs:452:26 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    450 │     assert.deepEqual(
+    451 │       error.attempts.map((attempt) => attempt.source),
+  > 452 │       [failed.url + "/", missing.url + "/"],
+        │                          ^^^^^^^^^^^^^^^^^
+    453 │     );
+    454 │     return {
+  
+  i Unsafe fix: Use a template literal.
+  
+    450 450 │       assert.deepEqual(
+    451 451 │         error.attempts.map((attempt) => attempt.source),
+    452     │ - ······[failed.url·+·"/",·missing.url·+·"/"],
+        452 │ + ······[failed.url·+·"/",·`${missing.url}/`],
+    453 453 │       );
+    454 454 │       return {
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/deploy-consumer.mjs:483:49 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    481 │     assert.ok(error instanceof GatewayReadError);
+    482 │     assert.ok(error.budgetExhausted);
+  > 483 │     assert.deepEqual(error.attempts, [{ source: stall.url + "/", outcome: "timeout" }]);
+        │                                                 ^^^^^^^^^^^^^^^
+    484 │     assert.ok(elapsedMs >= 300 && elapsedMs < 1400);
+    485 │     const stallAtReturn = stall.requests.length;
+  
+  i Unsafe fix: Use a template literal.
+  
+    481 481 │       assert.ok(error instanceof GatewayReadError);
+    482 482 │       assert.ok(error.budgetExhausted);
+    483     │ - ····assert.deepEqual(error.attempts,·[{·source:·stall.url·+·"/",·outcome:·"timeout"·}]);
+        483 │ + ····assert.deepEqual(error.attempts,·[{·source:·`${stall.url}/`,·outcome:·"timeout"·}]);
+    484 484 │       assert.ok(elapsedMs >= 300 && elapsedMs < 1400);
+    485 485 │       const stallAtReturn = stall.requests.length;
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/pack-author.mjs:57:48 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    55 │   });
+    56 │ }
+  > 57 │ await writeFile(join(output, "tarballs.json"), JSON.stringify(records, null, 2) + "\n");
+       │                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    58 │ await writeFile(
+    59 │   join(consumer, "package.json"),
+  
+  i Unsafe fix: Use a template literal.
+  
+    55 55 │     });
+    56 56 │   }
+    57    │ - await·writeFile(join(output,·"tarballs.json"),·JSON.stringify(records,·null,·2)·+·"\n");
+       57 │ + await·writeFile(join(output,·"tarballs.json"),·`${JSON.stringify(records,·null,·2)}\n`);
+    58 58 │   await writeFile(
+    59 59 │     join(consumer, "package.json"),
+  
+
+/mnt/d/Code/potential-guide.worktrees/silvermoon-task-engine-gateway-followup/.silvermoon/ideas/01M6TBMWDDTR4KK4N1KXXENBWJ/outer/verification/pack-author.mjs:60:3 lint/style/useTemplate  FIXABLE  ━━━━━━━━━━
+
+  i Template literals are preferred over string concatenation.
+  
+    58 │ await writeFile(
+    59 │   join(consumer, "package.json"),
+  > 60 │   JSON.stringify(
+       │   ^^^^^^^^^^^^^^^
+  > 61 │     {
+        ...
+  > 68 │     2,
+  > 69 │   ) + "\n",
+       │   ^^^^^^^^
+    70 │ );
+    71 │ await copyFile(
+  
+  i Unsafe fix: Use a template literal.
+  
+    58 58 │   await writeFile(
+    59 59 │     join(consumer, "package.json"),
+    60    │ - ··JSON.stringify(
+       60 │ + ··`${JSON.stringify(
+    61 61 │       {
+    62 62 │         name: "owned-silvermoon-deployment-consumer",
+    ····· │ 
+    67 67 │       null,
+    68 68 │       2,
+    69    │ - ··)·+·"\n",
+       69 │ + ··)}\n`,
+    70 70 │   );
+    71 71 │   await copyFile(
+  
+
+Checked 4 files in 92ms. No fixes applied.
+Found 8 infos.

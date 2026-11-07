@@ -1,0 +1,216 @@
+{
+  "sourceCommit": "5b02ee0cd4c12d1cf0c0700171d8f4d8dbcba424",
+  "sourceTree": "32a9643c39b0dafd5c45f1822c82b26d0742325f",
+  "synchronizedOuterRevisionBeforeVerification": "738ed3a6641b",
+  "sourceArchiveSha256": "9bbdb0f9cecf88f7bbcc6bb86144ff9f39803d38ad9b316c2ff045ebaaf4b5ea",
+  "nativeOwnedRoot": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107",
+  "authorInstall": "pnpm 11.22.0 install --frozen-lockfile; normal existing store and supply-chain policy",
+  "authorBuild": "pnpm build",
+  "consumerInstall": "npm 11.11.0 install --ignore-scripts --no-audit --no-fund --cache ../author-cache/npm-cache",
+  "consumerGraph": "npm ls --all --json, exit 0",
+  "consumerOnlyPath": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/consumer/runtime-bin",
+  "finalCounts": {
+    "pass": 16,
+    "fail": 0
+  },
+  "initialCounts": {
+    "pass": 16,
+    "fail": 0
+  },
+  "prelintCounts": {
+    "pass": 16,
+    "fail": 0
+  },
+  "finalScriptSha256": "3f0c943cfc5f7efd264058f23f3e8942d83027fc4c57aa46641af2a1f2389225",
+  "sharedScriptSha256": "269a3bf3da1353fe1cf11c867513e46e1d7d28d53b57c95ecd0891ea1c65d3a9",
+  "lockfileSha256": "564644f97fa0ec87fc95aaffcef5b49863154ccfa1d70eb4c3bf575a353d915d",
+  "setupCorrections": [
+    "Fresh explicit pnpm store encountered ECONNREFUSED through inherited localhost:10808 proxy; operation stopped.",
+    "One offline normal-store alternative explicitly failed ERR_PNPM_NO_OFFLINE_META, without disabling policy.",
+    "A restricted owned TLS relay to the two authorized origins restored actual native HTTPS reads.",
+    "Author helper map(resolve) argument error corrected before packing.",
+    "Final verifier rerun hit owned-directory EEXIST before scenarios/helpers; corrected with recursive owned-directory creation. Raw failure retained."
+  ],
+  "files": [
+    {
+      "path": "build.log",
+      "bytes": 13434,
+      "sha256": "e41e679a97a29a7091ea6aaa1c709ba249f58177e0af5d6733f5ffefc452c293"
+    },
+    {
+      "path": "deployment-run-initial.log",
+      "bytes": 1897,
+      "sha256": "26faa95791eaa930d770647df973c19ee61e5c8f0014b3345476b70c96860cf1"
+    },
+    {
+      "path": "deployment-run-prelint.log",
+      "bytes": 1897,
+      "sha256": "9e347d3ebad276a2812f72a2d6a0b9ee927388c1f300fb1812bcd8276c8e4c8b"
+    },
+    {
+      "path": "deployment-run-setup-error.log",
+      "bytes": 401,
+      "sha256": "b0e9e92d392b7b21aff2f5fab4c74d13be75fb12b1eebe8610dcb26b65e9e151"
+    },
+    {
+      "path": "deployment-run.log",
+      "bytes": 1897,
+      "sha256": "02bb26c82d1338ed8260759b85ade7a2b6028d7ce91cd5405bf0bbf6ec86a6fa"
+    },
+    {
+      "path": "deployment.json",
+      "bytes": 1390828,
+      "sha256": "38fa586827e50aae96d846c46724528e83324e31e092e5ea1c3f12ce72e0b7b8"
+    },
+    {
+      "path": "install-alternative.log",
+      "bytes": 1035,
+      "sha256": "aea69c9d80047bc09ebd111d69959aefa97b4f961ee71d9644719c8b6128b470"
+    },
+    {
+      "path": "install-relay.log",
+      "bytes": 13557,
+      "sha256": "c32b8496d9fbe1d10ed65fb497ac94360d05c63128913f410bea5a50e0635894"
+    },
+    {
+      "path": "install.log",
+      "bytes": 326446,
+      "sha256": "11a8e5f699fe8b360fb4dd63de5054fb0aef42562e574d292b57eb7d8e99e350"
+    },
+    {
+      "path": "installed-engine-all-fail.stderr.log",
+      "bytes": 170,
+      "sha256": "c0b07bc06d16fe0f341d08a6df904af7047846aba795afa36c97c6d563839816"
+    },
+    {
+      "path": "installed-engine-all-fail.stdout.log",
+      "bytes": 81,
+      "sha256": "a4a5111403c56ec28277d15add97df3975fad64c3c8bb6055aecae8b445fe76f"
+    },
+    {
+      "path": "installed-engine-initial.stderr.log",
+      "bytes": 170,
+      "sha256": "3fb58ec68a2642fd61107f04b66d4bde84c3eac749f228a8fba7d9a2ec93c7b7"
+    },
+    {
+      "path": "installed-engine-initial.stdout.log",
+      "bytes": 81,
+      "sha256": "8122a14587fc4d083cbb5954b2beaeb127e20754317dac29386d295572849cc9"
+    },
+    {
+      "path": "installed-engine-restarted.stderr.log",
+      "bytes": 170,
+      "sha256": "0d029e72a702d5a4c3713a2482337b843b376c8b92a8bd0bf7d8d434aaecba87"
+    },
+    {
+      "path": "installed-engine-restarted.stdout.log",
+      "bytes": 81,
+      "sha256": "1ba8390e4c93b58d5c523c5528582a2ac6cd32533f96da75ac9d5412fb46e8cf"
+    },
+    {
+      "path": "npm-graph.json",
+      "bytes": 182232,
+      "sha256": "e6ba44785f02b92e0e48c13e6d22de0c093b476195c1731caa8315fd3e32629d"
+    },
+    {
+      "path": "npm-install.log",
+      "bytes": 238,
+      "sha256": "9bdad08d8fb70f73361a6e62878a2514184bc7f37953081de5e1f3c59dc9e27f"
+    },
+    {
+      "path": "pack.log",
+      "bytes": 169,
+      "sha256": "190877bcbc0676e275a5296e87848e0cf0a961f6b4d52bb5de9b6a994eff1e7f"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 196039,
+      "sha256": "564644f97fa0ec87fc95aaffcef5b49863154ccfa1d70eb4c3bf575a353d915d"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1460,
+      "sha256": "827c9f55b7db28e0328804b24f2c36225f2bdff335833819eb956e1f858c1f70"
+    },
+    {
+      "path": "tarballs.json",
+      "bytes": 17581,
+      "sha256": "cf20f57a658c1c6df1f45d52b4f88f94f858e9cc856f5f8f418dfc2da3e98c7c"
+    },
+    {
+      "path": "verify-consumer.mjs",
+      "bytes": 3286,
+      "sha256": "269a3bf3da1353fe1cf11c867513e46e1d7d28d53b57c95ecd0891ea1c65d3a9"
+    },
+    {
+      "path": "initial-run/deployment.json",
+      "bytes": 1390633,
+      "sha256": "4726189f29301c1a12d0fa6377ff35a4d8e8d497d36a138c5f11cc9555b56b41"
+    },
+    {
+      "path": "initial-run/installed-engine-all-fail.stderr.log",
+      "bytes": 170,
+      "sha256": "2d1dc94a3582978c3e2756afa20cd5aa01ce4ace2127f2490db47342a3059232"
+    },
+    {
+      "path": "initial-run/installed-engine-all-fail.stdout.log",
+      "bytes": 81,
+      "sha256": "985e02a597f55dd4290764af3b5e70bd18a3df6ad0478bb8c940d96f82918306"
+    },
+    {
+      "path": "initial-run/installed-engine-initial.stderr.log",
+      "bytes": 170,
+      "sha256": "1a5aa5f7f9af4c2841fdc4b0cc4739b413f1f5528297ea109e340d8986084866"
+    },
+    {
+      "path": "initial-run/installed-engine-initial.stdout.log",
+      "bytes": 81,
+      "sha256": "815ecbcc01bf1a09c4fb0efe11d8b6b681e12272e733a798c96a3ea6b24aec86"
+    },
+    {
+      "path": "initial-run/installed-engine-restarted.stderr.log",
+      "bytes": 170,
+      "sha256": "27eabd0f73abee6fd85bca069868808153c56d8357eafc6d6b99c939e257f42c"
+    },
+    {
+      "path": "initial-run/installed-engine-restarted.stdout.log",
+      "bytes": 81,
+      "sha256": "7a719203341f42837c9cd4b31376d645859d48c6e0c4695c0411f797db0059ea"
+    },
+    {
+      "path": "prelint-run/deployment.json",
+      "bytes": 1389918,
+      "sha256": "de52c420d266ecfe2ecc219e8c6c39ce56f5d6a8e22f4f0bb393b33a8e805d8e"
+    },
+    {
+      "path": "prelint-run/installed-engine-all-fail.stderr.log",
+      "bytes": 170,
+      "sha256": "20a680493d6ead3e525cb9677662eafd1451df2cb0317dedf8746856e3705a86"
+    },
+    {
+      "path": "prelint-run/installed-engine-all-fail.stdout.log",
+      "bytes": 81,
+      "sha256": "ec7a347f7dc1ee3a1a6ef5fbeff98c443e17ebd951e215af420e02dd5829d8c5"
+    },
+    {
+      "path": "prelint-run/installed-engine-initial.stderr.log",
+      "bytes": 170,
+      "sha256": "7d9bca1cfd9e3c64719615b6c31dae0c1fb2653784737344acd27a6e4f98f22e"
+    },
+    {
+      "path": "prelint-run/installed-engine-initial.stdout.log",
+      "bytes": 81,
+      "sha256": "8a39515ebf14c6a61706a179ce6d7aca3b886dd56d8e8a5c30a02c7b475736a9"
+    },
+    {
+      "path": "prelint-run/installed-engine-restarted.stderr.log",
+      "bytes": 170,
+      "sha256": "710834defec07ef2f48f0a9ad9c966c7e435fbd21698048b03828780d5d2cef2"
+    },
+    {
+      "path": "prelint-run/installed-engine-restarted.stdout.log",
+      "bytes": 81,
+      "sha256": "909f661e85e8395fef56202663d91fe1128f10a05d9bc039b1d38e0d22e593a4"
+    }
+  ]
+}

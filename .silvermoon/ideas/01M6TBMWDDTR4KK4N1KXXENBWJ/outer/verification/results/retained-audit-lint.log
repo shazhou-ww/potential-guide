@@ -1,0 +1,1 @@
+既有 Biome `lint --write --stdin-file-path=verify-retained.mjs` 退出 0；规范化输出与保留脚本相同，没有语义或风格修改。工作树配置忽略隐藏的 `.silvermoon` 路径，因此通过 stdin 验证，没有修改仓库配置。

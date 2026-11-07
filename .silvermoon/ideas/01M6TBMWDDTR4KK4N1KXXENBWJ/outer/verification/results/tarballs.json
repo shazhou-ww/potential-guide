@@ -1,0 +1,884 @@
+[
+  {
+    "name": "@potential-guide/pguide-task-engine",
+    "version": "0.1.0-rc.3",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-pguide-task-engine-0.1.0-rc.3.tgz",
+    "bytes": 15704,
+    "sha256": "84b16a7cfa26fd91ce25a63fd134ea7e67a3ffddc6d650c3a14269e03693cdff",
+    "files": [
+      {
+        "path": "dist/config.d.ts"
+      },
+      {
+        "path": "dist/config.d.ts.map"
+      },
+      {
+        "path": "dist/config.js"
+      },
+      {
+        "path": "dist/config.js.map"
+      },
+      {
+        "path": "dist/main.d.ts"
+      },
+      {
+        "path": "dist/main.d.ts.map"
+      },
+      {
+        "path": "dist/main.js"
+      },
+      {
+        "path": "dist/main.js.map"
+      },
+      {
+        "path": "dist/service.d.ts"
+      },
+      {
+        "path": "dist/service.d.ts.map"
+      },
+      {
+        "path": "dist/service.js"
+      },
+      {
+        "path": "dist/service.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      },
+      {
+        "path": "settings.json"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/task-engine",
+    "version": "0.1.0-rc.1",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-0.1.0-rc.1.tgz",
+    "bytes": 98482,
+    "sha256": "33ff12c4c5ff93e26d27dd4bc0c79181f735da41daea0835299872411f4201a0",
+    "files": [
+      {
+        "path": "dist/bundle-engine.d.ts"
+      },
+      {
+        "path": "dist/bundle-engine.d.ts.map"
+      },
+      {
+        "path": "dist/bundle-engine.js"
+      },
+      {
+        "path": "dist/bundle-engine.js.map"
+      },
+      {
+        "path": "dist/bundle.d.ts"
+      },
+      {
+        "path": "dist/bundle.d.ts.map"
+      },
+      {
+        "path": "dist/bundle.js"
+      },
+      {
+        "path": "dist/bundle.js.map"
+      },
+      {
+        "path": "dist/catalog.d.ts"
+      },
+      {
+        "path": "dist/catalog.d.ts.map"
+      },
+      {
+        "path": "dist/catalog.js"
+      },
+      {
+        "path": "dist/catalog.js.map"
+      },
+      {
+        "path": "dist/content.d.ts"
+      },
+      {
+        "path": "dist/content.d.ts.map"
+      },
+      {
+        "path": "dist/content.js"
+      },
+      {
+        "path": "dist/content.js.map"
+      },
+      {
+        "path": "dist/engine.d.ts"
+      },
+      {
+        "path": "dist/engine.d.ts.map"
+      },
+      {
+        "path": "dist/engine.js"
+      },
+      {
+        "path": "dist/engine.js.map"
+      },
+      {
+        "path": "dist/frozen-catalog.d.ts"
+      },
+      {
+        "path": "dist/frozen-catalog.d.ts.map"
+      },
+      {
+        "path": "dist/frozen-catalog.js"
+      },
+      {
+        "path": "dist/frozen-catalog.js.map"
+      },
+      {
+        "path": "dist/identity.d.ts"
+      },
+      {
+        "path": "dist/identity.d.ts.map"
+      },
+      {
+        "path": "dist/identity.js"
+      },
+      {
+        "path": "dist/identity.js.map"
+      },
+      {
+        "path": "dist/index.d.ts"
+      },
+      {
+        "path": "dist/index.d.ts.map"
+      },
+      {
+        "path": "dist/index.js"
+      },
+      {
+        "path": "dist/index.js.map"
+      },
+      {
+        "path": "dist/logs.d.ts"
+      },
+      {
+        "path": "dist/logs.d.ts.map"
+      },
+      {
+        "path": "dist/logs.js"
+      },
+      {
+        "path": "dist/logs.js.map"
+      },
+      {
+        "path": "dist/observation.d.ts"
+      },
+      {
+        "path": "dist/observation.d.ts.map"
+      },
+      {
+        "path": "dist/observation.js"
+      },
+      {
+        "path": "dist/observation.js.map"
+      },
+      {
+        "path": "dist/pool.d.ts"
+      },
+      {
+        "path": "dist/pool.d.ts.map"
+      },
+      {
+        "path": "dist/pool.js"
+      },
+      {
+        "path": "dist/pool.js.map"
+      },
+      {
+        "path": "dist/testing.d.ts"
+      },
+      {
+        "path": "dist/testing.d.ts.map"
+      },
+      {
+        "path": "dist/testing.js"
+      },
+      {
+        "path": "dist/testing.js.map"
+      },
+      {
+        "path": "dist/type-supervisor.d.ts"
+      },
+      {
+        "path": "dist/type-supervisor.d.ts.map"
+      },
+      {
+        "path": "dist/type-supervisor.js"
+      },
+      {
+        "path": "dist/type-supervisor.js.map"
+      },
+      {
+        "path": "dist/type-worker.d.ts"
+      },
+      {
+        "path": "dist/type-worker.d.ts.map"
+      },
+      {
+        "path": "dist/type-worker.js"
+      },
+      {
+        "path": "dist/type-worker.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/cli-core",
+    "version": "0.3.0-rc.0",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-cli-core-0.3.0-rc.0.tgz",
+    "bytes": 90246,
+    "sha256": "be9db7a77c65ffc82ffa92f2e5fe7ae4440e97648c43cf2db1c8c6c00d5c2f51",
+    "files": [
+      {
+        "path": "dist/agents.d.ts"
+      },
+      {
+        "path": "dist/agents.d.ts.map"
+      },
+      {
+        "path": "dist/agents.js"
+      },
+      {
+        "path": "dist/agents.js.map"
+      },
+      {
+        "path": "dist/ahp.d.ts"
+      },
+      {
+        "path": "dist/ahp.d.ts.map"
+      },
+      {
+        "path": "dist/ahp.js"
+      },
+      {
+        "path": "dist/ahp.js.map"
+      },
+      {
+        "path": "dist/built-in-settings.d.ts"
+      },
+      {
+        "path": "dist/built-in-settings.d.ts.map"
+      },
+      {
+        "path": "dist/built-in-settings.js"
+      },
+      {
+        "path": "dist/built-in-settings.js.map"
+      },
+      {
+        "path": "dist/command-help.d.ts"
+      },
+      {
+        "path": "dist/command-help.d.ts.map"
+      },
+      {
+        "path": "dist/command-help.js"
+      },
+      {
+        "path": "dist/command-help.js.map"
+      },
+      {
+        "path": "dist/help.d.ts"
+      },
+      {
+        "path": "dist/help.d.ts.map"
+      },
+      {
+        "path": "dist/help.js"
+      },
+      {
+        "path": "dist/help.js.map"
+      },
+      {
+        "path": "dist/index.d.ts"
+      },
+      {
+        "path": "dist/index.d.ts.map"
+      },
+      {
+        "path": "dist/index.js"
+      },
+      {
+        "path": "dist/index.js.map"
+      },
+      {
+        "path": "dist/output.d.ts"
+      },
+      {
+        "path": "dist/output.d.ts.map"
+      },
+      {
+        "path": "dist/output.js"
+      },
+      {
+        "path": "dist/output.js.map"
+      },
+      {
+        "path": "dist/permissions.d.ts"
+      },
+      {
+        "path": "dist/permissions.d.ts.map"
+      },
+      {
+        "path": "dist/permissions.js"
+      },
+      {
+        "path": "dist/permissions.js.map"
+      },
+      {
+        "path": "dist/process-tree.d.ts"
+      },
+      {
+        "path": "dist/process-tree.d.ts.map"
+      },
+      {
+        "path": "dist/process-tree.js"
+      },
+      {
+        "path": "dist/process-tree.js.map"
+      },
+      {
+        "path": "dist/schemas/agents/v1.json"
+      },
+      {
+        "path": "dist/settings.d.ts"
+      },
+      {
+        "path": "dist/settings.d.ts.map"
+      },
+      {
+        "path": "dist/settings.js"
+      },
+      {
+        "path": "dist/settings.js.map"
+      },
+      {
+        "path": "dist/streaming-secret-redactor.d.ts"
+      },
+      {
+        "path": "dist/streaming-secret-redactor.d.ts.map"
+      },
+      {
+        "path": "dist/streaming-secret-redactor.js"
+      },
+      {
+        "path": "dist/streaming-secret-redactor.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      },
+      {
+        "path": "settings.json"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/task-engine-server",
+    "version": "0.1.0-rc.2",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-server-0.1.0-rc.2.tgz",
+    "bytes": 8465,
+    "sha256": "ff7e68e1c89295e10ccb921aa7293904643ad70a22affbdfa04adad46cb56364",
+    "files": [
+      {
+        "path": "dist/index.d.ts"
+      },
+      {
+        "path": "dist/index.d.ts.map"
+      },
+      {
+        "path": "dist/index.js"
+      },
+      {
+        "path": "dist/index.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/task-engine-webui",
+    "version": "0.1.0-rc.1",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-webui-0.1.0-rc.1.tgz",
+    "bytes": 249860,
+    "sha256": "68071c0de7c0b816be52c47d7bc0940c2a7bd1d5282ac183155f7fa96e1a5a3c",
+    "files": [
+      {
+        "path": "dist/public/app.js"
+      },
+      {
+        "path": "dist/public/index.html"
+      },
+      {
+        "path": "dist/public/style.css"
+      },
+      {
+        "path": "dist/src/browser.d.ts"
+      },
+      {
+        "path": "dist/src/browser.js"
+      },
+      {
+        "path": "dist/src/directory-observation.d.ts"
+      },
+      {
+        "path": "dist/src/directory-observation.js"
+      },
+      {
+        "path": "dist/src/dom.d.ts"
+      },
+      {
+        "path": "dist/src/dom.js"
+      },
+      {
+        "path": "dist/src/error-log.d.ts"
+      },
+      {
+        "path": "dist/src/error-log.js"
+      },
+      {
+        "path": "dist/src/form.d.ts"
+      },
+      {
+        "path": "dist/src/form.js"
+      },
+      {
+        "path": "dist/src/json.d.ts"
+      },
+      {
+        "path": "dist/src/json.js"
+      },
+      {
+        "path": "dist/src/lifecycle.d.ts"
+      },
+      {
+        "path": "dist/src/lifecycle.js"
+      },
+      {
+        "path": "dist/src/main.d.ts"
+      },
+      {
+        "path": "dist/src/main.js"
+      },
+      {
+        "path": "dist/src/model.d.ts"
+      },
+      {
+        "path": "dist/src/model.js"
+      },
+      {
+        "path": "dist/src/navigation.d.ts"
+      },
+      {
+        "path": "dist/src/navigation.js"
+      },
+      {
+        "path": "dist/src/presentation.d.ts"
+      },
+      {
+        "path": "dist/src/presentation.js"
+      },
+      {
+        "path": "dist/src/run-logs.d.ts"
+      },
+      {
+        "path": "dist/src/run-logs.js"
+      },
+      {
+        "path": "dist/src/server.d.ts"
+      },
+      {
+        "path": "dist/src/server.js"
+      },
+      {
+        "path": "dist/src/ui/button.d.ts"
+      },
+      {
+        "path": "dist/src/ui/button.js"
+      },
+      {
+        "path": "dist/src/ui/data-table.d.ts"
+      },
+      {
+        "path": "dist/src/ui/data-table.js"
+      },
+      {
+        "path": "dist/src/ui/dialog.d.ts"
+      },
+      {
+        "path": "dist/src/ui/dialog.js"
+      },
+      {
+        "path": "dist/src/ui/input.d.ts"
+      },
+      {
+        "path": "dist/src/ui/input.js"
+      },
+      {
+        "path": "dist/src/ui/sheet.d.ts"
+      },
+      {
+        "path": "dist/src/ui/sheet.js"
+      },
+      {
+        "path": "dist/src/ui/table.d.ts"
+      },
+      {
+        "path": "dist/src/ui/table.js"
+      },
+      {
+        "path": "dist/src/ui/tabs.d.ts"
+      },
+      {
+        "path": "dist/src/ui/tabs.js"
+      },
+      {
+        "path": "dist/src/ui/tooltip.d.ts"
+      },
+      {
+        "path": "dist/src/ui/tooltip.js"
+      },
+      {
+        "path": "dist/src/ui/utils.d.ts"
+      },
+      {
+        "path": "dist/src/ui/utils.js"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/task-protocol",
+    "version": "0.1.0-rc.1",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-protocol-0.1.0-rc.1.tgz",
+    "bytes": 54005,
+    "sha256": "1a909527697da85d821ca199d45ac748804fa514a1c8ef4faab0384e1b5dca78",
+    "files": [
+      {
+        "path": "dist/bundle-content.d.ts"
+      },
+      {
+        "path": "dist/bundle-content.d.ts.map"
+      },
+      {
+        "path": "dist/bundle-content.js"
+      },
+      {
+        "path": "dist/bundle-content.js.map"
+      },
+      {
+        "path": "dist/bundle-files.d.ts"
+      },
+      {
+        "path": "dist/bundle-files.d.ts.map"
+      },
+      {
+        "path": "dist/bundle-files.js"
+      },
+      {
+        "path": "dist/bundle-files.js.map"
+      },
+      {
+        "path": "dist/bundle-paths.d.ts"
+      },
+      {
+        "path": "dist/bundle-paths.d.ts.map"
+      },
+      {
+        "path": "dist/bundle-paths.js"
+      },
+      {
+        "path": "dist/bundle-paths.js.map"
+      },
+      {
+        "path": "dist/bundle-reference.d.ts"
+      },
+      {
+        "path": "dist/bundle-reference.d.ts.map"
+      },
+      {
+        "path": "dist/bundle-reference.js"
+      },
+      {
+        "path": "dist/bundle-reference.js.map"
+      },
+      {
+        "path": "dist/bundle.d.ts"
+      },
+      {
+        "path": "dist/bundle.d.ts.map"
+      },
+      {
+        "path": "dist/bundle.js"
+      },
+      {
+        "path": "dist/bundle.js.map"
+      },
+      {
+        "path": "dist/index.d.ts"
+      },
+      {
+        "path": "dist/index.d.ts.map"
+      },
+      {
+        "path": "dist/index.js"
+      },
+      {
+        "path": "dist/index.js.map"
+      },
+      {
+        "path": "dist/json.d.ts"
+      },
+      {
+        "path": "dist/json.d.ts.map"
+      },
+      {
+        "path": "dist/json.js"
+      },
+      {
+        "path": "dist/json.js.map"
+      },
+      {
+        "path": "dist/logs.d.ts"
+      },
+      {
+        "path": "dist/logs.d.ts.map"
+      },
+      {
+        "path": "dist/logs.js"
+      },
+      {
+        "path": "dist/logs.js.map"
+      },
+      {
+        "path": "dist/presentation.d.ts"
+      },
+      {
+        "path": "dist/presentation.d.ts.map"
+      },
+      {
+        "path": "dist/presentation.js"
+      },
+      {
+        "path": "dist/presentation.js.map"
+      },
+      {
+        "path": "dist/projection.d.ts"
+      },
+      {
+        "path": "dist/projection.d.ts.map"
+      },
+      {
+        "path": "dist/projection.js"
+      },
+      {
+        "path": "dist/projection.js.map"
+      },
+      {
+        "path": "dist/run.d.ts"
+      },
+      {
+        "path": "dist/run.d.ts.map"
+      },
+      {
+        "path": "dist/run.js"
+      },
+      {
+        "path": "dist/run.js.map"
+      },
+      {
+        "path": "dist/schema-runtime.d.ts"
+      },
+      {
+        "path": "dist/schema-runtime.d.ts.map"
+      },
+      {
+        "path": "dist/schema-runtime.js"
+      },
+      {
+        "path": "dist/schema-runtime.js.map"
+      },
+      {
+        "path": "dist/schema.d.ts"
+      },
+      {
+        "path": "dist/schema.d.ts.map"
+      },
+      {
+        "path": "dist/schema.js"
+      },
+      {
+        "path": "dist/schema.js.map"
+      },
+      {
+        "path": "dist/task-schema-uri.d.ts"
+      },
+      {
+        "path": "dist/task-schema-uri.d.ts.map"
+      },
+      {
+        "path": "dist/task-schema-uri.js"
+      },
+      {
+        "path": "dist/task-schema-uri.js.map"
+      },
+      {
+        "path": "dist/types.d.ts"
+      },
+      {
+        "path": "dist/types.d.ts.map"
+      },
+      {
+        "path": "dist/types.js"
+      },
+      {
+        "path": "dist/types.js.map"
+      },
+      {
+        "path": "dist/worker.d.ts"
+      },
+      {
+        "path": "dist/worker.d.ts.map"
+      },
+      {
+        "path": "dist/worker.js"
+      },
+      {
+        "path": "dist/worker.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/task-engine-http",
+    "version": "0.1.0-rc.1",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-http-0.1.0-rc.1.tgz",
+    "bytes": 17652,
+    "sha256": "e3c2a58a09ab8d062e584846eeb2f10382e559ec1f54366a8e515aa7c167c41f",
+    "files": [
+      {
+        "path": "dist/client.d.ts"
+      },
+      {
+        "path": "dist/client.d.ts.map"
+      },
+      {
+        "path": "dist/client.js"
+      },
+      {
+        "path": "dist/client.js.map"
+      },
+      {
+        "path": "dist/index.d.ts"
+      },
+      {
+        "path": "dist/index.d.ts.map"
+      },
+      {
+        "path": "dist/index.js"
+      },
+      {
+        "path": "dist/index.js.map"
+      },
+      {
+        "path": "dist/logs.d.ts"
+      },
+      {
+        "path": "dist/logs.d.ts.map"
+      },
+      {
+        "path": "dist/logs.js"
+      },
+      {
+        "path": "dist/logs.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      }
+    ]
+  },
+  {
+    "name": "@potential-guide/task-engine-storage",
+    "version": "0.1.0-rc.1",
+    "filename": "/home/lyweiwei/silvermoon-deploy-01M6TB-0bd1-20261107/author-cache/packs/potential-guide-task-engine-storage-0.1.0-rc.1.tgz",
+    "bytes": 11669,
+    "sha256": "ff1be1ca87f724e89758b4b437bfa1e8ac6aad3badcb74e78143871fa78754ed",
+    "files": [
+      {
+        "path": "dist/index.d.ts"
+      },
+      {
+        "path": "dist/index.d.ts.map"
+      },
+      {
+        "path": "dist/index.js"
+      },
+      {
+        "path": "dist/index.js.map"
+      },
+      {
+        "path": "LICENSE"
+      },
+      {
+        "path": "package.json"
+      },
+      {
+        "path": "README.md"
+      }
+    ]
+  }
+]

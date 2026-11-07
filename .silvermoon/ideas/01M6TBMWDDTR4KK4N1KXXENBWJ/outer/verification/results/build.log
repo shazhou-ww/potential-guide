@@ -1,0 +1,164 @@
+$ node scripts/build.mjs
+
+   • Packages in scope: @potential-guide/check-environment, @potential-guide/check-runtime-files, @potential-guide/check-sdk, @potential-guide/cli-core, @potential-guide/cli-runtime, @potential-guide/effects, @potential-guide/git-source, @potential-guide/ipfs-content, @potential-guide/objective-declarations, @potential-guide/objective-devbox-health, @potential-guide/objective-monorepo-standard, @potential-guide/objective-package-standard, @potential-guide/objective-pguide-self-check, @potential-guide/objective-pguide-setup, @potential-guide/objective-pilot, @potential-guide/objective-regulator, @potential-guide/objective-setup-marker, @potential-guide/pguide-agents, @potential-guide/pguide-config, @potential-guide/pguide-objectives, @potential-guide/pguide-regulate, @potential-guide/pguide-task-bundle, @potential-guide/pguide-task-engine, @potential-guide/pilot-protocol, @potential-guide/regulation-coordinator, @potential-guide/task-engine, @potential-guide/task-engine-http, @potential-guide/task-engine-server, @potential-guide/task-engine-storage, @potential-guide/task-engine-webui, @potential-guide/task-protocol, @potential-guide/task-sdk, @potential-guide/test-tree, pguide
+   • Running build in 34 packages
+   • Remote caching disabled
+
+@potential-guide/test-tree:build: cache miss, executing c1f7798f9a676daa
+@potential-guide/pilot-protocol:build: cache miss, executing cea26beb6c0d79e4
+@potential-guide/ipfs-content:build: cache miss, executing a0a3f65c0f92698b
+@potential-guide/cli-core:build: cache miss, executing 2ea4fa68c55ea9d5
+@potential-guide/objective-setup-marker:build: cache miss, executing 9441a5e267141f42
+@potential-guide/task-protocol:build: cache miss, executing 644372ea8729c448
+@potential-guide/effects:build: cache miss, executing 3071e8e92cd78129
+@potential-guide/check-runtime-files:build: cache miss, executing 01b61772d4925a73
+@potential-guide/ipfs-content:build: $ tsc -b
+@potential-guide/cli-core:build: $ node ../../scripts/build-settings.mjs && tsc -b && node ../../scripts/build-agents-schema.mjs
+@potential-guide/test-tree:build: $ tsc -b
+@potential-guide/check-runtime-files:build: $ tsc -b
+@potential-guide/effects:build: $ tsc -b
+@potential-guide/pilot-protocol:build: $ tsc -b
+@potential-guide/objective-setup-marker:build: $ node ../../scripts/build-objective-package.mjs objective-setup-marker
+@potential-guide/task-protocol:build: $ tsc -b
+@potential-guide/objective-setup-marker:build: Worker artifacts: 16 checked/generated.
+@potential-guide/task-sdk:build: cache miss, executing 658e142ea8193ea5
+@potential-guide/git-source:build: cache miss, executing 08fa91b350c4ffce
+@potential-guide/objective-pilot:build: cache miss, executing 0abcb83fd065beaf
+@potential-guide/pguide-config:build: cache miss, executing b01f1d496ac4276a
+@potential-guide/pguide-agents:build: cache miss, executing 818d135d60f3b65a
+@potential-guide/objective-declarations:build: cache miss, executing 0747cc37c293aa52
+@potential-guide/task-sdk:build: $ tsc -b
+@potential-guide/objective-pilot:build: $ tsc -b
+@potential-guide/git-source:build: $ tsc -b
+@potential-guide/objective-declarations:build: $ tsc -b
+@potential-guide/pguide-config:build: $ tsc -b
+@potential-guide/pguide-agents:build: $ tsc -b
+@potential-guide/pguide-task-bundle:build: cache miss, executing 9d10a6c44b54568c
+@potential-guide/pguide-task-bundle:build: $ tsc -b
+@potential-guide/pguide-objectives:build: cache miss, executing b6e033a4d44685a2
+@potential-guide/cli-runtime:build: cache miss, executing a4ce545a7f522305
+@potential-guide/objective-package-standard:build: cache miss, executing 78cb25369afbfaeb
+@potential-guide/objective-regulator:build: cache miss, executing 088d1495b10f0493
+@potential-guide/pguide-objectives:build: $ tsc -b
+@potential-guide/cli-runtime:build: $ tsc -b
+@potential-guide/objective-package-standard:build: $ node ../../scripts/build-objective-package.mjs objective-package-standard
+@potential-guide/objective-regulator:build: $ tsc -b
+@potential-guide/objective-package-standard:build: ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build:     packages/objective-pilot/src/probes.ts:162:79:
+@potential-guide/objective-package-standard:build:       162 │ ..../dependency-preload.js", import.meta.resolve("@potential-guid...
+@potential-guide/objective-package-standard:build:           ╵                              ~~~~~~~~~~~
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build:   You need to set the output format to "esm" for "import.meta" to work correctly.
+@potential-guide/objective-package-standard:build: 
+@potential-guide/task-engine:build: cache miss, executing 872f6d95b0d21d17
+@potential-guide/task-engine:build: $ tsc -b
+@potential-guide/regulation-coordinator:build: cache miss, executing 3230e98f55dbb6c7
+@potential-guide/pguide-regulate:build: cache miss, executing f736229c6e71fcdb
+@potential-guide/objective-package-standard:build: ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build:     packages/objective-pilot/src/probes.ts:162:79:
+@potential-guide/objective-package-standard:build:       162 │ ..../dependency-preload.js", import.meta.resolve("@potential-guid...
+@potential-guide/objective-package-standard:build:           ╵                              ~~~~~~~~~~~
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build:   You need to set the output format to "esm" for "import.meta" to work correctly.
+@potential-guide/objective-package-standard:build: 
+@potential-guide/regulation-coordinator:build: $ tsc -b
+@potential-guide/pguide-regulate:build: $ tsc -b
+@potential-guide/objective-package-standard:build: ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build:     packages/objective-pilot/src/probes.ts:162:79:
+@potential-guide/objective-package-standard:build:       162 │ ..../dependency-preload.js", import.meta.resolve("@potential-guid...
+@potential-guide/objective-package-standard:build:           ╵                              ~~~~~~~~~~~
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build:   You need to set the output format to "esm" for "import.meta" to work correctly.
+@potential-guide/objective-package-standard:build: 
+@potential-guide/objective-package-standard:build: Worker artifacts: 16 checked/generated.
+@potential-guide/task-engine-http:build: cache miss, executing 57c8d94f51ad20d3
+@potential-guide/check-sdk:build: cache miss, executing 4af231f3702272b9
+@potential-guide/task-engine-storage:build: cache miss, executing 0d3ad9d3d691fdc7
+@potential-guide/task-engine-storage:build: $ tsc -b
+@potential-guide/check-sdk:build: $ tsc -b && node build.mjs
+@potential-guide/task-engine-http:build: $ tsc -b
+pguide:build: cache miss, executing 7dc6f4f5bb31c78c
+pguide:build: $ tsc -b
+@potential-guide/task-engine-server:build: cache miss, executing d7a3f86b4a635602
+@potential-guide/task-engine-server:build: $ tsc -b
+@potential-guide/objective-monorepo-standard:build: cache miss, executing 28e930a49bdb809f
+@potential-guide/check-environment:build: cache miss, executing fdde5d283cc44397
+@potential-guide/objective-monorepo-standard:build: $ tsc -b && node ../../scripts/build-objective-package.mjs objective-monorepo-standard
+@potential-guide/check-environment:build: $ node build.mjs --candidate
+@potential-guide/task-engine-webui:build: cache miss, executing 20d7945b7bde5a61
+@potential-guide/task-engine-webui:build: $ tsc -p tsconfig.json && node build.mjs && tailwindcss -i src/style.css -o dist/public/style.css --minify
+@potential-guide/objective-monorepo-standard:build: ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-monorepo-standard:build:     packages/objective-pilot/src/probes.ts:162:79:
+@potential-guide/objective-monorepo-standard:build:       162 │ ..../dependency-preload.js", import.meta.resolve("@potential-guid...
+@potential-guide/objective-monorepo-standard:build:           ╵                              ~~~~~~~~~~~
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-monorepo-standard:build:   You need to set the output format to "esm" for "import.meta" to work correctly.
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-pguide-setup:build: cache miss, executing a5eede034b4977d7
+@potential-guide/objective-devbox-health:build: cache miss, executing 5bfdad1c3055c037
+@potential-guide/objective-pguide-setup:build: $ node ../../scripts/build-objective-package.mjs objective-pguide-setup
+@potential-guide/objective-devbox-health:build: $ node ../../scripts/build-objective-package.mjs objective-devbox-health
+@potential-guide/objective-monorepo-standard:build: ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-monorepo-standard:build:     packages/objective-pilot/src/probes.ts:162:79:
+@potential-guide/objective-monorepo-standard:build:       162 │ ..../dependency-preload.js", import.meta.resolve("@potential-guid...
+@potential-guide/objective-monorepo-standard:build:           ╵                              ~~~~~~~~~~~
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-monorepo-standard:build:   You need to set the output format to "esm" for "import.meta" to work correctly.
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-devbox-health:build: Worker artifacts: 16 checked/generated.
+@potential-guide/objective-pguide-setup:build: Worker artifacts: 16 checked/generated.
+@potential-guide/objective-pguide-self-check:build: cache miss, executing 6590618756d13ea4
+@potential-guide/objective-monorepo-standard:build: ▲ [WARNING] "import.meta" is not available with the "cjs" output format and will be empty [empty-import-meta]
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-monorepo-standard:build:     packages/objective-pilot/src/probes.ts:162:79:
+@potential-guide/objective-monorepo-standard:build:       162 │ ..../dependency-preload.js", import.meta.resolve("@potential-guid...
+@potential-guide/objective-monorepo-standard:build:           ╵                              ~~~~~~~~~~~
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-monorepo-standard:build:   You need to set the output format to "esm" for "import.meta" to work correctly.
+@potential-guide/objective-monorepo-standard:build: 
+@potential-guide/objective-pguide-self-check:build: $ node ../../scripts/build-objective-package.mjs objective-pguide-self-check
+@potential-guide/objective-monorepo-standard:build: Worker artifacts: 16 checked/generated.
+@potential-guide/task-engine-webui:build: [3m[1m[34m≈[39m[22m[23m tailwindcss [34mv4.3.3[39m
+@potential-guide/task-engine-webui:build: 
+@potential-guide/task-engine-webui:build: Done in [34m85ms[39m
+@potential-guide/objective-pguide-self-check:build: Worker artifacts: 16 checked/generated.
+@potential-guide/pguide-task-engine:build: cache miss, executing 11bf5b4c4e1dbed6
+@potential-guide/pguide-task-engine:build: $ tsc -p tsconfig.json
+
+ Tasks:    34 successful, 34 total
+Cached:    0 cached, 34 total
+  Time:    11.024s 
+
+
+   • Packages in scope: @potential-guide/check-environment
+   • Running verify in 1 package
+   • Remote caching disabled
+
+@potential-guide/ipfs-content:build: cache hit, replaying logs a0a3f65c0f92698b
+@potential-guide/ipfs-content:build: $ tsc -b
+@potential-guide/cli-core:build: cache hit, replaying logs 2ea4fa68c55ea9d5
+@potential-guide/cli-core:build: $ node ../../scripts/build-settings.mjs && tsc -b && node ../../scripts/build-agents-schema.mjs
+@potential-guide/task-protocol:build: cache hit, replaying logs 644372ea8729c448
+@potential-guide/task-protocol:build: $ tsc -b
+@potential-guide/task-sdk:build: cache hit, replaying logs 658e142ea8193ea5
+@potential-guide/task-sdk:build: $ tsc -b
+@potential-guide/pguide-task-bundle:build: cache hit, replaying logs 9d10a6c44b54568c
+@potential-guide/pguide-task-bundle:build: $ tsc -b
+@potential-guide/task-engine:build: cache hit, replaying logs 872f6d95b0d21d17
+@potential-guide/task-engine:build: $ tsc -b
+@potential-guide/check-sdk:build: cache hit, replaying logs 4af231f3702272b9
+@potential-guide/check-sdk:build: $ tsc -b && node build.mjs
+@potential-guide/check-environment:build: cache hit, replaying logs fdde5d283cc44397
+@potential-guide/check-environment:build: $ node build.mjs --candidate
+@potential-guide/check-environment:verify: cache bypass, force executing 8bd15bda0972d196
+@potential-guide/check-environment:verify: $ node verify.mjs
+
+ Tasks:    9 successful, 9 total
+Cached:    8 cached, 9 total
+  Time:    1.066s 
+
