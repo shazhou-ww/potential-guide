@@ -1,7 +1,23 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { assertImmutableSchemas, collectSchemas, schemaBase } from "./publish-schemas.mjs";
+
+test("retired Checker and Objective schemas retain their immutable canonical contents", async () => {
+  const schemas = await collectSchemas(fileURLToPath(new URL("..", import.meta.url)));
+  for (const [kind, digest] of [
+    ["checker", "d1812f0a7c922ea48727e75b15c80e456a6932c3b7986bd9541eb3b61c1bd304"],
+    ["objective", "bf2b5594d8ba3f360f7589aef6ea60e10d56ecd5e39d616386804a3d82a44699"],
+  ]) {
+    const bytes = schemas.get(`schemas/artifacts/${kind}/v1.json`);
+    assert.ok(bytes, `Missing historical ${kind} schema.`);
+    assert.equal(
+      createHash("sha256").update(bytes.toString("utf8").replaceAll("\r\n", "\n")).digest("hex"),
+      digest,
+    );
+  }
+});
 
 test("immutable publication permits new URIs, rejects modifications, deletions and unavailable hosting", async () => {
   const path = "schemas/objective/v1.json";

@@ -52,7 +52,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         "@potential-guide/task-engine",
       ],
     ],
-    ["artifact-contracts", ["@potential-guide/check-artifacts"]],
     [
       "mvp-server",
       [
@@ -170,7 +169,7 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       directory,
       closure,
       entries,
-      label === "npm-objectives" || label === "artifact-contracts" || label.startsWith("mvp-"),
+      label === "npm-objectives" || label.startsWith("mvp-"),
     );
     if (label === "bundle-authoring" || label === "task-sdk") {
       const authorEntries = ["@potential-guide/pguide-task-bundle"];
@@ -187,8 +186,7 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
       ])
         assert.ok(!names.has(forbidden), `Author tools must not install ${forbidden}.`);
     }
-    if (label === "artifact-contracts" || label.startsWith("mvp-"))
-      await checkMvpConsumer(root, directory, label, graph, run);
+    if (label.startsWith("mvp-")) await checkMvpConsumer(root, directory, label, graph, run);
     if (label === "task-sdk") {
       await checkTaskSdkConsumer(directory, run);
     }

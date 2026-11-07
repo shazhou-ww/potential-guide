@@ -316,13 +316,6 @@ export const verificationPackages = [
       ["js", "d.ts", "js.map", "d.ts.map"].map((extension) => `dist/${name}.${extension}`),
     ),
   },
-  {
-    id: "check-artifacts",
-    directory: "check-artifacts",
-    name: "@potential-guide/check-artifacts",
-    bins: [],
-    requiredExports: ["prepareCheckArtifact", "inspectCheckArtifact", "readArtifactFiles"],
-  },
 ];
 
 const component = "(?:0|[1-9]\\d*)";

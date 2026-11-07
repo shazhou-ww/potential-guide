@@ -5,7 +5,6 @@
     { "path": "./packages/ipfs-content" },
     { "path": "./packages/check-sdk" },
     { "path": "./packages/check-environment" },
-    { "path": "./packages/check-artifacts" },
     { "path": "./packages/test-tree" },
     { "path": "./packages/pguide-agents" },
     {

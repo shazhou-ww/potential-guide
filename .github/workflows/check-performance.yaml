@@ -52,12 +52,6 @@ jobs:
           pnpm --dir subject install --frozen-lockfile
           pnpm --dir harness install --frozen-lockfile
           if test -d control; then pnpm --dir control install --frozen-lockfile; fi
-      - name: Verify bounded HTTPS cleanup in the separate harness checkout
-        env:
-          PGUIDE_HTTPS_TRACE: "1"
-        run: |
-          pnpm --dir harness exec turbo run build --filter=@potential-guide/check-artifacts
-          pnpm --dir harness exec tsx --test --test-name-pattern="real HTTPS acquisition" packages/check-artifacts/test/artifacts.test.ts
       - name: Cold control check on the paired runner
         if: inputs.baseline != ''
         run: node harness/scripts/measure-check.mjs control cold

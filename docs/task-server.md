@@ -242,14 +242,10 @@ Physical termination is not proof that external side effects did not occur.
 
 ## Check and artifacts
 
-`@potential-guide/check-artifacts/contracts` exports the existing validators,
-not another schema truth: manifest parsing, full file-set/Git-tree digest and
-References validation, runtime checks, mapping, subject and result validation.
-It imports no preparation or filesystem/worker modules. All inputs are supplied
-bytes/objects; functions do not download, write disk or start workers.
-
-These legacy contract/file APIs remain for existing CLI consumers; they do not
-provide an Engine Check registration or generic business execution layer.
+`@potential-guide/check-artifacts` and its legacy contract/file/authoring APIs
+have been retired. Historical Checker/Objective schema JSON remains unchanged
+for compatibility; it does not provide an Engine Check registration or generic
+business execution layer.
 `check-task` and its `createArtifactSource` / `createCheckTaskType` APIs have
 been removed. New checks use `check-sdk` and the normal Task Bundle authoring
 flow, as demonstrated by `check-environment`. The Engine receives Bundle CIDs
@@ -273,17 +269,11 @@ an active Checker source adapter or HTTP route.
 
 ## Installation versus imports
 
-We retain authoring APIs and production `esbuild` in `check-artifacts` for backward
-compatibility. `/contracts` eliminates preparation/build **imports**, not their
-installed dependencies: `esbuild`, platform optional binaries, `tar`, and
-`check-runtime-files` still appear in a production install. There is no separate
-author-build package in this MVP. A split would change the existing `/build`
-consumer contract or leave a compatibility dependency and would not deliver
-installation isolation without migration. Packed-consumer evidence records the
-actual installed graph rather than claiming a subpath makes dependencies vanish.
-Engine's generic Bundle loader uses `task-protocol`, not the Check `/files`
-primitives. Check support packages and the author-only `task-sdk` are not
-Server production dependencies.
+The retired `check-artifacts` package is no longer packed or installed by
+repository consumers. Its former `/contracts` subpath provided import isolation,
+not installation isolation. Engine's generic Bundle loader uses `task-protocol`;
+Check support packages and the author-only `task-sdk` are not Server production
+dependencies. Packed-consumer evidence checks the actual installed graph.
 
 ## Check and Probe retirement
 

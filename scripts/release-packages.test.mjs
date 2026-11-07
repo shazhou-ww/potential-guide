@@ -32,7 +32,7 @@ test("local verification covers the internal runtime dependency closure without 
         assert.ok(names.has(name), `${manifest.name} needs a local verification pack for ${name}`);
     }
   }
-  for (const id of ["check-runtime-files", "check-artifacts"]) {
+  for (const id of ["check-runtime-files"]) {
     assert.ok(verificationPackages.some((entry) => entry.id === id));
     assert.throws(() => parseReleaseTag(`${id}-v0.1.0`), /Unsupported package/);
   }
@@ -69,6 +69,7 @@ test("release inventory contains the new packages and excludes retired Guide and
     "objective-portfolio-supervisor",
     "pguide-supervise",
     "artifact-files",
+    "check-artifacts",
     "pguide-pilot",
   ]) {
     assert.ok(!releasePackages.some((entry) => entry.id === id));
@@ -79,6 +80,7 @@ test("release inventory contains the new packages and excludes retired Guide and
 test("retired Check and Probe adapters have no workspace, consumer dependency, pack or authoring scenario", async () => {
   for (const path of [
     "../packages/probe-task",
+    "../packages/check-artifacts",
     "../examples/task-server/probe-config.mjs",
     "../examples/task-server/probe-integration.mjs",
     "../packages/check-task",
@@ -91,6 +93,7 @@ test("retired Check and Probe adapters have no workspace, consumer dependency, p
   assert.ok(!verificationPackages.some(({ id }) => id === "probe-task"));
   assert.throws(() => parseReleaseTag("probe-task-v0.1.0-rc.0"), /Unsupported package/);
   assert.ok(!verificationPackages.some(({ id }) => id === "check-task"));
+  assert.ok(!verificationPackages.some(({ id }) => id === "check-artifacts"));
   assert.throws(() => parseReleaseTag("check-task-v0.1.0-rc.0"), /Unsupported package/);
   for (const workspace of ["packages", "apps"])
     for (const entry of await readdir(new URL(`../${workspace}/`, import.meta.url), {
@@ -125,6 +128,17 @@ test("retired Check and Probe adapters have no workspace, consumer dependency, p
       ])
         assert.equal(
           manifest[field]?.["@potential-guide/check-task"],
+          undefined,
+          `${manifest.name} ${field}`,
+        );
+      for (const field of [
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+      ])
+        assert.equal(
+          manifest[field]?.["@potential-guide/check-artifacts"],
           undefined,
           `${manifest.name} ${field}`,
         );

@@ -11,9 +11,9 @@ and the extensible `pguide` command line:
   Schemas, derives validation/structural equality, and exposes authorized current
   type discovery with optional submission revision guards. Check/Probe use type
   version 2; historical contracts are never silently reinterpreted.
-- [`@potential-guide/check-artifacts`](./packages/check-artifacts/README.md) explicitly
-  builds/packs standalone Checks and prepares digest-pinned local/HTTPS artifacts
-  for Check Host, without consumer-side Check installation or builds.
+- [`@potential-guide/check-sdk`](./packages/check-sdk/README.md) authors standalone
+  checks as standard Task Bundles, as demonstrated by
+  [`check-environment`](./packages/check-environment/README.md).
 - `@potential-guide/pilot-protocol` independently provides Pilot definitions,
   schema compilation, strict parsing, reference validation and subject projection.
 - `@potential-guide/objective-pilot` consumes those definitions,

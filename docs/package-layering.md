@@ -165,8 +165,8 @@ Bundle fixtures and `check-environment/build.mjs` to use
 packages to an author command. Bundle budgets, paths and declaration/file
 inspection belong to `task-protocol`; local directory acquisition uses native
 Node file APIs in the author/runtime consumers, and Node version comparison
-uses `semver`. Check portable names use `sanitize-filename` without rewriting
-artifact identity. The former `artifact-files` workspace is retired rather
+uses `semver`. The legacy `check-artifacts` workspace and its filename validation
+are retired; historical schema definitions remain static. The former `artifact-files` workspace is retired rather
 than replaced by a generic filesystem or declaration utility layer.
 
 `packages/objective-monorepo-standard/test/package-layers.test.mjs` exercises valid downward/direct-protocol/same-layer

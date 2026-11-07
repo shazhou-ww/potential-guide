@@ -4,6 +4,10 @@ Checker Host and Objective Host have been retired. Artifact formats and immutabl
 Schemas remain valid business data; they are not automatically Task Bundles.
 The later `check-task` and `probe-task` adapters are also retired. Their source
 acquisition and observation APIs are not active compatibility surfaces.
+`check-artifacts`, including its root, `/contracts` and `/build` APIs, is also
+retired from the repository. The Checker/Objective schema JSON and canonical
+URLs remain unchanged as static historical contracts; they are no longer
+regenerated from a runtime package.
 Use [Task Bundles](axis/task-engine-contracts/task-bundle.md) and the
 [Task Engine Server](task-server.md) for execution. The Host service and bridge
 sections below are historical protocol documentation, not available APIs.
@@ -29,16 +33,14 @@ contracts and `task.build.yaml`. The low-level compiler is
 `@potential-guide/pguide-task-bundle/build`; offline artifact checks use `/artifact`.
 Upload and pin use independently chosen external tools; `/publish` has been removed. It does not extend the
 Checker/Objective Host authorization or business APIs. The remaining sections
-below describe Checker/Objective artifacts and their existing Host services.
+below describe historical Checker/Objective artifacts and their retired Host services.
 
 ## Authoring
 
-Pure consumer validation is available from `@potential-guide/check-artifacts/contracts`.
+Pure consumer validation was available from `@potential-guide/check-artifacts/contracts`.
 It reexports the same manifest, file-set/digest/References, mapping, subject and
-result rules without preparation IO. The legacy root and `/build` remain
-compatible. This is import isolation, not installation isolation: production
-`esbuild` and archive dependencies remain installed. See the
-[MVP dependency decision](task-server.md#installation-versus-imports).
+result rules without preparation IO. The root and `/build` entrypoints were
+part of the same retired package. None is an active compatibility API.
 
 Checker roots contain `checker.yaml`, one self-contained CommonJS entry, and
 Markdown under `references/<language>/`. Objective roots contain
@@ -177,8 +179,7 @@ typed Objective HTTPS references and preserves exact dependency bindings.
 
 ## Repository verification
 
-`pnpm consumers:check` (also included in `pnpm deployment:verify`) includes an
-isolated `artifact-contracts` packed consumer. It installs
-the actual tarballs, uses the public author/build APIs, mounts both services,
-and executes real workers through the Checker v3 and Objective SDKs. This is
-local implementation evidence, not publication or external deployment acceptance.
+The legacy `artifact-contracts` packed consumer has been removed with
+`check-artifacts`. Schema publication tests retain the static Checker/Objective
+definitions and reject changes to their canonical contents. New execution and
+packed-consumer verification use Task Bundles and the generic Task Engine.

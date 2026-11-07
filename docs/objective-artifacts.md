@@ -7,6 +7,8 @@ reject execution. New execution uses
 [Task Bundles](axis/task-engine-contracts/task-bundle.md).
 Consumption, validation and recovery examples below document historical
 formats and the retired workflow, not active CLI capabilities.
+The `check-artifacts` library and its local verification packs are also retired.
+Historical Checker/Objective schema JSON and canonical URLs remain unchanged.
 
 An Objective is `objective.json` plus explicitly declared References. It has no
 package.json, npm package identity, version range, registry choice, JavaScript
@@ -15,10 +17,8 @@ delivered executable artifacts. This increment supports local Objective
 directories; direct HTTPS Check archives use the existing Check preparation
 boundary. Objective archive distribution, Release automation, built-in migration
 and complete offline export are not provided here.
-Use the candidate through this workspace or locally packed libraries. Local
-package verification includes the Check support library without changing the
-formal release plan; published CLI delivery must plan that prerequisite in the
-later release work.
+The following describes the retired candidate, not an available workspace or
+locally packed library.
 
 ## Author and consume
 
@@ -126,8 +126,8 @@ Check `source` is exactly one of:
 
 The HTTPS transport digest covers exact gzip-tar bytes, separately from the Check
 logical digest. No redirect, credentials, lifecycle script or unsafe extraction
-fallback is introduced. [Check artifact limits and safety](../packages/check-artifacts/README.md)
-continue to apply. Directory references are relative to the owning Objective's
+fallback was introduced. These were the retired Check artifact safety rules.
+Directory references are relative to the owning Objective's
 original source directory (absolute paths are also accepted). They are trusted
 source capabilities, not paths inside the Objective payload.
 

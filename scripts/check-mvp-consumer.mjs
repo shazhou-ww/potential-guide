@@ -3,24 +3,19 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export async function checkMvpConsumer(root, directory, label, graph, run) {
-  assert.ok(["artifact-contracts", "mvp-server"].includes(label), "Unsupported MVP consumer.");
+  assert.equal(label, "mvp-server", "Unsupported MVP consumer.");
   const names = new Set(graph.map((entry) => entry.name));
   assert.ok(!names.has("@potential-guide/checker-host"));
   assert.ok(!names.has("@potential-guide/objective-host"));
-  if (label === "mvp-server") {
-    for (const forbidden of [
-      "@potential-guide/artifact-files",
-      "@potential-guide/check-artifacts",
-      "@potential-guide/check-runtime-files",
-      "@potential-guide/task-sdk",
-      "@potential-guide/check-task",
-      "@potential-guide/probe-task",
-    ])
-      assert.ok(!names.has(forbidden), `Generic Task server must not install ${forbidden}.`);
-  } else {
-    assert.ok(names.has("esbuild"), "A subpath is not installation dependency isolation.");
-    assert.ok(names.has("tar"));
-  }
+  for (const forbidden of [
+    "@potential-guide/artifact-files",
+    "@potential-guide/check-artifacts",
+    "@potential-guide/check-runtime-files",
+    "@potential-guide/task-sdk",
+    "@potential-guide/check-task",
+    "@potential-guide/probe-task",
+  ])
+    assert.ok(!names.has(forbidden), `Generic Task server must not install ${forbidden}.`);
   await writeFile(join(directory, "dependency-graph.json"), JSON.stringify(graph, null, 2));
   if (process.env.PGUIDE_MVP_EVIDENCE_DIRECTORY) {
     const output = resolve(root, process.env.PGUIDE_MVP_EVIDENCE_DIRECTORY);
@@ -62,56 +57,14 @@ export async function checkMvpConsumer(root, directory, label, graph, run) {
       )}\n`,
     );
   }
-  if (label === "artifact-contracts") {
+  for (const name of ["echo-config.mjs", "echo-type.mjs"])
     await writeFile(
-      join(directory, "pure.mjs"),
-      `
-import assert from "node:assert/strict";
-import {createRequire,syncBuiltinESMExports} from "node:module";
-import {resolve} from "node:path";
-import {pathToFileURL} from "node:url";
-const require=createRequire(import.meta.url);
-const denied=()=>{throw Error("forbidden contract side effect")};
-for(const [module,names] of [
- ["node:fs",["writeFile","writeFileSync","mkdir","mkdirSync","createWriteStream"]],
- ["node:fs/promises",["writeFile","mkdir","rename","unlink"]],
- ["node:worker_threads",["Worker"]],["node:net",["connect","createConnection"]],
- ["node:http",["request","get","createServer"]],["node:https",["request","get"]],
- ["node:child_process",["spawn","fork","exec","execFile"]]]) {
- const object=require(module);for(const name of names)object[name]=denied;
-}
-globalThis.fetch=denied;syncBuiltinESMExports();
-const c=await import("@potential-guide/check-artifacts/contracts");
-const local={kind:"checker",url:pathToFileURL(resolve("not-required-to-exist.tgz")).href};
-assert.deepEqual(c.parseArtifactReference(c.formatArtifactReference(local)),local);
-assert.equal(c.parseFileArtifactUrl(local.url),resolve("not-required-to-exist.tgz"));
-assert.throws(()=>c.validateArtifactReference({...local,kind:"objective"}));
-const page=Buffer.from("---\\ntitle: Packed\\ndescription: Packed\\n---\\nBody\\n");
-const manifest={$schema:c.checkerSchemaUri,runtime:{type:"node",minVersion:"22.13.0"},entry:"checker.cjs",subjectSchema:{type:"object"},languages:["en"],problems:[]};
-const bytes=Buffer.from(JSON.stringify(manifest));
-const parsed=c.parseCheckerManifest(bytes);
-const files=new Map([["checker.yaml",bytes],["checker.cjs",Buffer.from("exports.execute=()=>{}")],["references/en/checker.md",page]]);
-assert.equal(c.inspectContractFiles(files).digest,c.gitTreeDigest(files));
-assert.ok(c.validateArtifactSubject(parsed,c.mapSubject("$",{})));
-assert.equal(c.parseCheckerResult({status:200,message:"",payload:{ok:true,problems:[]}},parsed).ok,true);
-c.assertRuntime(parsed,{type:"node",version:process.versions.node});
-const objective={$schema:c.objectiveSchemaUri,subjectSchema:{type:"object"},languages:["en"],levels:[{id:"ready",checks:["check"]}],checkers:{check:{url:"https://example.test/a",digest:c.gitTreeDigest(files),subjectMapping:"$"}}};
-const objectiveBytes=Buffer.from(JSON.stringify(objective));
-c.parseObjectiveArtifactManifest(objectiveBytes);
-c.inspectContractFiles(new Map([["objective.yaml",objectiveBytes],["references/en/objective.md",page],["references/en/levels/ready.md",page]]));
-console.log("pure-packed: checker/objective manifests, full files, References, digest, subject/result; zero IO");
-`,
+      join(directory, name),
+      await readFile(join(root, "examples", "task-server", name)),
     );
-    console.log(await run(process.execPath, ["pure.mjs"], directory));
-  } else {
-    for (const name of ["echo-config.mjs", "echo-type.mjs"])
-      await writeFile(
-        join(directory, name),
-        await readFile(join(root, "examples", "task-server", name)),
-      );
-    await writeFile(
-      join(directory, "consumer-config.mjs"),
-      `
+  await writeFile(
+    join(directory, "consumer-config.mjs"),
+    `
 import {readFile} from "node:fs/promises";
 import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
 import {configureTaskServer} from "./echo-config.mjs";
@@ -121,10 +74,10 @@ export default async function configure(){
  return configureTaskServer({token:process.env.TASK_SERVER_TOKEN,port:0,database:process.env.TASK_SERVER_DATABASE??"consumer.sqlite",ipfsClient});
 }
 `,
-    );
-    await writeFile(
-      join(directory, "mvp.mjs"),
-      `
+  );
+  await writeFile(
+    join(directory, "mvp.mjs"),
+    `
 import assert from "node:assert/strict";
 import {readFile,writeFile} from "node:fs/promises";
 import {startTaskServer} from "@potential-guide/task-engine-server";
@@ -170,8 +123,7 @@ assert.equal(process.listenerCount("SIGINT"),signals);
 try{await exercise(server.url)}finally{await server.close()}
 console.log("packed mvp-server: programmatic readiness, auth, result, history and SSE reconnect; declarative CLI is verified separately");
 `,
-    );
-    console.log(await run(process.execPath, ["mvp.mjs"], directory));
-  }
+  );
+  console.log(await run(process.execPath, ["mvp.mjs"], directory));
   console.log(`${label} actual production install: ${[...names].sort().join(", ")}`);
 }

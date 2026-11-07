@@ -49,10 +49,9 @@ are protocol; `objective-pilot` consumes both protocols, then
 packages and their release tags are retired.
 The generic Task Engine release scope is documented below. Its release routes
 prepare configuration only: they do not prove external publishing authorization
-or a successful npm release. `check-artifacts` and `check-runtime-files`
-remain local-verification-only.
+or a successful npm release. `check-runtime-files` remains local-verification-only.
 Their pack/install checks do not authorize bootstrap or product publication.
-`check-task` and `probe-task` are retired from the repository, verification packs and author
+`check-artifacts`, `check-task` and `probe-task` are retired from the repository, verification packs and author
 examples. This does not deprecate or unpublish any historical npm version.
 Publish `check-sdk` before `check-environment`, which consumes it. Both Check
 packages use independent stable or RC tags and the same trusted publishing
@@ -221,8 +220,10 @@ adding these routes grants neither that approval nor Trusted Publisher access.
 
 ### Cleanup boundaries
 
-The unused `artifact-files` package is retired from the repository. No other
-package removal, npm deprecation or unpublish is part of this preparation.
+The unused `artifact-files` and legacy `check-artifacts` packages are retired
+from the repository. Historical Checker/Objective schema JSON and their URLs
+remain unchanged; schema synchronization no longer imports the retired package.
+Repository retirement does not deprecate or unpublish any npm version.
 
 - `ipfs-content` is private and outside the product runtime closure, but Engine
   regression tests still use it. Migrate those tests with equivalent coverage
@@ -231,9 +232,9 @@ package removal, npm deprecation or unpublish is part of this preparation.
   inspection time. Confirm its manual-generation workflow is no longer needed
   before removing it and its root TypeScript/layer/lockfile references.
 - `check-environment` remains a build dependency of concrete Objective packages
-  and generated workers. `check-artifacts` and `check-runtime-files` still have
-  Check/Probe and CLI Runtime consumers. Removing them from the generic closure
-  does not authorize deleting their packages or compatible entrypoints.
+  and generated workers. `check-runtime-files` still supplies private directory
+  and file operations to CLI Runtime; retain it independently of the retired
+  Check/Probe adapters and `check-artifacts`.
 - Historical `config` and Supervisor names are already retired in this source
   tree. Preserve published versions. Consider a separate npm deprecation only
   after replacement products and caller migration are verified; configuration
@@ -479,7 +480,7 @@ gh workflow run ci.yaml --ref main -f published=true
 
 The default local `pnpm deployment:verify` path installs those explicitly selected
 CLI tarballs. It packs the release inventory plus the local runtime support
-packages (`check-runtime-files` and `check-artifacts`), checks their contents, and uses npm
+package (`check-runtime-files`), checks their contents, and uses npm
 `overrides` pointing to the internal tarballs. This isolated consumer makes
 unpublished RC dependencies available without requiring the main package to
 depend on optional commands. `pnpm pack:check` checks packed artifact structure;

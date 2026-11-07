@@ -59,17 +59,11 @@ test("remaining MVP consumer fixtures compile and retired Check execution is rej
   };
   try {
     await checkMvpConsumer(root, directory, "mvp-server", [], run);
-    await checkMvpConsumer(
-      root,
-      directory,
-      "artifact-contracts",
-      [{ name: "esbuild" }, { name: "tar" }],
-      run,
-    );
-    await assert.rejects(
-      checkMvpConsumer(root, directory, "mvp-check", [], run),
-      /Unsupported MVP consumer/,
-    );
+    for (const label of ["artifact-contracts", "mvp-check"])
+      await assert.rejects(
+        checkMvpConsumer(root, directory, label, [], run),
+        /Unsupported MVP consumer/,
+      );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
