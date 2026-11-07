@@ -2,3 +2,4 @@
 {"type":"submitIdeal","timestamp":"2026-11-07T23:15:46.068Z","payload":{"idealRevision":"ee4553b276cdcc3a1c0fb738c2d68085e05f078c"}}
 {"type":"submitIdeal","timestamp":"2026-11-07T23:33:24.025Z","payload":{"idealRevision":"aae776f74c006b4401e6e76b928317cefb2f9af8"}}
 {"type":"submitIdeal","timestamp":"2026-11-07T23:55:19.673Z","payload":{"idealRevision":"c2ff603a54b7ecaf7d0fb6cd8e4a0bbb3bee6960"}}
+{"type":"acceptIdeal","timestamp":"2026-11-07T23:58:15.219Z","payload":{"idealRevision":"c2ff603a54b7ecaf7d0fb6cd8e4a0bbb3bee6960"}}
