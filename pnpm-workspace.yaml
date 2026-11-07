@@ -43,7 +43,7 @@ catalog:
   "@types/npm-package-arg": 6.1.4
   "@types/pacote": 11.1.8
   tsx: 4.23.15
-  turbo: ^2.11.8
+  turbo: ^2.11.10
   typescript: 5.9.3
   semver: 7.8.5
   "@types/semver": 7.8.0
