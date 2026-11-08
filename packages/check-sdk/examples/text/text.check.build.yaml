@@ -7,8 +7,3 @@ source:
 languages: [en]
 problemCodes: [text-empty]
 referenceRoot: references
-references:
-  en:
-    check: references/en/check.md
-    problems:
-      text-empty: references/en/problems/text-empty.md

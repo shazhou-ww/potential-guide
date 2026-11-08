@@ -260,26 +260,22 @@ test("Check authoring rejects missing, misnamed, undeclared and invalid inputs",
     ],
     [
       "filename",
-      async (_dir, config) => {
-        const mapping = config.references.en;
-        assert.ok(mapping);
-        mapping.problems["text-empty"] = "references/en/problems/wrong.md";
+      async (dir) => {
+        await writeFile(join(dir, "references/en/problems/wrong.md"), page);
       },
     ],
     [
-      "unknown language mapping",
+      "stale author references rejected",
       async (_dir, config) => {
-        const mapping = config.references.en;
-        assert.ok(mapping);
-        config.references.fr = mapping;
+        Object.assign(config, {
+          references: { en: { check: "references/en/check.md", problems: {} } },
+        });
       },
     ],
     [
       "unknown problem",
-      async (_dir, config) => {
-        const mapping = config.references.en;
-        assert.ok(mapping);
-        mapping.problems.unknown = "references/en/problems/unknown.md";
+      async (dir) => {
+        await writeFile(join(dir, "references/en/problems/unknown.md"), page);
       },
     ],
     [
@@ -393,14 +389,9 @@ test("single/multilanguage and zero-code authoring freeze exact resource bytes",
         await cp(join(directory, "references/en"), join(directory, "references/zh-CN"), {
           recursive: true,
         });
-        config.references["zh-CN"] = {
-          check: "references/zh-CN/check.md",
-          problems: { "text-empty": "references/zh-CN/problems/text-empty.md" },
-        };
       }
       if (mode === "zero") {
         config.problemCodes = [];
-        config.references.en.problems = {};
         await rm(join(directory, "references/en/problems"), { recursive: true });
         await writeFile(
           join(directory, "src/main.ts"),
@@ -499,12 +490,6 @@ test("independent Check standard scaffold executes pass/problem through Engine",
           join(directory, `references/${language}/problems/${code}.md`),
           `${page}${language} ${code} v1\n`,
         );
-      config.references[language] = {
-        check: `references/${language}/check.md`,
-        problems: Object.fromEntries(
-          config.problemCodes.map((code) => [code, `references/${language}/problems/${code}.md`]),
-        ),
-      };
     }
     await writeFile(configFile, stringify(config));
     const main = join(directory, "src/main.ts");

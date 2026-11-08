@@ -301,6 +301,20 @@ export const releasePackages = [
 export const verificationPackages = [
   ...releasePackages,
   {
+    id: "ipfs-content",
+    directory: "ipfs-content",
+    name: "@potential-guide/ipfs-content",
+    bins: [],
+    requiredExports: ["readContentTree", "openContent", "encodeContentCar"],
+  },
+  {
+    id: "probe-sdk",
+    directory: "probe-sdk",
+    name: "@potential-guide/probe-sdk",
+    bins: [],
+    requiredExports: ["createProbeTask"],
+  },
+  {
     id: "check-runtime-files",
     directory: "check-runtime-files",
     name: "@potential-guide/check-runtime-files",

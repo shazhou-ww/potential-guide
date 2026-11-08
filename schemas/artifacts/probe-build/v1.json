@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/probe-build/v1.json",
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "name",
+    "kind",
+    "source",
+    "languages",
+    "referenceRoot",
+    "bundles",
+    "checks",
+    "levels"
+  ],
+  "properties": {
+    "name": { "minLength": 1, "type": "string" },
+    "kind": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" },
+    "source": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": ["root", "entry", "contract"],
+      "properties": {
+        "root": { "minLength": 1, "type": "string" },
+        "entry": { "minLength": 1, "type": "string" },
+        "contract": { "minLength": 1, "type": "string" }
+      }
+    },
+    "languages": {
+      "minItems": 1,
+      "uniqueItems": true,
+      "maxItems": 32,
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "referenceRoot": { "minLength": 1, "type": "string" },
+    "bundles": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": ["source"],
+          "properties": {
+            "source": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": ["kind", "cid"],
+                  "properties": {
+                    "kind": { "const": "ipfs", "type": "string" },
+                    "cid": { "minLength": 1, "type": "string" }
+                  }
+                },
+                {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": ["kind", "url"],
+                  "properties": {
+                    "kind": { "const": "publication", "type": "string" },
+                    "url": { "minLength": 1, "type": "string" }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": ["bundle", "inputMapping"],
+          "properties": {
+            "bundle": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" },
+            "inputMapping": { "minLength": 1, "maxLength": 1024, "type": "string" }
+          }
+        }
+      }
+    },
+    "levels": {
+      "minItems": 1,
+      "maxItems": 128,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["id", "checks"],
+        "properties": {
+          "id": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" },
+          "checks": {
+            "uniqueItems": true,
+            "maxItems": 128,
+            "type": "array",
+            "items": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" }
+          }
+        }
+      }
+    },
+    "resources": {
+      "maxItems": 256,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "minLength": 1, "type": "string" },
+          "to": { "minLength": 1, "type": "string" }
+        }
+      }
+    },
+    "binary": { "maxItems": 256, "type": "array", "items": { "minLength": 1, "type": "string" } }
+  }
+}

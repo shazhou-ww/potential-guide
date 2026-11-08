@@ -4,6 +4,7 @@
     { "path": "./packages/pguide-task-bundle" },
     { "path": "./packages/ipfs-content" },
     { "path": "./packages/check-sdk" },
+    { "path": "./packages/probe-sdk" },
     { "path": "./packages/check-environment" },
     { "path": "./packages/test-tree" },
     { "path": "./packages/pguide-agents" },

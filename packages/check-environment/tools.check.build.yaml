@@ -7,11 +7,3 @@ source:
 languages: [en]
 problemCodes: [tool-missing, tool-unusable, version-unparseable, tool-version]
 referenceRoot: references/tools
-references:
-  en:
-    check: references/tools/en/check.md
-    problems:
-      tool-missing: references/tools/en/problems/tool-missing.md
-      tool-unusable: references/tools/en/problems/tool-unusable.md
-      version-unparseable: references/tools/en/problems/version-unparseable.md
-      tool-version: references/tools/en/problems/tool-version.md

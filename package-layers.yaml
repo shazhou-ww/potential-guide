@@ -11,6 +11,7 @@ protocol:
   - "@potential-guide/pilot-protocol"
 business:
   - "@potential-guide/check-sdk"
+  - "@potential-guide/probe-sdk"
   - "@potential-guide/check-environment"
   - "@potential-guide/objective-pilot"
   - "@potential-guide/objective-regulator"

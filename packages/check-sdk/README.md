@@ -17,8 +17,11 @@ are not automatically included in business Bundles.
 
 Use the [small independent text check](examples/text/README.md).
 Check Build YAML declares name/kind, source root/entry/contract, canonical
-BCP 47 languages, stable problemCodes, referenceRoot and explicit per-language
-check/problem mappings. Unknown properties fail; a zero-code list is valid.
+BCP 47 languages, stable problemCodes and referenceRoot. Pages are inferred:
+`<referenceRoot>/<language>/check.md` and `problems/<code>.md`.
+The former author `references` field is now rejected: remove it when migrating
+author YAML. Generated `resources/check.json.references`, immutable Bundles and
+Check results are unchanged. Unknown properties fail; a zero-code list is valid.
 Optional `resources: [{from: "assets/file.json", to: "resources/file.json"}]`
 selects additional exact files, with no glob expansion.
 Optional `binary: ["resources/assets/**"]` uses the ordinary Task final-path
@@ -27,7 +30,7 @@ It cannot select the generated `resources/check.json` index.
 
 `prepareCheck(file)` validates every declared language's `check.md` and
 `problems/<code>.md`, rejects undeclared files/languages/codes, symlinks,
-duplicate mappings and escaping paths, and snapshots inputs under
+case/path collisions and escaping paths, and snapshots inputs under
 `dist/staging/<kind>/`. Every Reference needs YAML frontmatter containing
 **only** nonempty `title` and `description` (at most 200 Unicode code points).
 Bodies, sections, translations, links and anchors are not parsed or validated.

@@ -22,13 +22,6 @@ export const checkBuildSchema = Type.Object(
     problemCodes: Type.Array(Type.String({ pattern: "^[a-z][a-z0-9-]*$", maxLength: 4096 }), {
       uniqueItems: true,
     }),
-    references: Type.Record(
-      Type.String(),
-      Type.Object(
-        { check: pathSchema, problems: Type.Record(Type.String(), pathSchema) },
-        { additionalProperties: false },
-      ),
-    ),
     referenceRoot: pathSchema,
     resources: Type.Optional(
       Type.Array(
@@ -41,13 +34,13 @@ export const checkBuildSchema = Type.Object(
 );
 export type CheckBuild = Static<typeof checkBuildSchema>;
 
-function yaml(text: string, file: string): unknown {
+export function yaml(text: string, file: string): unknown {
   const document = parseDocument(text, { uniqueKeys: true });
   if (document.errors.length) throw new Error(`${file}: ${document.errors.join("; ")}`);
   return document.toJS({ maxAliasCount: 0 });
 }
 
-function portable(path: string) {
+export function portable(path: string) {
   if (
     !path ||
     path.includes("\\") ||
@@ -59,7 +52,7 @@ function portable(path: string) {
   return path;
 }
 
-async function safeFile(root: string, path: string): Promise<Buffer> {
+export async function safeFile(root: string, path: string): Promise<Buffer> {
   const parts = portable(path).split("/");
   let current = root;
   for (const [index, part] of parts.entries()) {
@@ -71,7 +64,7 @@ async function safeFile(root: string, path: string): Promise<Buffer> {
   return readFile(current);
 }
 
-async function files(root: string, prefix = ""): Promise<string[]> {
+export async function files(root: string, prefix = ""): Promise<string[]> {
   const info = await lstat(root);
   if (!info.isDirectory() || info.isSymbolicLink())
     throw new Error(`Not an ordinary directory: ${root}`);
@@ -86,7 +79,7 @@ async function files(root: string, prefix = ""): Promise<string[]> {
   return output.sort();
 }
 
-async function safeDirectory(root: string, path: string): Promise<void> {
+export async function safeDirectory(root: string, path: string): Promise<void> {
   let current = root;
   for (const part of portable(path).split("/")) {
     current = join(current, part);
@@ -96,7 +89,7 @@ async function safeDirectory(root: string, path: string): Promise<void> {
   }
 }
 
-async function outputDirectory(root: string, path: string): Promise<void> {
+export async function outputDirectory(root: string, path: string): Promise<void> {
   let current = root;
   for (const part of portable(path).split("/")) {
     current = join(current, part);
@@ -136,6 +129,52 @@ export function validateReference(bytes: Uint8Array, path: string): void {
     );
 }
 
+/** Only declared business pages are discoverable; Markdown links never select files. */
+export async function readReferences(
+  root: string,
+  referenceRoot: string,
+  languages: readonly string[],
+  required: readonly string[],
+  optional: readonly string[] = [],
+): Promise<Map<string, Buffer>> {
+  await safeDirectory(root, referenceRoot);
+  const allowed = new Set(
+    languages.flatMap((language) =>
+      [...required, ...optional].map((suffix) => `${language}/${suffix}`),
+    ),
+  );
+  const directories = new Set<string>();
+  for (const path of allowed) {
+    const parts = path.split("/");
+    for (let count = 1; count < parts.length; count++)
+      directories.add(parts.slice(0, count).join("/"));
+  }
+  async function checkDirectories(directory: string, prefix = ""): Promise<void> {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isSymbolicLink()) throw new Error(`Linked Reference: ${path}`);
+      if (entry.isDirectory()) {
+        if (!directories.has(path)) throw new Error(`Unknown Reference directory: ${path}`);
+        await checkDirectories(join(directory, entry.name), path);
+      } else if (!entry.isFile() || !allowed.has(path))
+        throw new Error(`Unknown Reference page: ${path}`);
+    }
+  }
+  await checkDirectories(join(root, referenceRoot));
+  const found = new Set(await files(join(root, referenceRoot)));
+  for (const language of languages)
+    for (const suffix of required)
+      if (!found.has(`${language}/${suffix}`))
+        throw new Error(`Missing Reference: ${referenceRoot}/${language}/${suffix}`);
+  const resources = new Map<string, Buffer>();
+  for (const path of found) {
+    const bytes = await safeFile(root, `${referenceRoot}/${path}`);
+    validateReference(bytes, path);
+    resources.set(`resources/references/${path}`, bytes);
+  }
+  return resources;
+}
+
 export interface PreparedCheck {
   kind: string;
   buildFile: string;
@@ -164,69 +203,20 @@ export async function prepareCheck(buildFile: string): Promise<PreparedCheck> {
       fail(`invalid language ${language}`);
     }
   }
-  if (Object.keys(config.references).some((language) => !config.languages.includes(language)))
-    fail("unknown Reference language");
   portable(config.referenceRoot);
   portable(config.source.root);
   if ([config.source.root, config.referenceRoot].some((path) => path.split("/")[0] === "dist"))
     fail("author source/Reference roots must not overlap generated dist outputs");
   await safeDirectory(root, config.source.root);
-  await safeDirectory(root, config.referenceRoot);
-  for (const entry of await readdir(join(root, config.referenceRoot), { withFileTypes: true })) {
-    if (!entry.isDirectory() || !config.languages.includes(entry.name))
-      fail(`unknown language or filename ${config.referenceRoot}/${entry.name}`);
-    for (const child of await readdir(join(root, config.referenceRoot, entry.name), {
-      withFileTypes: true,
-    })) {
-      if (child.name === "check.md" && child.isFile()) continue;
-      if (child.name !== "problems" || !child.isDirectory())
-        fail(`unknown Reference path ${config.referenceRoot}/${entry.name}/${child.name}`);
-      for (const problem of await readdir(
-        join(root, config.referenceRoot, entry.name, "problems"),
-        { withFileTypes: true },
-      ))
-        if (!problem.isFile() || !config.problemCodes.some((code) => problem.name === `${code}.md`))
-          fail(`${entry.name}: unknown problem filename ${problem.name}`);
-    }
-  }
-  const resources = new Map<string, Buffer>();
-  const selected = new Set<string>();
-  for (const language of config.languages) {
-    const mapping = config.references[language];
-    if (!mapping) return fail(`missing ${language} definition mapping`);
-    const required = new Map<string, string>([["check.md", mapping.check]]);
-    if (Object.keys(mapping.problems).some((code) => !config.problemCodes.includes(code)))
-      fail(`${language}: unknown problem code`);
-    for (const code of config.problemCodes) {
-      const path = mapping.problems[code];
-      if (!path) return fail(`${language}: missing problem ${code}`);
-      required.set(`problems/${code}.md`, path);
-    }
-    for (const [suffix, path] of required) {
-      const expected = `${config.referenceRoot}/${language}/${suffix}`;
-      if (path !== expected)
-        fail(`${language}: filename/path mismatch ${path}; expected ${expected}`);
-      if (selected.has(path)) fail(`${language}: duplicate mapping ${path}`);
-      selected.add(path);
-      let bytes: Buffer;
-      try {
-        bytes = await safeFile(root, path);
-        validateReference(bytes, path);
-      } catch (error) {
-        return fail(`${language} ${suffix} ${path}: ${String(error)}`);
-      }
-      resources.set(`resources/references/${language}/${suffix}`, bytes);
-    }
-  }
-  const actual = await files(join(root, config.referenceRoot));
-  if (actual.some((path) => !selected.has(`${config.referenceRoot}/${path}`)))
-    fail(
-      `unknown language, problem code or filename in ${config.referenceRoot}: ${actual.filter((path) => !selected.has(`${config.referenceRoot}/${path}`)).join(", ")}`,
-    );
+  const resources = await readReferences(root, config.referenceRoot, config.languages, [
+    "check.md",
+    ...config.problemCodes.map((code) => `problems/${code}.md`),
+  ]).catch((error: unknown) => fail(String(error)));
   for (const resource of config.resources ?? []) {
     const destination = portable(resource.to);
     if (
       !destination.startsWith("resources/") ||
+      destination.startsWith("resources/references/") ||
       resources.has(destination) ||
       destination === "resources/check.json"
     )
@@ -240,6 +230,12 @@ export async function prepareCheck(buildFile: string): Promise<PreparedCheck> {
   }
   for (const path of [config.source.entry, config.source.contract])
     if (!source.has(path)) fail(`source not in source root: ${path}`);
+  const folded = new Set<string>();
+  for (const path of [...source.keys(), ...resources.keys()]) {
+    portable(path);
+    if (folded.has(path.toLowerCase())) fail(`ambiguous input path: ${path}`);
+    folded.add(path.toLowerCase());
+  }
   const definitions = `dist/definitions/${config.kind}`;
   const literal = JSON.stringify(config.problemCodes);
   const definitionJs = Buffer.from(

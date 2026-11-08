@@ -542,7 +542,7 @@ test("real repository classifies project skills at their documented location", a
   assert.equal(result.report.state, "pass", JSON.stringify(result.report.findings));
 });
 
-test("real repository has thirty-four package-owned subjects and no old contract input", async (t) => {
+test("real repository has thirty-five package-owned subjects and no old contract input", async (t) => {
   const entry = parseObjectives(await readFile(join(root, "objectives.yaml"), "utf8")).standardize;
   const subject = projectObjective(entry, context(root), undefined);
   const observed = [];
@@ -625,7 +625,7 @@ test("real repository has thirty-four package-owned subjects and no old contract
       result.report.findings.filter(({ state }) => state === "fail" || state === "unverified"),
     ),
   );
-  assert.equal(observed.length, 34);
+  assert.equal(observed.length, 35);
   assert.deepEqual(result.problems, []);
   assert.ok(observed.every(({ source }) => source.expectedLevelId === "terminal"));
   assert.throws(() =>

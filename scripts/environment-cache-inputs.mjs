@@ -15,9 +15,10 @@ export async function environmentCacheInputs(root) {
   for (const kind of ["tools", "directories", "network"]) {
     const config = parse(await readFile(join(directory, `${kind}.check.build.yaml`), "utf8"));
     if (!Array.isArray(config?.binary) || !config.binary.length) continue;
-    for (const reference of Object.values(config.references ?? {})) {
-      inputs.add(reference.check);
-      for (const path of Object.values(reference.problems ?? {})) inputs.add(path);
+    for (const language of config.languages ?? []) {
+      inputs.add(`${config.referenceRoot}/${language}/check.md`);
+      for (const code of config.problemCodes ?? [])
+        inputs.add(`${config.referenceRoot}/${language}/problems/${code}.md`);
     }
     for (const resource of config.resources ?? []) inputs.add(resource.from);
   }

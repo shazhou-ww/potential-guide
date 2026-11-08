@@ -7,9 +7,3 @@ source:
 languages: [en]
 problemCodes: [not-directory, directory-unusable]
 referenceRoot: references/directories
-references:
-  en:
-    check: references/directories/en/check.md
-    problems:
-      not-directory: references/directories/en/problems/not-directory.md
-      directory-unusable: references/directories/en/problems/directory-unusable.md

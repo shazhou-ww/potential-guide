@@ -6,9 +6,16 @@ import { fileURLToPath } from "node:url";
 const check = process.argv.includes("--check");
 const { taskBundleSchema } = await import("../packages/task-protocol/dist/index.js");
 const { taskBuildSchema } = await import("../packages/pguide-task-bundle/dist/authoring.js");
+const { checkBuildSchema } = await import("../packages/check-sdk/dist/authoring.js");
+const { probeBuildSchema, objectiveSchema } = await import(
+  "../packages/probe-sdk/dist/authoring.js"
+);
 for (const [kind, schema, version = "v1"] of [
   ["task", taskBundleSchema],
   ["task-build", taskBuildSchema],
+  ["check-build", checkBuildSchema, "v2"],
+  ["probe-build", probeBuildSchema],
+  ["probe-objective", objectiveSchema],
 ]) {
   const destination = new URL(`../schemas/artifacts/${kind}/${version}.json`, import.meta.url);
   const text = execFileSync(
@@ -19,7 +26,11 @@ for (const [kind, schema, version = "v1"] of [
       "--stdin-file-path=schema.json",
     ],
     {
-      input: JSON.stringify({ $schema: "https://json-schema.org/draft/2020-12/schema", ...schema }),
+      input: JSON.stringify({
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        $id: `https://shazhou-ww.github.io/potential-guide/schemas/artifacts/${kind}/${version}.json`,
+        ...schema,
+      }),
       encoding: "utf8",
     },
   );

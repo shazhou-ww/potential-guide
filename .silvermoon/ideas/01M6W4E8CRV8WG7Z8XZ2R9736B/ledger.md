@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 验证组合与子调用边界
-- [ ] **I-S02:** 实现两阶段准备与资源推导
-- [ ] **I-S03:** 装配 Probe 与回归验证
+- [x] **I-S01:** 验证组合与子调用边界
+- [x] **I-S02:** 实现两阶段准备与资源推导
+- [x] **I-S03:** 装配 Probe 与回归验证
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 格式与语义可验证
-- [ ] **I-AC02:** 成品闭包与身份保持
-- [ ] **I-AC03:** Probe 输出符合约定
+- [x] **I-AC01:** 格式与语义可验证
+- [x] **I-AC02:** 成品闭包与身份保持
+- [x] **I-AC03:** Probe 输出符合约定
 
 ## Deployment
 

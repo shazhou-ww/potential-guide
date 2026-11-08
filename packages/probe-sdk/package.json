@@ -1,0 +1,67 @@
+{
+  "name": "@potential-guide/probe-sdk",
+  "private": true,
+  "version": "0.1.0-rc.0",
+  "description": "Two-stage Probe Task authoring and independent Check composition.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./authoring": {
+      "types": "./dist/authoring.d.ts",
+      "import": "./dist/authoring.js"
+    },
+    "./execution": {
+      "types": "./dist/execution.d.ts",
+      "import": "./dist/execution.js"
+    },
+    "./publication": {
+      "types": "./dist/publication.d.ts",
+      "import": "./dist/publication.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@potential-guide/check-sdk": "workspace:^",
+    "@potential-guide/ipfs-content": "workspace:^",
+    "@potential-guide/task-protocol": "workspace:^",
+    "@potential-guide/task-sdk": "workspace:^",
+    "@sinclair/typebox": "catalog:",
+    "multiformats": "catalog:",
+    "yaml": "catalog:"
+  },
+  "devDependencies": {
+    "@potential-guide/pguide-task-bundle": "workspace:^",
+    "@potential-guide/task-engine": "workspace:^",
+    "@potential-guide/task-engine-http": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shazhou-ww/potential-guide.git",
+    "directory": "packages/probe-sdk"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/check-build/v2.json",
+  "additionalProperties": false,
+  "type": "object",
+  "required": ["name", "kind", "source", "languages", "problemCodes", "referenceRoot"],
+  "properties": {
+    "name": { "minLength": 1, "type": "string" },
+    "kind": { "pattern": "^[a-z][a-z0-9-]*$", "type": "string" },
+    "source": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": ["root", "entry", "contract"],
+      "properties": {
+        "root": { "minLength": 1, "type": "string" },
+        "entry": { "minLength": 1, "type": "string" },
+        "contract": { "minLength": 1, "type": "string" }
+      }
+    },
+    "languages": {
+      "minItems": 1,
+      "uniqueItems": true,
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "problemCodes": {
+      "uniqueItems": true,
+      "type": "array",
+      "items": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 4096, "type": "string" }
+    },
+    "referenceRoot": { "minLength": 1, "type": "string" },
+    "resources": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "minLength": 1, "type": "string" },
+          "to": { "minLength": 1, "type": "string" }
+        }
+      }
+    },
+    "binary": { "maxItems": 256, "type": "array", "items": { "minLength": 1, "type": "string" } }
+  }
+}

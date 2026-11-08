@@ -34,9 +34,9 @@ test("accepted environment CARs contain only their validated exact resources and
       for (const code of config.problemCodes)
         expected.push(`resources/references/${language}/problems/${code}.md`);
       for (const [source, target] of [
-        [config.references[language].check, index.references[language].check],
+        [`${config.referenceRoot}/${language}/check.md`, index.references[language].check],
         ...config.problemCodes.map((code: string) => [
-          config.references[language].problems[code],
+          `${config.referenceRoot}/${language}/problems/${code}.md`,
           index.references[language].problems[code],
         ]),
       ])

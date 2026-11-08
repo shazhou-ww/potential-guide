@@ -1,18 +1,28 @@
 # @potential-guide/ipfs-content
 
-**Private regression fixtures only; not published or installed by production consumers.**
-Production CAR code lives in `pguide-task-bundle/car`; Gateway/UnixFS reads live in
-`task-engine`. Existing legacy adapter tests remain here to preserve migration
-vectors. Active Task fixtures use checked artifact bytes and explicit memory import, without RPC or pin.
-The historical API description below applies only to these test fixtures.
+**Private workspace runtime support and regression fixtures; not npm-release-authorized.**
+Probe authoring uses this package to acquire and verify complete canonical Check
+trees and final CARs. Probe's explicit execution adapter uses `openContent` to
+verify the child directory CID through the parent DAG before independent Task
+submission. These are active production-code consumers within the workspace, not
+fixture-only APIs. Generic Task compilation still uses `pguide-task-bundle/car`;
+the generic Engine retains its own Gateway/UnixFS read boundary in `task-engine`.
+Legacy adapter tests remain here to preserve migration vectors.
 
 Thin local policy adapters for official Helia/IPLD, not a second IPFS implementation
 or Task Bundle interpreter. There is one support package, with independent codec,
 read, write and pin operations. No operation starts a node or enables discovery.
 Use `/read` for Gateway/content access, `/codec` for offline file-tree/CAR
 conversion, and `/publish` for Kubo write/pin. The root entry point aggregates
-these APIs for compatibility; Engine/service imports use `/read` so author
-codecs and the RPC factory are not loaded by read-only startup.
+these APIs; `/read` offers the narrower read-only boundary. Neither Probe
+preparation nor execution invokes the write/pin APIs or starts an IPFS service.
+
+`readContentTree(client, cid, options)` snapshots a bounded regular-file directory
+using official UnixFS readers. It validates closure, paths, byte/file/block budgets
+and cancellation, then requires the canonical import root to equal the supplied CID.
+It rejects equivalent file bytes imported under a different UnixFS profile instead
+of silently changing a child's identity. Task and Check business validation remains
+the responsibility of the consuming SDK, not this content support package.
 
 ## Offline codec
 

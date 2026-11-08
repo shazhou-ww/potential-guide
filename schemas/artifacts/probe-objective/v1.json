@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/probe-objective/v1.json",
+  "additionalProperties": false,
+  "type": "object",
+  "required": ["$schema", "kind", "languages", "bundles", "checks", "levels", "references"],
+  "properties": {
+    "$schema": {
+      "const": "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/probe-objective/v1.json",
+      "type": "string"
+    },
+    "kind": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" },
+    "languages": {
+      "minItems": 1,
+      "uniqueItems": true,
+      "maxItems": 32,
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "bundles": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": ["path", "cid"],
+          "properties": {
+            "path": { "minLength": 1, "maxLength": 4096, "type": "string" },
+            "cid": { "minLength": 1, "maxLength": 4096, "type": "string" }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": ["bundle", "inputMapping"],
+          "properties": {
+            "bundle": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" },
+            "inputMapping": { "minLength": 1, "maxLength": 1024, "type": "string" }
+          }
+        }
+      }
+    },
+    "levels": {
+      "minItems": 1,
+      "maxItems": 128,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["id", "checks"],
+        "properties": {
+          "id": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" },
+          "checks": {
+            "uniqueItems": true,
+            "maxItems": 128,
+            "type": "array",
+            "items": { "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128, "type": "string" }
+          }
+        }
+      }
+    },
+    "references": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "additionalProperties": false,
+          "type": "object",
+          "required": ["objective", "levels", "checks"],
+          "properties": {
+            "objective": { "minLength": 1, "maxLength": 4096, "type": "string" },
+            "levels": {
+              "type": "object",
+              "patternProperties": {
+                "^[a-z][a-z0-9-]*$": { "minLength": 1, "maxLength": 4096, "type": "string" }
+              }
+            },
+            "checks": {
+              "type": "object",
+              "patternProperties": {
+                "^[a-z][a-z0-9-]*$": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": ["problems"],
+                  "properties": {
+                    "check": { "minLength": 1, "maxLength": 4096, "type": "string" },
+                    "problems": {
+                      "type": "object",
+                      "patternProperties": {
+                        "^[a-z][a-z0-9-]*$": { "minLength": 1, "maxLength": 4096, "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

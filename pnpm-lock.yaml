@@ -775,6 +775,40 @@ importers:
         specifier: 'catalog:'
         version: 2.9.1
 
+  packages/probe-sdk:
+    dependencies:
+      '@potential-guide/check-sdk':
+        specifier: workspace:^
+        version: link:../check-sdk
+      '@potential-guide/ipfs-content':
+        specifier: workspace:^
+        version: link:../ipfs-content
+      '@potential-guide/task-protocol':
+        specifier: workspace:^
+        version: link:../task-protocol
+      '@potential-guide/task-sdk':
+        specifier: workspace:^
+        version: link:../task-sdk
+      '@sinclair/typebox':
+        specifier: 'catalog:'
+        version: 0.34.52
+      multiformats:
+        specifier: 'catalog:'
+        version: 14.0.5
+      yaml:
+        specifier: 'catalog:'
+        version: 2.9.1
+    devDependencies:
+      '@potential-guide/pguide-task-bundle':
+        specifier: workspace:^
+        version: link:../pguide-task-bundle
+      '@potential-guide/task-engine':
+        specifier: workspace:^
+        version: link:../task-engine
+      '@potential-guide/task-engine-http':
+        specifier: workspace:^
+        version: link:../task-engine-http
+
   packages/regulation-coordinator:
     dependencies:
       '@potential-guide/effects':
