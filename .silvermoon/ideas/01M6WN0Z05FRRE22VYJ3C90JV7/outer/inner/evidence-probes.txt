@@ -1,0 +1,1171 @@
+COMMAND: node scripts\run-probe-objectives.mjs run (first port)
+EXIT: 0
+{"gateway":"http://127.0.0.1:56269","mode":"in-process","maxConcurrent":1,"maxChildConcurrent":1}
+{
+  "objective": "monorepo-standard",
+  "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+  "result": {
+    "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+    "documentation": {
+      "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+    },
+    "currentLevel": {
+      "id": "terminal",
+      "documentation": {
+        "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+      }
+    },
+    "checks": []
+  },
+  "task": {
+    "requestId": "01M6X1WVPB9K4AJ8QFJA3XQ9BQ",
+    "taskId": "01M6X1WW1M5H7BH88HM2C868WK",
+    "seriesId": "01M6X1WW1M5H7BH88HM2C868WK",
+    "stage": "completed",
+    "receivedAt": "2026-11-08T07:45:19.412Z",
+    "eligibleAt": "2026-11-08T07:45:19.412Z",
+    "deadlineAt": "2026-11-08T07:47:19.412Z",
+    "timestamp": "2026-11-08T07:45:20.184Z",
+    "updatedAt": "2026-11-08T07:45:20.168Z",
+    "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+    "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+    "canceled": false,
+    "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+    "name": "Standardize this monorepo",
+    "run": {
+      "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+      "startedAt": "2026-11-08T07:45:19.495Z",
+      "matchedAt": "2026-11-08T07:45:19.495Z",
+      "completedAt": "2026-11-08T07:45:20.168Z"
+    },
+    "termination": {
+      "terminatedAt": "2026-11-08T07:45:20.168Z"
+    },
+    "result": {
+      "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+      "documentation": {
+        "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+      },
+      "currentLevel": {
+        "id": "terminal",
+        "documentation": {
+          "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+        }
+      },
+      "checks": []
+    }
+  },
+  "children": [
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "rootRunId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy"
+        },
+        "requestId": "01M6X1WWJHQTDJ45VD5392ACKG",
+        "taskId": "01M6X1WWNT3KYJR67EEVKQMX85",
+        "seriesId": "01M6X1WWNT3KYJR67EEVKQMX85",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:20.058Z",
+        "eligibleAt": "2026-11-08T07:45:20.058Z",
+        "deadlineAt": "2026-11-08T07:45:50.057Z",
+        "timestamp": "2026-11-08T07:45:20.185Z",
+        "updatedAt": "2026-11-08T07:45:20.135Z",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "canceled": false,
+        "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+        "name": "Monorepo root policy",
+        "run": {
+          "runId": "01M6X1WWP1RJQ3R8HAP6W5H4J3",
+          "startedAt": "2026-11-08T07:45:20.111Z",
+          "matchedAt": "2026-11-08T07:45:20.111Z",
+          "completedAt": "2026-11-08T07:45:20.135Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:20.135Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "rootRunId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy"
+        },
+        "runId": "01M6X1WWP1RJQ3R8HAP6W5H4J3",
+        "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+        "name": "Monorepo root policy",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+        "timestamp": "2026-11-08T07:45:20.186Z",
+        "type": "bundle",
+        "version": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:20.111Z",
+        "startedSequence": 30,
+        "updatedAt": "2026-11-08T07:45:20.137Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 33,
+          "occurredAt": "2026-11-08T07:45:20.135Z"
+        },
+        "completedAt": "2026-11-08T07:45:20.135Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:20.137Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "rootRunId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace"
+        },
+        "requestId": "01M6X1WWCP805X4FPRHK0TCJ6G",
+        "taskId": "01M6X1WWG73Q158Z4XW6FFZ11J",
+        "seriesId": "01M6X1WWG73Q158Z4XW6FFZ11J",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:19.879Z",
+        "eligibleAt": "2026-11-08T07:45:19.879Z",
+        "deadlineAt": "2026-11-08T07:45:49.878Z",
+        "timestamp": "2026-11-08T07:45:20.185Z",
+        "updatedAt": "2026-11-08T07:45:19.949Z",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "canceled": false,
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "run": {
+          "runId": "01M6X1WWGF6TKE3MDBTT09BA6J",
+          "startedAt": "2026-11-08T07:45:19.932Z",
+          "matchedAt": "2026-11-08T07:45:19.932Z",
+          "completedAt": "2026-11-08T07:45:19.949Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:19.949Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "rootRunId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace"
+        },
+        "runId": "01M6X1WWGF6TKE3MDBTT09BA6J",
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+        "timestamp": "2026-11-08T07:45:20.186Z",
+        "type": "bundle",
+        "version": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:19.932Z",
+        "startedSequence": 21,
+        "updatedAt": "2026-11-08T07:45:19.950Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 24,
+          "occurredAt": "2026-11-08T07:45:19.949Z"
+        },
+        "completedAt": "2026-11-08T07:45:19.949Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:19.950Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "rootRunId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain"
+        },
+        "requestId": "01M6X1WW4Q40JQYX32T0Y9Z3SW",
+        "taskId": "01M6X1WW8MB9QJXTYS07GQK5F1",
+        "seriesId": "01M6X1WW8MB9QJXTYS07GQK5F1",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:19.636Z",
+        "eligibleAt": "2026-11-08T07:45:19.636Z",
+        "deadlineAt": "2026-11-08T07:45:49.635Z",
+        "timestamp": "2026-11-08T07:45:20.185Z",
+        "updatedAt": "2026-11-08T07:45:19.753Z",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "canceled": false,
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "run": {
+          "runId": "01M6X1WW92SNB512HE2V5AFMRC",
+          "startedAt": "2026-11-08T07:45:19.703Z",
+          "matchedAt": "2026-11-08T07:45:19.703Z",
+          "completedAt": "2026-11-08T07:45:19.753Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:19.753Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "rootRunId": "01M6X1WW2FB03YYBFSXPMBKDYA",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain"
+        },
+        "runId": "01M6X1WW92SNB512HE2V5AFMRC",
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:37",
+        "timestamp": "2026-11-08T07:45:20.186Z",
+        "type": "bundle",
+        "version": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:19.703Z",
+        "startedSequence": 12,
+        "updatedAt": "2026-11-08T07:45:19.754Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 15,
+          "occurredAt": "2026-11-08T07:45:19.753Z"
+        },
+        "completedAt": "2026-11-08T07:45:19.753Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:19.754Z"
+      }
+    }
+  ]
+}
+{
+  "objective": "task-engine-device",
+  "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+  "result": {
+    "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+    "documentation": {
+      "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+    },
+    "currentLevel": {
+      "id": "terminal",
+      "documentation": {
+        "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+      }
+    },
+    "checks": []
+  },
+  "task": {
+    "requestId": "01M6X1WWSTCC7X51N2BWSZ2TJY",
+    "taskId": "01M6X1WX3V93BHHDZSFVWHNCFD",
+    "seriesId": "01M6X1WX3V93BHHDZSFVWHNCFD",
+    "stage": "completed",
+    "receivedAt": "2026-11-08T07:45:20.507Z",
+    "eligibleAt": "2026-11-08T07:45:20.507Z",
+    "deadlineAt": "2026-11-08T07:47:20.507Z",
+    "timestamp": "2026-11-08T07:45:21.077Z",
+    "updatedAt": "2026-11-08T07:45:21.064Z",
+    "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+    "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+    "canceled": false,
+    "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+    "name": "Prepare this device for Task Engine",
+    "run": {
+      "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+      "startedAt": "2026-11-08T07:45:20.586Z",
+      "matchedAt": "2026-11-08T07:45:20.586Z",
+      "completedAt": "2026-11-08T07:45:21.064Z"
+    },
+    "termination": {
+      "terminatedAt": "2026-11-08T07:45:21.064Z"
+    },
+    "result": {
+      "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+      "documentation": {
+        "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+      },
+      "currentLevel": {
+        "id": "terminal",
+        "documentation": {
+          "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+        }
+      },
+      "checks": []
+    }
+  },
+  "children": [
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "rootRunId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway"
+        },
+        "requestId": "01M6X1WXDFHSVQQQS838XCA5T7",
+        "taskId": "01M6X1WXH5KX2TG572EYWHYKXZ",
+        "seriesId": "01M6X1WXH5KX2TG572EYWHYKXZ",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:20.934Z",
+        "eligibleAt": "2026-11-08T07:45:20.934Z",
+        "deadlineAt": "2026-11-08T07:45:50.934Z",
+        "timestamp": "2026-11-08T07:45:21.078Z",
+        "updatedAt": "2026-11-08T07:45:21.035Z",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "canceled": false,
+        "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+        "name": "Environment network check",
+        "run": {
+          "runId": "01M6X1WXHK7W21KSZR9MSTZZYP",
+          "startedAt": "2026-11-08T07:45:20.992Z",
+          "matchedAt": "2026-11-08T07:45:20.992Z",
+          "completedAt": "2026-11-08T07:45:21.035Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:21.035Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "rootRunId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway"
+        },
+        "runId": "01M6X1WXHK7W21KSZR9MSTZZYP",
+        "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+        "name": "Environment network check",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+        "timestamp": "2026-11-08T07:45:21.079Z",
+        "type": "bundle",
+        "version": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:20.992Z",
+        "startedSequence": 66,
+        "updatedAt": "2026-11-08T07:45:21.037Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 69,
+          "occurredAt": "2026-11-08T07:45:21.035Z"
+        },
+        "completedAt": "2026-11-08T07:45:21.035Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:21.037Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "rootRunId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage"
+        },
+        "requestId": "01M6X1WXAKYBXAP2S5NSPQRKHA",
+        "taskId": "01M6X1WXAQTVY226HR80JM5SA2",
+        "seriesId": "01M6X1WXAQTVY226HR80JM5SA2",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:20.727Z",
+        "eligibleAt": "2026-11-08T07:45:20.727Z",
+        "deadlineAt": "2026-11-08T07:45:50.726Z",
+        "timestamp": "2026-11-08T07:45:21.079Z",
+        "updatedAt": "2026-11-08T07:45:20.800Z",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "canceled": false,
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "run": {
+          "runId": "01M6X1WXB106ADCQRBP06N3AGB",
+          "startedAt": "2026-11-08T07:45:20.776Z",
+          "matchedAt": "2026-11-08T07:45:20.776Z",
+          "completedAt": "2026-11-08T07:45:20.800Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:20.800Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "rootRunId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage"
+        },
+        "runId": "01M6X1WXB106ADCQRBP06N3AGB",
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+        "timestamp": "2026-11-08T07:45:21.079Z",
+        "type": "bundle",
+        "version": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:20.776Z",
+        "startedSequence": 57,
+        "updatedAt": "2026-11-08T07:45:20.802Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 60,
+          "occurredAt": "2026-11-08T07:45:20.800Z"
+        },
+        "completedAt": "2026-11-08T07:45:20.800Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:20.802Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "rootRunId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime"
+        },
+        "requestId": "01M6X1WX6VTWQA8K3XZG85GGJ0",
+        "taskId": "01M6X1WX6ZVTSA98BFAGGETV2H",
+        "seriesId": "01M6X1WX6ZVTSA98BFAGGETV2H",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:20.607Z",
+        "eligibleAt": "2026-11-08T07:45:20.607Z",
+        "deadlineAt": "2026-11-08T07:45:50.607Z",
+        "timestamp": "2026-11-08T07:45:21.079Z",
+        "updatedAt": "2026-11-08T07:45:20.700Z",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "canceled": false,
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "run": {
+          "runId": "01M6X1WX725KMG4XCC0Q5VSS4J",
+          "startedAt": "2026-11-08T07:45:20.650Z",
+          "matchedAt": "2026-11-08T07:45:20.650Z",
+          "completedAt": "2026-11-08T07:45:20.700Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:20.700Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "rootRunId": "01M6X1WX4Q7MSV7AEEXZC174M1",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime"
+        },
+        "runId": "01M6X1WX725KMG4XCC0Q5VSS4J",
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "dataDomain": "01M6X1WVP45AJPD4J99TDW2X6H",
+        "revision": "01M6X1WVP45AJPD4J99TDW2X6H:73",
+        "timestamp": "2026-11-08T07:45:21.079Z",
+        "type": "bundle",
+        "version": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:20.650Z",
+        "startedSequence": 48,
+        "updatedAt": "2026-11-08T07:45:20.702Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 51,
+          "occurredAt": "2026-11-08T07:45:20.700Z"
+        },
+        "completedAt": "2026-11-08T07:45:20.700Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:20.702Z"
+      }
+    }
+  ]
+}
+
+COMMAND: node scripts\run-probe-objectives.mjs run (second port; no rebuild)
+EXIT: 0
+{"gateway":"http://127.0.0.1:58071","mode":"in-process","maxConcurrent":1,"maxChildConcurrent":1}
+{
+  "objective": "monorepo-standard",
+  "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+  "result": {
+    "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+    "documentation": {
+      "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+    },
+    "currentLevel": {
+      "id": "terminal",
+      "documentation": {
+        "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+      }
+    },
+    "checks": []
+  },
+  "task": {
+    "requestId": "01M6X1WYMTS63HRV10B2GZ8XHA",
+    "taskId": "01M6X1WYZZP7VGGR4ZJ9F5YS52",
+    "seriesId": "01M6X1WYZZP7VGGR4ZJ9F5YS52",
+    "stage": "completed",
+    "receivedAt": "2026-11-08T07:45:22.431Z",
+    "eligibleAt": "2026-11-08T07:45:22.431Z",
+    "deadlineAt": "2026-11-08T07:47:22.431Z",
+    "timestamp": "2026-11-08T07:45:23.196Z",
+    "updatedAt": "2026-11-08T07:45:23.180Z",
+    "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+    "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+    "canceled": false,
+    "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+    "name": "Standardize this monorepo",
+    "run": {
+      "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+      "startedAt": "2026-11-08T07:45:22.513Z",
+      "matchedAt": "2026-11-08T07:45:22.513Z",
+      "completedAt": "2026-11-08T07:45:23.180Z"
+    },
+    "termination": {
+      "terminatedAt": "2026-11-08T07:45:23.180Z"
+    },
+    "result": {
+      "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+      "documentation": {
+        "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+      },
+      "currentLevel": {
+        "id": "terminal",
+        "documentation": {
+          "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+        }
+      },
+      "checks": []
+    }
+  },
+  "children": [
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "rootRunId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy"
+        },
+        "requestId": "01M6X1WZGREDBQJNFJ47SVH537",
+        "taskId": "01M6X1WZM1AK58DPM3V4R4DC2D",
+        "seriesId": "01M6X1WZM1AK58DPM3V4R4DC2D",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:23.073Z",
+        "eligibleAt": "2026-11-08T07:45:23.073Z",
+        "deadlineAt": "2026-11-08T07:45:53.073Z",
+        "timestamp": "2026-11-08T07:45:23.198Z",
+        "updatedAt": "2026-11-08T07:45:23.152Z",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "canceled": false,
+        "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+        "name": "Monorepo root policy",
+        "run": {
+          "runId": "01M6X1WZM8WF021BCT762D0KS6",
+          "startedAt": "2026-11-08T07:45:23.127Z",
+          "matchedAt": "2026-11-08T07:45:23.127Z",
+          "completedAt": "2026-11-08T07:45:23.152Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:23.152Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "rootRunId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy"
+        },
+        "runId": "01M6X1WZM8WF021BCT762D0KS6",
+        "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+        "name": "Monorepo root policy",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+        "timestamp": "2026-11-08T07:45:23.198Z",
+        "type": "bundle",
+        "version": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:23.127Z",
+        "startedSequence": 30,
+        "updatedAt": "2026-11-08T07:45:23.153Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 33,
+          "occurredAt": "2026-11-08T07:45:23.152Z"
+        },
+        "completedAt": "2026-11-08T07:45:23.152Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:23.153Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "rootRunId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace"
+        },
+        "requestId": "01M6X1WZAZYMQ5YGS6VF3EANA8",
+        "taskId": "01M6X1WZEDAQJPVZZH6214W909",
+        "seriesId": "01M6X1WZEDAQJPVZZH6214W909",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:22.893Z",
+        "eligibleAt": "2026-11-08T07:45:22.893Z",
+        "deadlineAt": "2026-11-08T07:45:52.892Z",
+        "timestamp": "2026-11-08T07:45:23.198Z",
+        "updatedAt": "2026-11-08T07:45:22.964Z",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "canceled": false,
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "run": {
+          "runId": "01M6X1WZENKA69TEXJAH7F8ZD1",
+          "startedAt": "2026-11-08T07:45:22.947Z",
+          "matchedAt": "2026-11-08T07:45:22.947Z",
+          "completedAt": "2026-11-08T07:45:22.964Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:22.964Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "rootRunId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace"
+        },
+        "runId": "01M6X1WZENKA69TEXJAH7F8ZD1",
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+        "timestamp": "2026-11-08T07:45:23.198Z",
+        "type": "bundle",
+        "version": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:22.947Z",
+        "startedSequence": 21,
+        "updatedAt": "2026-11-08T07:45:22.965Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 24,
+          "occurredAt": "2026-11-08T07:45:22.964Z"
+        },
+        "completedAt": "2026-11-08T07:45:22.964Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:22.965Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "rootRunId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain"
+        },
+        "requestId": "01M6X1WZ31CRVV5R3CY5TVZW1M",
+        "taskId": "01M6X1WZ6YP9GHB8FPJ8QVD14M",
+        "seriesId": "01M6X1WZ6YP9GHB8FPJ8QVD14M",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:22.655Z",
+        "eligibleAt": "2026-11-08T07:45:22.655Z",
+        "deadlineAt": "2026-11-08T07:45:52.655Z",
+        "timestamp": "2026-11-08T07:45:23.198Z",
+        "updatedAt": "2026-11-08T07:45:22.757Z",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "canceled": false,
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "run": {
+          "runId": "01M6X1WZ77QMM2RGEVH6WHRNVN",
+          "startedAt": "2026-11-08T07:45:22.709Z",
+          "matchedAt": "2026-11-08T07:45:22.709Z",
+          "completedAt": "2026-11-08T07:45:22.757Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:22.757Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "rootRunId": "01M6X1WZ0T13S4GJVJGXWE9QJJ",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain"
+        },
+        "runId": "01M6X1WZ77QMM2RGEVH6WHRNVN",
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:37",
+        "timestamp": "2026-11-08T07:45:23.198Z",
+        "type": "bundle",
+        "version": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:22.709Z",
+        "startedSequence": 12,
+        "updatedAt": "2026-11-08T07:45:22.758Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 15,
+          "occurredAt": "2026-11-08T07:45:22.757Z"
+        },
+        "completedAt": "2026-11-08T07:45:22.757Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:22.758Z"
+      }
+    }
+  ]
+}
+{
+  "objective": "task-engine-device",
+  "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+  "result": {
+    "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+    "documentation": {
+      "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+    },
+    "currentLevel": {
+      "id": "terminal",
+      "documentation": {
+        "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+      }
+    },
+    "checks": []
+  },
+  "task": {
+    "requestId": "01M6X1WZQYMFYRB1CSHREM7RBT",
+    "taskId": "01M6X1X0229GDXFP2Q9B30TPEG",
+    "seriesId": "01M6X1X0229GDXFP2Q9B30TPEG",
+    "stage": "completed",
+    "receivedAt": "2026-11-08T07:45:23.522Z",
+    "eligibleAt": "2026-11-08T07:45:23.522Z",
+    "deadlineAt": "2026-11-08T07:47:23.522Z",
+    "timestamp": "2026-11-08T07:45:24.092Z",
+    "updatedAt": "2026-11-08T07:45:24.078Z",
+    "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+    "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+    "canceled": false,
+    "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+    "name": "Prepare this device for Task Engine",
+    "run": {
+      "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+      "startedAt": "2026-11-08T07:45:23.601Z",
+      "matchedAt": "2026-11-08T07:45:23.601Z",
+      "completedAt": "2026-11-08T07:45:24.078Z"
+    },
+    "termination": {
+      "terminatedAt": "2026-11-08T07:45:24.078Z"
+    },
+    "result": {
+      "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+      "documentation": {
+        "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+      },
+      "currentLevel": {
+        "id": "terminal",
+        "documentation": {
+          "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+        }
+      },
+      "checks": []
+    }
+  },
+  "children": [
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "rootRunId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway"
+        },
+        "requestId": "01M6X1X0BM4VDXAZGAXRX52CXT",
+        "taskId": "01M6X1X0F9A318H8RENXQZW04N",
+        "seriesId": "01M6X1X0F9A318H8RENXQZW04N",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:23.945Z",
+        "eligibleAt": "2026-11-08T07:45:23.945Z",
+        "deadlineAt": "2026-11-08T07:45:53.945Z",
+        "timestamp": "2026-11-08T07:45:24.093Z",
+        "updatedAt": "2026-11-08T07:45:24.044Z",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "canceled": false,
+        "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+        "name": "Environment network check",
+        "run": {
+          "runId": "01M6X1X0FN5NK9NTN0807S7KKS",
+          "startedAt": "2026-11-08T07:45:24.002Z",
+          "matchedAt": "2026-11-08T07:45:24.002Z",
+          "completedAt": "2026-11-08T07:45:24.044Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:24.044Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "rootRunId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway"
+        },
+        "runId": "01M6X1X0FN5NK9NTN0807S7KKS",
+        "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+        "name": "Environment network check",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+        "timestamp": "2026-11-08T07:45:24.094Z",
+        "type": "bundle",
+        "version": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:24.002Z",
+        "startedSequence": 66,
+        "updatedAt": "2026-11-08T07:45:24.047Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 69,
+          "occurredAt": "2026-11-08T07:45:24.044Z"
+        },
+        "completedAt": "2026-11-08T07:45:24.044Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:24.047Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "rootRunId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage"
+        },
+        "requestId": "01M6X1X08QW0MYB79ZXSGXZCDF",
+        "taskId": "01M6X1X08WNJJBMHKNH1QF0WW3",
+        "seriesId": "01M6X1X08WNJJBMHKNH1QF0WW3",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:23.740Z",
+        "eligibleAt": "2026-11-08T07:45:23.740Z",
+        "deadlineAt": "2026-11-08T07:45:53.740Z",
+        "timestamp": "2026-11-08T07:45:24.094Z",
+        "updatedAt": "2026-11-08T07:45:23.813Z",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "canceled": false,
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "run": {
+          "runId": "01M6X1X095ZECWT6VXF73Y9V2H",
+          "startedAt": "2026-11-08T07:45:23.789Z",
+          "matchedAt": "2026-11-08T07:45:23.789Z",
+          "completedAt": "2026-11-08T07:45:23.813Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:23.813Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "rootRunId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage"
+        },
+        "runId": "01M6X1X095ZECWT6VXF73Y9V2H",
+        "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "name": "Environment directories check",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+        "timestamp": "2026-11-08T07:45:24.094Z",
+        "type": "bundle",
+        "version": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:23.789Z",
+        "startedSequence": 57,
+        "updatedAt": "2026-11-08T07:45:23.815Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 60,
+          "occurredAt": "2026-11-08T07:45:23.813Z"
+        },
+        "completedAt": "2026-11-08T07:45:23.813Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:23.815Z"
+      }
+    },
+    {
+      "task": {
+        "parent": {
+          "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "rootRunId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime"
+        },
+        "requestId": "01M6X1X051JB7MD677VABX3S3B",
+        "taskId": "01M6X1X0554V7N87C22C10HP40",
+        "seriesId": "01M6X1X0554V7N87C22C10HP40",
+        "stage": "completed",
+        "receivedAt": "2026-11-08T07:45:23.621Z",
+        "eligibleAt": "2026-11-08T07:45:23.621Z",
+        "deadlineAt": "2026-11-08T07:45:53.621Z",
+        "timestamp": "2026-11-08T07:45:24.094Z",
+        "updatedAt": "2026-11-08T07:45:23.710Z",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "canceled": false,
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "run": {
+          "runId": "01M6X1X058P724YYNQGYC500MP",
+          "startedAt": "2026-11-08T07:45:23.664Z",
+          "matchedAt": "2026-11-08T07:45:23.664Z",
+          "completedAt": "2026-11-08T07:45:23.710Z"
+        },
+        "termination": {
+          "terminatedAt": "2026-11-08T07:45:23.710Z"
+        },
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        }
+      },
+      "run": {
+        "parent": {
+          "runId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "rootRunId": "01M6X1X02XXKW46H66ZMSV50CB",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime"
+        },
+        "runId": "01M6X1X058P724YYNQGYC500MP",
+        "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "name": "Environment tools check",
+        "dataDomain": "01M6X1WYMMQ7CX5DE8BCWX23J9",
+        "revision": "01M6X1WYMMQ7CX5DE8BCWX23J9:73",
+        "timestamp": "2026-11-08T07:45:24.094Z",
+        "type": "bundle",
+        "version": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "environment": "node",
+        "scope": "probe-local",
+        "startedAt": "2026-11-08T07:45:23.664Z",
+        "startedSequence": 48,
+        "updatedAt": "2026-11-08T07:45:23.712Z",
+        "stage": "completed",
+        "exit": {
+          "basis": "worker",
+          "code": 0,
+          "forced": false,
+          "sequence": 51,
+          "occurredAt": "2026-11-08T07:45:23.710Z"
+        },
+        "completedAt": "2026-11-08T07:45:23.710Z",
+        "result": {
+          "pass": true,
+          "documentation": {
+            "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+          }
+        },
+        "reclaimedAt": "2026-11-08T07:45:23.712Z"
+      }
+    }
+  ]
+}

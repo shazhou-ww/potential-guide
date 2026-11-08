@@ -1,9 +1,10 @@
 import { createCheckResult } from "@potential-guide/check-sdk";
 import { createCheckResultSchema } from "@potential-guide/check-sdk/contracts";
-import { Value } from "@sinclair/typebox/value";
-import type { TaskCallback, TaskContext } from "@potential-guide/task-sdk";
 import { canonical, json } from "@potential-guide/task-protocol";
-import { mapInput, readCheckDefinition, readObjective, type ProbeDefinitions } from "./model.js";
+import type { TaskCallback, TaskContext } from "@potential-guide/task-sdk";
+import { Value } from "@sinclair/typebox/value";
+import { mapInput, type ProbeDefinitions, readCheckDefinition, readObjective } from "./model.js";
+
 export type { ProbeDefinitions } from "./model.js";
 
 export interface CheckInvocation {
@@ -80,7 +81,7 @@ const same = (a: unknown, b: unknown) => canonical(json(a)) === canonical(json(b
 /** Execute ordered goals, never rewrite child facts or fetch Markdown during assembly. */
 export function createProbeTask<Input>(
   definitions: ProbeDefinitions,
-  invoke: CheckInvoker,
+  invoke?: CheckInvoker,
 ): TaskCallback<Input, ProbeResult> {
   return async (input, context) => {
     context.signal.throwIfAborted();
@@ -139,15 +140,24 @@ export function createProbeTask<Input>(
         const check = objective.checks[ref]!;
         const bundle = objective.bundles[check.bundle]!;
         const child = children[check.bundle]!;
-        const observed = await invoke(
-          {
-            parentCid: context.bundle.cid,
-            path: bundle.path,
-            cid: bundle.cid,
-            input: mapInput(input, check.inputMapping),
-          },
-          context,
-        );
+        const mapped = mapInput(input, check.inputMapping);
+        const observed = invoke
+          ? await invoke(
+              {
+                parentCid: context.bundle.cid,
+                path: bundle.path,
+                cid: bundle.cid,
+                input: mapped,
+              },
+              context,
+            )
+          : await context.invokeTask({
+              key: `check:${ref}`,
+              path: bundle.path,
+              cid: bundle.cid,
+              input: json(mapped),
+              timeoutMs: 30_000,
+            });
         context.signal.throwIfAborted();
         if (!Value.Check(createCheckResultSchema(child.problemCodes, child.languages), observed))
           throw new Error("Invalid child Check result.");

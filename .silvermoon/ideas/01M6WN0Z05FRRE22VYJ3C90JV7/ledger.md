@@ -4,15 +4,15 @@
 
 ### Implementation steps
 
-- [ ] **I-S01:** 定义通用调用契约
-- [ ] **I-S02:** 实现宿主组合与生命周期
-- [ ] **I-S03:** 接入 Probe 与标准运行入口
+- [x] **I-S01:** 定义通用调用契约
+- [x] **I-S02:** 实现宿主组合与生命周期
+- [x] **I-S03:** 接入 Probe 与标准运行入口
 
 ### Implementation acceptance criteria
 
-- [ ] **I-AC01:** 通用接口与校验成立
-- [ ] **I-AC02:** 调度与清理有界
-- [ ] **I-AC03:** Probe 不再绑定部署地址
+- [x] **I-AC01:** 通用接口与校验成立
+- [x] **I-AC02:** 调度与清理有界
+- [x] **I-AC03:** Probe 不再绑定部署地址
 
 ## Deployment
 

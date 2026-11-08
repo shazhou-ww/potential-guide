@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
-import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { prepareCheck, verifyCheckResources } from "../packages/check-sdk/dist/authoring.js";
 import { readContentTree } from "../packages/ipfs-content/dist/index.js";
 import { MemoryIpfsClient } from "../packages/ipfs-content/dist/testing.js";
-import { buildTask } from "../packages/pguide-task-bundle/dist/authoring.js";
 import { readTaskArtifact } from "../packages/pguide-task-bundle/dist/artifact.js";
+import { buildTask } from "../packages/pguide-task-bundle/dist/authoring.js";
 import { prepareProbe, verifyProbeResources } from "../packages/probe-sdk/dist/authoring.js";
 import { createTaskEngine, newId } from "../packages/task-engine/dist/index.js";
 import { MemoryStore } from "../packages/task-engine/dist/testing.js";
@@ -24,7 +24,7 @@ const requireFromProbeSdk = createRequire(join(root, "packages/probe-sdk/package
 const { parse } = requireFromProbeSdk("yaml");
 const caller = { scope: "probe-local", subject: "objective-runner" };
 const authorization = "potential-guide-local-probe";
-const gatewayPort = 51_231;
+let gatewayPort = 0;
 const scenarios = {
   monorepo: {
     name: "Monorepo standardization",
@@ -94,6 +94,10 @@ async function buildProbe(client, scenario, environment) {
   const prepared = await prepareProbe(buildFile, { client });
   const artifact = await buildTask(prepared.buildFile);
   const content = await readTaskArtifact(artifact.car);
+  assert.doesNotMatch(
+    content.files.get("worker.cjs").toString("utf8"),
+    /127\.0\.0\.1:51231|potential-guide-local-probe|probe-local|task-engine-device"\s*}/,
+  );
   await verifyProbeResources(prepared, content);
   const imported = await client.import(content.files);
   assert.equal(imported, artifact.cid);
@@ -140,6 +144,8 @@ async function startLocalEngine(client) {
     store: new MemoryStore(),
     ipfsClient: client,
     authorize: (requester) => requester.scope === caller.scope,
+    authorizeChild: ({ caller: requester }) => requester.scope === caller.scope,
+    limits: { maxConcurrent: 1, maxChildConcurrent: 1 },
   });
   await engine.start();
   const handler = createTaskHandler({
@@ -189,6 +195,7 @@ async function startLocalEngine(client) {
     await engine.close();
     throw error;
   });
+  gatewayPort = server.address().port;
   return {
     engine,
     close: async () => {
@@ -264,10 +271,19 @@ async function runAll() {
     cids[scenario.kind] = cid;
   }
   const local = await startLocalEngine(client);
+  console.log(
+    JSON.stringify({
+      gateway: `http://127.0.0.1:${gatewayPort}`,
+      mode: "in-process",
+      maxConcurrent: 1,
+      maxChildConcurrent: 1,
+    }),
+  );
   let deviceStorage;
   try {
     const repositoryRoot = root;
-    deviceStorage = await mkdtemp(join(tmpdir(), "pguide-task-engine-data-"));
+    deviceStorage = join(root, ".cache", `probe-objective-data-${randomUUID()}`);
+    await mkdir(deviceStorage, { recursive: true });
     const input = {
       "monorepo-standard": {
         toolchain: {
@@ -305,12 +321,24 @@ async function runAll() {
       const task = await executeProbe(local.engine, bundleCid, objectiveInput);
       if (task.stage !== "completed")
         throw new Error(`${scenario.name} did not complete: ${JSON.stringify(task)}`);
+      await local.engine.waitForTaskRelease(task.taskId, caller);
+      const children = local.engine
+        .listTasks({ scope: caller.scope }, { limit: 100 }, caller)
+        .tasks.map((summary) => local.engine.getTask(summary.taskId, caller))
+        .filter((child) => child.parent?.runId === task.run.runId)
+        .map((child) => ({ task: child, run: local.engine.getRun(child.run.runId, caller) }));
+      assert.equal(children.length, 3);
+      assert.ok(
+        children.every((child) => child.task.stage === "completed" && child.run.reclaimedAt),
+      );
       console.log(
         JSON.stringify(
           {
             objective: scenario.kind,
             bundle: cids[scenario.kind],
             result: task.result,
+            task,
+            children,
           },
           null,
           2,

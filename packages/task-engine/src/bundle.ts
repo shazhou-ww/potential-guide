@@ -1,17 +1,17 @@
-import { gte } from "semver";
 import {
   type BundleReference,
   bundleCid,
-  isTaskBundlePath as safePath,
-  readTaskBundle,
   type ResolvedTaskBundle,
+  readTaskBundle,
+  isTaskBundlePath as safePath,
   type TaskBundleDeclaration,
   type TaskBundleFileLimits,
-  taskBundleLimits,
   TaskError,
+  taskBundleLimits,
   validateBundleReference,
   validateTaskText,
 } from "@potential-guide/task-protocol";
+import { gte } from "semver";
 import { GatewayReadError, type IpfsClient, openContent, withGatewayHints } from "./content.js";
 
 export type BundleLimits = TaskBundleFileLimits & {
@@ -29,6 +29,7 @@ export const defaultBundleLimits: Readonly<BundleLimits> = Object.freeze({
   blocks: 16_384,
 });
 export interface VerifiedBundle {
+  childRoot(path: string, signal: AbortSignal): Promise<string>;
   cid: string;
   declaration: TaskBundleDeclaration;
   resolved: ResolvedTaskBundle;
@@ -266,6 +267,18 @@ export class BundleCache {
         bytes: total,
         cid,
         source: files.get("worker.cjs")!.toString("utf8"),
+        childRoot: async (path, signal) => {
+          if (
+            !safePath(path) ||
+            !path.startsWith("resources/") ||
+            ![...allowed].some((file) => file.startsWith(`${path}/`))
+          )
+            throw new TaskError("invalid_bundle", "Child path is outside the verified parent DAG.");
+          const entry = await openContent(client, `${cid}/${path}`, access(signal));
+          if (entry.type !== "directory")
+            throw new TaskError("invalid_bundle", "Child Task root must be a directory.");
+          return entry.cid.toString();
+        },
         get retainedBytes() {
           return [...retainedBlocks.values()].reduce((sum, block) => sum + block.length, 0);
         },

@@ -7,6 +7,32 @@ Task 是独立需求；Run 是包含业务 preparation、allocation 和 executio
 v5 使用按需 Bundle、持久受理与下述统一消费协议。Check/Probe 作为自包含作者回调，
 不进入通用宿主的注册表或资源桥。本轮不发布 npm；旧域必须由操作者显式切换。
 
+## 通用 Task 组合
+
+Bundle Worker 的 `context.invokeTask({key, cid, path, input, timeoutMs})` 由宿主
+受理普通独立子 Task。`authorizeChild({caller, parentCid, cid, path, depth})` 默认
+拒绝；授权不能替代普通 submit/task/cancel 权限和父嵌入 DAG 根校验。
+caller 继承父 Task，不接受业务配置中的地址、凭据或权限扩展。
+独立本机服务显式启用同 scope 的嵌入子 Task；嵌入宿主可进一步按 CID 限权。
+
+父 Run、根 Run、key、深度、原始意图与截止时间在 `submission.preparing` 中原子
+持久化；子 Task 使用宿主 isolation identity，不与无关 Task 合并运行。
+授权后的子 Task/Run 快照通过 `parent: {runId, rootRunId, depth, key, path}` 暴露
+关系，不暴露额外凭据；对应 source history 保留 admission 意图。
+每层拥有独立执行容量：根层 maxConcurrent，子层 maxChildConcurrent（默认 4）；
+最多 maxChildDepth（默认 4）层，每根 maxChildTotal（默认 64）个子请求，
+每父最多 maxChildConcurrent 个在途子请求。最大执行 Worker 数因此有界于
+`maxConcurrent + maxChildDepth * maxChildConcurrent`，父等待不借用下一层容量。
+childTimeoutMs 默认 30000，childCleanupMs 默认 5000；父 Task/执行截止时间进一步
+收窄调用。清理不依赖已取消的父信号，成功返回前确认子资源释放。
+
+父取消、超时、Worker 退出与恢复都会取消已持久化子请求。恢复不会重演父 Worker；
+crash 前无物理释放证明的子 Run 保留 stopped/unknown，即使 demand 已取消也不
+标成 reclaimed。地址/凭据只在宿主配置中；不支持跨 Engine、远程多租户、自动 pin
+或发布。已有不调用子任务的 immutable Bundle 不变，见[Worker 契约](task-bundle-worker.md)。
+宿主对子资源的回收证明不替代父 Worker 自身副作用的证明：父强杀后子任务可以
+已释放，但父 Run 仍保持 cleanupUnknown，Engine 可能继续保留 Store 所有权。
+
 ## 按需受理
 
 每个 Request 必带 `bundle: "根CID"` 或 `bundle: {cid, hint}`、`requestId`、`timeoutMs`，

@@ -1,0 +1,167 @@
+COMMAND: pnpm --filter @potential-guide/task-engine test
+EXIT: 0
+▶ generic host-mediated child Tasks
+  ✔ capacity one has distinct parent, child and grandchild lanes (708.5752ms)
+  ✔ lost acknowledgement retry reuses one durable child identity (353.67ms)
+  ✔ actual dropped IPC reply retries by original key without duplicate admission (413.8114ms)
+  ✔ completed parent restart preserves proof without reauthorizing historical children (307.6561ms)
+  ✔ mismatch fails explicitly (160.9419ms)
+  ✔ invalid-input fails explicitly (257.6254ms)
+  ✔ invalid-result fails explicitly (339.5ms)
+  ✔ conflict fails explicitly (256.0207ms)
+  ✔ concurrent fails explicitly (241.6672ms)
+  ✔ timeout fails explicitly (218.09ms)
+  ✔ authorization is host-owned and denied by default (139.3174ms)
+  ✔ depth quota is bounded (294.4527ms)
+  ✔ total quota is bounded (292.8347ms)
+  ✔ cancel cancels and releases descendants (214.1776ms)
+  ✔ parent-timeout cancels and releases descendants (275.1145ms)
+  ✔ early-exit cancels and releases descendants (235.7186ms)
+  ✔ killed parent cleans descendants without inventing parent resource-release proof (274.5431ms)
+  ✔ cancel while child content is preparing cannot later create an orphan Task (231.9883ms)
+  ✔ restart cancels persisted descendants and retains explicit unknown release (247.7297ms)
+✔ generic host-mediated child Tasks (6169.8204ms)
+ℹ tests 225
+ℹ suites 0
+ℹ pass 225
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 55788.1106
+
+COMMAND: pnpm --filter @potential-guide/probe-sdk test
+EXIT: 0
+✔ generic compiler preserves complete canonical child DAG, binary and snapshots (1215.84ms)
+✔ publication API snapshot, precise locks and paired inferred author rules (1007.5968ms)
+✔ sparse overrides require complete same-language coverage and reject invalid pages (447.0562ms)
+✔ Probe goals aggregate failures, scoped overrides, inheritance, terminal and invocation errors (288.9101ms)
+✔ metadata read cleanup preserves primary and cancellation errors and releases the reader (0.8513ms)
+✔ metadata cleanup failure after a successful read is reported rather than discarded (0.3006ms)
+✔ standard Engine executes Probe and independent child Tasks via authorized HTTP composition (4642.1803ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8807.0277
+
+COMMAND: pnpm --filter @potential-guide/task-engine-server test
+EXIT: 0
+✔ write/storage fault gives unavailable receipts and durable missing status, without blocking final outputs (260.7122ms)
+✔ slow consumers replay pages, retention reports explicit gaps, and subscriptions have a hard capacity (230.1493ms)
+✔ v1 bundles support diagnostic logs; disabled logging is distinct (531.778ms)
+(node:43756) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ shutdown owns cancellation of a quiet SSE body even when request abort propagation is blocked (144.293ms)
+✔ independent programmatic import cannot listen, open a database or install global signals (733.9021ms)
+✔ import has no signals; real HTTP auth, permission, bounded body, history and SSE reconnect (139.2489ms)
+✔ occupied port and invalid config roll back resources and release the Store (1.963ms)
+✔ startup failure after acquiring resources and bounded shutdown never report false success (25.8572ms)
+✔ SQLite duplicate owner fails without disturbing the live Server (102.503ms)
+✔ physical resource cleanup failure is not successful shutdown; lease remains held (33.1739ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3818.5064
+
+COMMAND: pnpm --filter @potential-guide/task-protocol --filter @potential-guide/task-sdk test
+EXIT: 0
+packages/task-protocol test: ℹ tests 130
+packages/task-protocol test: ℹ suites 0
+packages/task-protocol test: ℹ pass 130
+packages/task-protocol test: ℹ fail 0
+packages/task-protocol test: ℹ cancelled 0
+packages/task-protocol test: ℹ skipped 0
+packages/task-protocol test: ℹ todo 0
+packages/task-protocol test: ℹ duration_ms 837.1703
+packages/task-sdk test: ℹ tests 1
+packages/task-sdk test: ℹ suites 0
+packages/task-sdk test: ℹ pass 1
+packages/task-sdk test: ℹ fail 0
+packages/task-sdk test: ℹ cancelled 0
+packages/task-sdk test: ℹ skipped 0
+packages/task-sdk test: ℹ todo 0
+packages/task-sdk test: ℹ duration_ms 99.5322
+
+COMMAND: pnpm --filter @potential-guide/pguide-task-engine test (process-local PATH isolation)
+EXIT: 0
+﹣ real pguide init/build -> Kubo CAR import -> CLI execution and SQLite recovery (0.9316ms) # Set PGUIDE_E2E_KUBO_RPC and PGUIDE_E2E_KUBO_GATEWAY explicitly.
+(node:56012) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Gateway-only Engine and UI execute a Bundle without any RPC and retain source ownership (552.4649ms)
+✔ explicit local Caller scope and browser request policy (0.5255ms)
+✔ Gateway service keeps UI HTTP and owned rollback/close without reading content at startup (66.3794ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 13219.3103
+
+COMMAND: pnpm check (earlier complete attempt)
+EXIT: 1
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+$ biome format .
+ Tasks:    35 successful, 35 total
+$ turbo run typecheck && tsc -p tsconfig.test.json --pretty false
+ Tasks:    35 successful, 35 total
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+@potential-guide/objective-pilot:test: pguide evidence write failed: D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\objective-pilot\.cache\evidence-kY8YAA\28593d83-fa3d-4a23-adc1-25d390a19cca\events.jsonl
+@potential-guide/pguide-task-bundle:test: ℹ tests 119
+@potential-guide/pguide-task-bundle:test: ℹ suites 0
+@potential-guide/pguide-task-bundle:test: ℹ pass 112
+@potential-guide/pguide-task-bundle:test: ℹ fail 7
+@potential-guide/pguide-task-bundle:test: ℹ cancelled 0
+@potential-guide/pguide-task-bundle:test: ℹ skipped 0
+@potential-guide/pguide-task-bundle:test: ℹ todo 0
+@potential-guide/pguide-task-bundle:test: ℹ duration_ms 20693.4291
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\car-file-6e78c01c-9056-46e2-87b6-66bbb461897b\bundle.car' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\car-file-6e78c01c-9056-46e2-87b6-66bbb461897b\alias.car'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\75a84209-805e-478c-a306-577e4fd2b749\custom-ignore' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\75a84209-805e-478c-a306-577e4fd2b749\task\.gitignore'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\8e961285-dd41-4968-921b-e6e58b7d195f\missing' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\8e961285-dd41-4968-921b-e6e58b7d195f\task\.gitignore'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\0b6f4530-c993-49c4-8ebd-09451efc9e1c\outside\package.json' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\0b6f4530-c993-49c4-8ebd-09451efc9e1c\task\package.json'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\0f50d9cb-282d-4e64-bd79-1df1cc2c88c3\outside\missing.ts' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\0f50d9cb-282d-4e64-bd79-1df1cc2c88c3\task\src\main.ts'
+ Tasks:    49 successful, 56 total
+Failed:    @potential-guide/pguide-task-bundle#test
+ ERROR  run failed: command  exited (1)
+
+COMMAND: pnpm check (final candidate)
+EXIT: 1
+@potential-guide/pguide-task-bundle:test: ℹ tests 119
+@potential-guide/pguide-task-bundle:test: ℹ pass 112
+@potential-guide/pguide-task-bundle:test: ℹ fail 7
+@potential-guide/pguide-task-bundle:test: ℹ cancelled 0
+@potential-guide/pguide-task-bundle:test: ℹ skipped 0
+@potential-guide/pguide-task-bundle:test: ℹ duration_ms 21374.315
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\car-file-dda7364c-3028-4e0e-87fb-192d1f9829e9\bundle.car' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\car-file-dda7364c-3028-4e0e-87fb-192d1f9829e9\alias.car'
+ Tasks:    46 successful, 49 total
+Cached:    46 cached, 49 total
+Failed:    @potential-guide/pguide-task-bundle#test
+ ERROR  run failed: command  exited (1)
+
+COMMAND: pnpm pack:check
+EXIT: 0
+@potential-guide/check-environment: 99 packed files
+@potential-guide/ipfs-content: 31 packed files
+@potential-guide/probe-sdk: 27 packed files
+@potential-guide/check-runtime-files: 31 packed files
+Package structure verified; run pnpm consumers:check for isolated consumers.
+
+COMMAND: node --check scripts\serve-task-cars.mjs; node --check scripts\submit-probe-objective.mjs
+EXIT: 0 (no output)

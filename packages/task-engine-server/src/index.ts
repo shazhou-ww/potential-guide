@@ -11,6 +11,7 @@ import { openSqliteStore } from "@potential-guide/task-engine-storage";
 import { positive, type Store, TaskError } from "@potential-guide/task-protocol";
 
 export interface ServerOptions {
+  authorizeChild?: EngineOptions["authorizeChild"];
   logs?: EngineOptions["logs"];
   ipfsClient: EngineOptions["ipfsClient"];
   allowGateway?: EngineOptions["allowGateway"];
@@ -153,6 +154,7 @@ export async function startTaskServer(options: ServerOptions): Promise<TaskServe
       },
     };
     engine = createTaskEngine({
+      ...(options.authorizeChild ? { authorizeChild: options.authorizeChild } : {}),
       store: lease,
       ipfsClient: options.ipfsClient,
       ...(options.bundlePrefetch !== undefined ? { bundlePrefetch: options.bundlePrefetch } : {}),

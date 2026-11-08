@@ -82,5 +82,29 @@ Workers may execute verified CommonJS source in memory without a Bundle director
 Bundle bytes are immutable. Runtime output belongs outside the Bundle.
 Workers are isolation/lifecycle boundaries, not security sandboxes.
 
+## Host-mediated child Tasks
+
+`context.invokeTask({key, cid, path, input, timeoutMs})` returns the independently
+validated child result. `key` is a stable parent-Run-local idempotency key; retries
+must keep the identical intent. `path` selects an embedded directory under the
+verified parent `resources/` DAG; its root must equal the canonical `cid`.
+Input is a JSON object without Task envelope fields.
+
+The host supplies the inherited caller, content source and authorization; the
+Worker does not supply addresses, credentials or scope. Composition is denied
+unless the host explicitly enables `authorizeChild`. Default limits are 4 levels,
+4 children in flight per parent, 4 executing children per depth, and 64 children
+over the whole root Run. Each depth has its own bounded lane, avoiding waiting
+parents exhausting their children's execution capacity. Default invocation and
+cleanup budgets are 30 seconds and 5 seconds; parent Task and execution deadlines
+can only narrow them.
+
+The association and request intent are persisted before admission. Parent
+cancellation, timeout, Worker exit and host recovery cancel descendants.
+Success waits for child physical-release proof; failed cleanup reports
+`reclamation_unknown`. Recovery cancels demand but never invents proof of physical
+release after a crashed host. No child Worker is loaded into the parent. Existing
+non-composing Bundles remain unchanged and need no extra configuration.
+
 The generation-scoped message contract is documented in
 [`docs/task-bundle-worker.md`](https://github.com/shazhou-ww/potential-guide/blob/main/docs/task-bundle-worker.md).

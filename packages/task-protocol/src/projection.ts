@@ -70,6 +70,27 @@ export function assertFactsVersion(facts: Facts): void {
     if (!["starts-after-eligible", "terminates-after-eligible"].includes(run.binding.matchPolicy))
       fail("unsupported_version", "Unsupported stored Run policy.");
   for (const [id, record] of Object.entries(facts.submissions)) {
+    if (record.composition) {
+      const child = record.composition;
+      if (
+        !Number.isSafeInteger(child.depth) ||
+        child.depth < 1 ||
+        typeof child.key !== "string" ||
+        !/^[a-zA-Z0-9._:-]{1,128}$/.test(child.key) ||
+        typeof child.path !== "string" ||
+        !child.path.startsWith("resources/") ||
+        !child.intent ||
+        typeof child.intent !== "object"
+      )
+        fail("storage_corrupt", "Invalid stored child association.");
+      try {
+        ulid(child.parentRunId);
+        ulid(child.rootRunId);
+        timestamp(child.deadlineAt);
+      } catch {
+        fail("storage_corrupt", "Invalid child parent identity or deadline.");
+      }
+    }
     if (
       !record ||
       record.request?.requestId !== id ||
@@ -163,6 +184,7 @@ function group(record: Pick<TaskRecord, "binding" | "input">): string {
     comparisonContracts.set(schema, contract);
   }
   return canonical([
+    b.compositionId ?? null,
     b.type,
     b.version,
     b.contractRevision,
@@ -267,6 +289,7 @@ export function project(
   if (stage === "completed" && run?.result === undefined)
     fail("history_gap", "Completed Run result is missing.");
   const snapshot: TaskSnapshot = {
+    ...parentAssociation(facts, task.request.requestId),
     requestId: task.request.requestId,
     taskId,
     seriesId: task.seriesId,
@@ -307,6 +330,7 @@ export function projectRun(facts: Facts, runId: string, now: number): RunSnapsho
   if (runStage(run) === "completed" && run.result === undefined)
     fail("history_gap", "Completed Run result is missing.");
   const snapshot: RunSnapshot = {
+    ...parentAssociation(facts, run.binding.compositionId),
     runId,
     ...(run.binding.bundle
       ? { bundle: structuredClone(run.binding.bundle), name: run.binding.declaration!.name }
@@ -336,6 +360,23 @@ export function projectRun(facts: Facts, runId: string, now: number): RunSnapsho
     ...(run.cleanupUnknown ? { cleanupUnknown: structuredClone(run.cleanupUnknown) } : {}),
   };
   return snapshot;
+}
+function parentAssociation(
+  facts: Facts,
+  requestId: string | undefined,
+): Pick<TaskSnapshot, "parent"> {
+  const child = requestId ? facts.submissions[requestId]?.composition : undefined;
+  return child
+    ? {
+        parent: {
+          runId: child.parentRunId,
+          rootRunId: child.rootRunId,
+          depth: child.depth,
+          key: child.key,
+          path: child.path,
+        },
+      }
+    : {};
 }
 export function wouldQualify(facts: Facts, observedAt: string): boolean {
   timestamp(observedAt);

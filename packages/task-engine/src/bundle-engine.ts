@@ -1,12 +1,13 @@
-import type { IpfsClient } from "./content.js";
 import {
   at,
   bundleCid,
   type Caller,
+  type ChildTaskInvocation,
   canonical,
   type ErrorFact,
   json,
   object,
+  type RunResourceContext,
   requestTime,
   type SubmissionRecord,
   type SubmissionResult,
@@ -17,19 +18,51 @@ import {
   validateBundleReference,
 } from "@potential-guide/task-protocol";
 import { BundleCache, type BundleLimits } from "./bundle.js";
+import type { IpfsClient } from "./content.js";
 import { TaskEngine as Coordinator, type EngineOptions as CoordinatorOptions } from "./engine.js";
+import { newId } from "./identity.js";
 
 export { defaultEngineLimits, type EngineLimits } from "./engine.js";
 export interface EngineOptions
   extends Omit<
     CoordinatorOptions,
-    "types" | "currentVersions" | "allocationLimits" | "loadBundle"
+    | "types"
+    | "currentVersions"
+    | "allocationLimits"
+    | "loadBundle"
+    | "invokeTask"
+    | "confirmChildRelease"
   > {
   ipfsClient: IpfsClient;
   bundleLimits?: Partial<BundleLimits>;
   bundleConcurrency?: number;
   bundlePrefetch?: boolean;
   allowGateway?: (url: URL) => boolean;
+  /** Deny by default. Caller identity is inherited, never supplied by the Worker. */
+  authorizeChild?: (request: {
+    caller: Caller;
+    parentCid: string;
+    cid: string;
+    path: string;
+    depth: number;
+  }) => boolean;
+}
+function bounded<T>(action: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+    void Promise.resolve()
+      .then(() => {
+        signal.throwIfAborted();
+        return action();
+      })
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener("abort", abort));
+  });
+}
+async function pause(signal: AbortSignal): Promise<void> {
+  await bounded(() => new Promise((resolve) => setTimeout(resolve, 10)), signal);
 }
 function failure(error: unknown): ErrorFact {
   return {
@@ -46,6 +79,11 @@ export class TaskEngine implements TaskService {
   private closeAttempt: Promise<void> | undefined;
   private readonly processing = new Map<string, Promise<void>>();
   private readonly waiters = new Map<string, Set<() => void>>();
+  private readonly invocations = new Map<
+    string,
+    { intent: string; operation: Promise<import("@potential-guide/task-protocol").Json> }
+  >();
+  private readonly lifetime = new AbortController();
   readonly getTask: TaskService["getTask"];
   readonly cancelTask: TaskService["cancelTask"];
   readonly getRun: TaskService["getRun"];
@@ -89,6 +127,8 @@ export class TaskEngine implements TaskService {
       types: [],
       currentVersions: {},
       authorize: options.authorize,
+      invokeTask: (request, context) => this.invokeTask(request, context),
+      confirmChildRelease: (runId) => this.cleanupChildren(runId),
       ...(options.logs ? { logs: options.logs } : {}),
       ...(options.clock ? { clock: options.clock } : {}),
       ...(options.limits ? { limits: options.limits } : {}),
@@ -208,6 +248,26 @@ export class TaskEngine implements TaskService {
       throw error;
     }
     this.started = true;
+    // Recovery never resumes a dead parent's Worker. Cancel its durable descendants
+    // before admitting retained preparing requests.
+    for (const run of Object.values(this.core.facts().facts.runs))
+      if ((run.exit || run.stopRequested) && !run.reclaimedAt) {
+        try {
+          await this.cleanupChildren(run.runId);
+        } catch (error) {
+          this.options.onError?.(failure(error));
+          if (!this.core.facts().facts.runs[run.runId]!.cleanupUnknown)
+            this.core.commitAdmission([
+              {
+                type: "run.cleanup.unknown",
+                runId: run.runId,
+                scope: run.binding.scope,
+                occurredAt: at(this.now()),
+                data: { reason: "Child cleanup remains unconfirmed after recovery." },
+              },
+            ]);
+        }
+      }
     for (const record of Object.values(this.core.facts().facts.submissions))
       if (record.decision.status === "preparing") this.begin(record);
   }
@@ -228,6 +288,13 @@ export class TaskEngine implements TaskService {
     return structuredClone(this.record(id, caller).request);
   }
   async submit(value: unknown, caller: Caller): Promise<SubmissionResult> {
+    return this.admit(value, caller);
+  }
+  private async admit(
+    value: unknown,
+    caller: Caller,
+    composition?: SubmissionRecord["composition"],
+  ): Promise<SubmissionResult> {
     this.readable();
     this.core.authorizeAdmission(caller, "submit", caller?.scope);
     const raw = object(json(value, this.limits.maxPayloadBytes));
@@ -262,6 +329,7 @@ export class TaskEngine implements TaskService {
         (record) => record.decision.status === "preparing",
       ).length >= this.limits.maxPreparing;
     const record: SubmissionRecord = {
+      ...(composition ? { composition } : {}),
       bundleProtocol: "ipfs",
       request: raw as TaskRequest,
       caller: structuredClone(caller),
@@ -306,6 +374,274 @@ export class TaskEngine implements TaskService {
     if (cached) await processing;
     return this.result(this.core.facts().facts.submissions[id]!);
   }
+  private parent(context: RunResourceContext) {
+    const facts = this.core.facts().facts;
+    const run = facts.runs[context.runId];
+    if (
+      !run ||
+      run.exit ||
+      run.stopRequested ||
+      run.workerGeneration !== context.workerGeneration ||
+      run.binding.scope !== context.scope ||
+      !run.binding.bundle
+    )
+      throw new TaskError("forbidden", "Child invocation requires the current active parent Run.");
+    const task = Object.values(facts.tasks).find(
+      (task) =>
+        !task.canceledAt &&
+        Date.parse(task.deadlineAt) >= this.now() &&
+        task.binding.compositionId === run.binding.compositionId &&
+        task.binding.version === run.binding.version &&
+        task.binding.scope === run.binding.scope &&
+        task.binding.subject === run.binding.subject &&
+        this.core.getTask(task.taskId, { scope: task.binding.scope, subject: task.binding.subject })
+          .run?.runId === run.runId,
+    );
+    if (!task) throw new TaskError("forbidden", "Parent has no active Task demand.");
+    const parent = facts.submissions[task.request.requestId]?.composition;
+    return {
+      run,
+      task,
+      caller: { scope: task.binding.scope, subject: task.binding.subject },
+      depth: (parent?.depth ?? 0) + 1,
+      rootRunId: parent?.rootRunId ?? run.runId,
+      deadlineAt: Math.min(
+        Date.parse(task.deadlineAt),
+        parent ? Date.parse(parent.deadlineAt) : Number.POSITIVE_INFINITY,
+      ),
+    };
+  }
+  private async invokeTask(
+    value: ChildTaskInvocation,
+    context: RunResourceContext,
+  ): Promise<import("@potential-guide/task-protocol").Json> {
+    this.readable();
+    context.signal.throwIfAborted();
+    const raw = object(json(value, this.limits.maxPayloadBytes));
+    if (
+      Object.keys(raw).some((key) => !["key", "cid", "path", "input", "timeoutMs"].includes(key)) ||
+      typeof raw.key !== "string" ||
+      !/^[a-zA-Z0-9._:-]{1,128}$/.test(raw.key) ||
+      typeof raw.path !== "string" ||
+      !Number.isSafeInteger(raw.timeoutMs) ||
+      (raw.timeoutMs as number) < 1 ||
+      (raw.timeoutMs as number) > this.limits.childTimeoutMs
+    )
+      throw new TaskError("invalid_request", "Invalid child invocation identity or deadline.");
+    const cid = bundleCid(validateBundleReference(raw.cid));
+    const input = object(raw.input);
+    if (
+      Object.keys(input).some((key) =>
+        [
+          "requestId",
+          "bundle",
+          "type",
+          "timeoutMs",
+          "eligibleAt",
+          "seriesId",
+          "matchPolicy",
+        ].includes(key),
+      )
+    )
+      throw new TaskError("invalid_input", "Child input collides with the Task envelope.");
+    const parent = this.parent(context);
+    if (
+      this.options.authorizeChild?.({
+        caller: parent.caller,
+        parentCid: bundleCid(parent.run.binding.bundle!),
+        cid,
+        path: raw.path,
+        depth: parent.depth,
+      }) !== true
+    )
+      throw new TaskError("forbidden", "Host child policy denied access.");
+    this.core.authorizeAdmission(parent.caller, "submit", parent.caller.scope);
+    const records = Object.values(this.core.facts().facts.submissions);
+    const existing = records.find(
+      (record) =>
+        record.composition?.parentRunId === context.runId && record.composition.key === raw.key,
+    );
+    if (existing && canonical(existing.composition!.intent) !== canonical(raw))
+      throw new TaskError("idempotency_conflict", "Child key intent changed.");
+    const key = `${context.runId}:${raw.key}`;
+    const running = this.invocations.get(key);
+    if (running) {
+      if (running.intent !== canonical(raw))
+        throw new TaskError("idempotency_conflict", "Child key intent changed.");
+      return running.operation;
+    }
+    const operation = this.invokeChild(
+      raw as unknown as ChildTaskInvocation,
+      context,
+      parent,
+      existing,
+    );
+    this.invocations.set(key, { intent: canonical(raw), operation });
+    try {
+      return await operation;
+    } finally {
+      this.invocations.delete(key);
+    }
+  }
+  private async invokeChild(
+    request: ChildTaskInvocation,
+    context: RunResourceContext,
+    parent: ReturnType<TaskEngine["parent"]>,
+    existing?: SubmissionRecord,
+  ): Promise<import("@potential-guide/task-protocol").Json> {
+    const deadline = existing
+      ? Date.parse(existing.composition!.deadlineAt)
+      : Math.min(
+          this.now() + request.timeoutMs,
+          parent.deadlineAt,
+          Date.parse(parent.run.startedAt) + this.limits.executionWallMs,
+        );
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(new TaskError("child_timeout", "Child deadline exceeded.")),
+      Math.max(1, deadline - this.now()),
+    );
+    const signal = AbortSignal.any([controller.signal, context.signal, this.lifetime.signal]);
+    let record = existing;
+    try {
+      const prepared = await bounded(async () => {
+        const lease = await this.cache.acquire(parent.run.binding.bundle!);
+        if (signal.aborted) {
+          lease.release();
+          signal.throwIfAborted();
+        }
+        return lease;
+      }, signal);
+      try {
+        if ((await bounded(() => prepared.childRoot(request.path, signal), signal)) !== request.cid)
+          throw new TaskError("invalid_bundle", "Child subtree does not match the requested CID.");
+      } finally {
+        prepared.release();
+      }
+      this.parent(context);
+      signal.throwIfAborted();
+      if (!record) {
+        const records = Object.values(this.core.facts().facts.submissions).filter(
+          (record) => record.composition,
+        );
+        if (
+          parent.depth > this.limits.maxChildDepth ||
+          records.filter((record) => record.composition!.rootRunId === parent.rootRunId).length >=
+            this.limits.maxChildTotal ||
+          records.filter(
+            (record) =>
+              record.composition!.parentRunId === context.runId &&
+              (record.decision.status === "preparing" ||
+                (record.decision.status === "accepted" &&
+                  !["completed", "failed", "stopped"].includes(
+                    this.getTask(record.decision.taskId, record.caller).stage,
+                  ))),
+          ).length >= this.limits.maxChildConcurrent
+        )
+          throw new TaskError(
+            "child_quota_exceeded",
+            "Child depth, concurrent or total budget exceeded.",
+          );
+        const requestId = newId(this.now());
+        // admit persists association and intent before its first asynchronous boundary.
+        const admission = this.admit(
+          {
+            ...object(request.input),
+            requestId,
+            bundle: request.cid,
+            timeoutMs: Math.max(1, deadline - this.now()),
+          },
+          parent.caller,
+          {
+            parentRunId: context.runId,
+            rootRunId: parent.rootRunId,
+            depth: parent.depth,
+            key: request.key,
+            path: request.path,
+            intent: json(request),
+            deadlineAt: at(deadline),
+          },
+        );
+        record = this.core.facts().facts.submissions[requestId];
+        await bounded(() => admission, signal);
+      }
+      for (;;) {
+        signal.throwIfAborted();
+        this.parent(context);
+        const decision = this.core.facts().facts.submissions[record!.request.requestId]!.decision;
+        if (decision.status === "rejected")
+          throw new TaskError(decision.error.code, decision.error.message);
+        if (decision.status === "accepted") {
+          const task = this.getTask(decision.taskId, parent.caller);
+          if (!task.bundle || bundleCid(task.bundle) !== request.cid)
+            throw new TaskError("invalid_response", "Child result identity mismatch.");
+          if (task.stage === "completed") {
+            await bounded(() => this.waitForTaskRelease(task.taskId, parent.caller), signal);
+            return json(task.result, this.limits.maxPayloadBytes);
+          }
+          if (["failed", "stopped"].includes(task.stage))
+            throw new TaskError(
+              task.error?.code ?? "child_failed",
+              task.error?.message ?? "Child Task failed.",
+            );
+        }
+        await pause(signal);
+      }
+    } catch (primary) {
+      if (record) {
+        try {
+          await this.cleanupChild(record);
+        } catch {
+          throw new TaskError(
+            "reclamation_unknown",
+            `Child request ${record.request.requestId} cleanup unconfirmed; inspect its durable parent association.`,
+          );
+        }
+      }
+      throw primary;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  private async cleanupChild(record: SubmissionRecord): Promise<void> {
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () =>
+        controller.abort(new TaskError("reclamation_unknown", "Child cleanup budget exceeded.")),
+      this.limits.childCleanupMs,
+    );
+    try {
+      let current = this.core.facts().facts.submissions[record.request.requestId]!;
+      if (current.decision.status === "preparing") {
+        this.reject(
+          record.request.requestId,
+          new TaskError("parent_terminated", "Parent demand ended."),
+        );
+        current = this.core.facts().facts.submissions[record.request.requestId]!;
+      }
+      if (current.decision.status === "rejected") return;
+      if (current.decision.status !== "accepted")
+        throw new TaskError("reclamation_unknown", "Child admission cannot be canceled.");
+      const taskId = current.decision.taskId;
+      const task = this.getTask(taskId, record.caller);
+      if (task.run && this.getRun(task.run.runId, record.caller).reclaimedAt) return;
+      this.cancelTask(taskId, record.caller);
+      await bounded(() => this.waitForTaskRelease(taskId, record.caller), controller.signal);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  private async cleanupChildren(parentRunId: string): Promise<void> {
+    const records = Object.values(this.core.facts().facts.submissions).filter(
+      (record) => record.composition?.parentRunId === parentRunId,
+    );
+    const results = await Promise.allSettled(records.map((record) => this.cleanupChild(record)));
+    if (results.some((result) => result.status === "rejected"))
+      throw new TaskError(
+        "reclamation_unknown",
+        `Parent ${parentRunId} has unconfirmed child cleanup.`,
+      );
+  }
   private reject(id: string, error: unknown): void {
     const current = this.core.facts().facts.submissions[id];
     if (!current || current.decision.status !== "preparing" || this.closing) return;
@@ -328,6 +664,11 @@ export class TaskEngine implements TaskService {
     if (running) return running;
     const operation = Promise.resolve()
       .then(async () => {
+        if (
+          this.closing ||
+          this.core.facts().facts.submissions[id]?.decision.status !== "preparing"
+        )
+          return;
         const prepared = await this.cache.acquire(validateBundleReference(record.request.bundle));
         try {
           if (this.closing) return;
@@ -425,6 +766,13 @@ export class TaskEngine implements TaskService {
     return this.closeAttempt;
   }
   private async closeInner(): Promise<void> {
+    this.lifetime.abort(new TaskError("engine_closed", "Engine is closing."));
+    for (const record of Object.values(this.core.facts().facts.submissions))
+      if (record.composition && record.decision.status === "preparing")
+        this.reject(
+          record.request.requestId,
+          new TaskError("parent_terminated", "Engine is closing."),
+        );
     this.closing = true;
     const coreClose = this.core.close();
     void coreClose.catch(() => {});

@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import {
   type Caller,
+  type ChildTaskInvocation,
   canonical,
   compileInputSchema,
   compileJsonSchema,
@@ -20,6 +21,10 @@ import {
 } from "@potential-guide/task-protocol";
 
 export interface TypeChannel {
+  invokeTask?(
+    request: ChildTaskInvocation,
+    context: import("@potential-guide/task-protocol").RunResourceContext,
+  ): Promise<Json>;
   logDropped?(runId: string, generation: string, scope: string, count: number): RunLogReceipt;
   log?(runId: string, generation: string, scope: string, value: RunLogInput): RunLogReceipt;
   dispatch?(
@@ -554,6 +559,26 @@ class RunWorker {
     try {
       const value = json(message.value, this.limits.maxPayloadBytes);
       switch (message.kind) {
+        case "task-invoke": {
+          const context = this.contexts.get(runId);
+          if (!this.channel.invokeTask || !context || !this.registration.bundle)
+            throw new TaskError("forbidden", "Host has not enabled Task composition.");
+          context.controller.signal.throwIfAborted();
+          resourceContext = context;
+          context.resources.add(operation);
+          const result = json(
+            await this.channel.invokeTask(value as unknown as ChildTaskInvocation, {
+              runId,
+              scope: context.scope,
+              signal: context.controller.signal,
+              workerGeneration: context.workerGeneration,
+            }),
+            this.limits.maxPayloadBytes,
+          );
+          if (this.worker === worker && this.generation === generation)
+            worker.postMessage({ generation, kind: "ack", id, value: result });
+          return;
+        }
         case "checkpoint":
           rejectOutput();
           if (!this.channel.checkpoint)

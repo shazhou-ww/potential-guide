@@ -28,6 +28,15 @@ export type SubmissionResult =
   | { status: "accepted"; requestId: string; taskId: string }
   | { status: "rejected"; requestId: string; error: ErrorFact };
 export interface SubmissionRecord {
+  composition?: {
+    parentRunId: string;
+    rootRunId: string;
+    depth: number;
+    key: string;
+    path: string;
+    intent: Json;
+    deadlineAt: string;
+  };
   bundleProtocol?: "ipfs";
   request: TaskRequest;
   caller: Caller;
@@ -41,7 +50,15 @@ export interface ErrorFact {
   code: string;
   message: string;
 }
+export interface ParentTaskAssociation {
+  runId: string;
+  rootRunId: string;
+  depth: number;
+  key: string;
+  path: string;
+}
 export interface TaskSnapshot {
+  parent?: ParentTaskAssociation;
   bundle?: BundleReference;
   name?: string;
   requestId: string;
@@ -70,6 +87,8 @@ export interface TaskSnapshot {
   result?: Json;
 }
 export interface Binding {
+  /** Host-owned isolation identity; absent for ordinary non-composing Tasks. */
+  compositionId?: string;
   bundle?: BundleReference;
   declaration?: ResolvedTaskBundle;
   type: string;
@@ -213,6 +232,7 @@ export interface PublicEvent {
 export type TaskEvent = PublicEvent;
 export type RunEvent = PublicEvent;
 export interface RunSnapshot {
+  parent?: ParentTaskAssociation;
   bundle?: BundleReference;
   name?: string;
   runId: string;

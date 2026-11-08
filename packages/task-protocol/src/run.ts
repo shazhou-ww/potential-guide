@@ -27,6 +27,15 @@ export class RunFailure extends TaskError {
     super(code, message);
   }
 }
+export interface ChildTaskInvocation {
+  /** Stable within this parent Run; retrying the same key must preserve intent. */
+  key: string;
+  cid: string;
+  /** A directory in the verified parent DAG whose root must equal cid. */
+  path: string;
+  input: Json;
+  timeoutMs: number;
+}
 export interface RunContext<Message extends Json = never> {
   readonly generation?: string;
   readonly startedAt?: string;
@@ -40,6 +49,7 @@ export interface RunContext<Message extends Json = never> {
   progress(value: RunProgress): Promise<void>;
   checkpoint(value: Json): Promise<void>;
   log(value: RunLogInput): Promise<RunLogReceipt>;
+  invokeTask?(request: ChildTaskInvocation): Promise<Json>;
 }
 export interface TaskType<Input = Json, Result = Json, Message extends Json = never> {
   type: string;

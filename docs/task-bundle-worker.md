@@ -57,6 +57,7 @@ Worker → 宿主：
 | pong | 无 |
 | progress | `id, runId, value: RunProgress` |
 | checkpoint | `id, runId, value: Result` |
+| task-invoke | `id, runId, value: {key, cid, path, input, timeoutMs}` |
 | complete | `id, runId, value: Result` |
 | failed | `id, runId, value: {code, message, result?}` |
 | message-confirm | `id, runId, value: {taskId, messageId, state: "accepted" \| "rejected", reason?}` |
@@ -72,7 +73,7 @@ Worker → 宿主：
 | --- | --- |
 | run | `runId, scope, input, identity: {generation, startedAt}` |
 | ping | 无 |
-| ack | `id, error?: {code, message}` |
+| ack | `id, value?: Json, error?: {code, message}` |
 | log-ack | `runId, logId, value: RunLogReceipt, error?: {code, message}` |
 | log-drop-ack | `runId, logId, value: RunLogReceipt, error?: {code, message}` |
 | message | `runId, value: {taskId, messageId, caller: {scope, subject}, payload}` |
@@ -83,6 +84,15 @@ Worker → 宿主：
 宿主按相同 id ack，错误 ack 拒绝相应操作。不重用旧通道或重复确认身份。
 进度、checkpoint 和业务消息确认通过同一有界输出队列排空，之后才报告结果。
 三份业务 Schema 都在同一构建内固定，运行中不联网补引用。
+
+`task-invoke` 是通用宿主中介调用，不是 Probe 分支或任意资源 RPC。
+`value` 在成功 ACK 中为独立子 Task 的已校验结果；失败 NACK 返回明确错误。
+key 在父 Run 内稳定，相同 key 的不同意图被拒绝。宿主继承 caller，验证嵌入
+resources 目录根 CID、准入权限、输入/结果和父生命周期；默认拒绝组合。
+父子关联与原始请求在 admission 之前原子持久化，重试不产生第二个子 Task。
+每深度执行池和深度/并发/总量/截止时间预算防止等待父任务占满子任务容量。
+父撤回、退出和恢复执行有界清理；无法证明释放时返回 reclamation_unknown。
+调用不占用业务输出队列，但占用同一有界 IPC 在途额度，宿主仍跟踪其清理责任。
 
 完整业务校验统一属于 Engine：input/message 在投递前验证，checkpoint、
 complete 和 failed.result 在任何接纳或持久化前验证。Worker 不执行业务 Schema
@@ -132,7 +142,7 @@ SDK 每个 Worker 最多 `min(16, maxInFlight)` 条日志在途，每条 ACK 等
 ## 构建和边界
 
 作者只提供 YAML 与 `(input, context) => Promise<result>` 回调。
-context 提供 `runId`、`generation`、`startedAt`、`scope`、`signal`、`messages`、`progress`、`checkpoint`、`log`；
+context 提供 `runId`、`generation`、`startedAt`、`scope`、`signal`、`messages`、`progress`、`checkpoint`、`log`、`invokeTask`；
 不暴露原始 parentPort。每条业务消息提供独立 Task 撤回信号和 accept/reject。
 `identity` 来自宿主已持久确立的 Run，不从业务 Input 合并或推导。
 作者模块及其顶层业务代码延迟到 Run 命令后才求值；握手不执行作者业务模块。

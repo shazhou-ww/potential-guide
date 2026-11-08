@@ -10,15 +10,15 @@ bundles:
   toolchain:
     source:
       kind: ipfs
-      cid: bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a
+      cid: bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4
   workspace:
     source:
       kind: ipfs
-      cid: bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe
+      cid: bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe
   policy:
     source:
       kind: ipfs
-      cid: bafybeia3bpqxern3vs56ewbryvztv2ayodqdt55du5v3s7xrtz24b3eyya
+      cid: bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm
 checks:
   node:
     bundle: toolchain

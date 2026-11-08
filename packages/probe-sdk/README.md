@@ -59,7 +59,7 @@ accepted candidates. Keep accepted outputs and locks separate from staging.
 
 Author contract default-exports `createProbeContract(input, definitions)` from
 `/contracts`. Its input is a TypeBox object. The entry calls
-`runTask(createProbeTask(definitions, invoke))`. Both import the generated
+`runTask(createProbeTask(definitions))`. Both import the generated
 definitions. The generic compiler emits the only `task.yaml`, `worker.cjs`, schemas
 and CAR. `resources/objective.json` is the generated business resource.
 
@@ -91,6 +91,18 @@ the current generic compiler's canonical UnixFS profile; alternative imports fai
 explicitly. Full CAR validation compares actual child roots, not merely file bytes.
 
 ## Independent execution
+
+The normal Worker uses `createProbeTask(definitions)` and the generic
+`context.invokeTask` host capability. Probe retains Level ordering, deterministic
+input mapping, Check fact/URI validation and document Overrides. The host owns
+content, authorization, deadlines, durable parent-child associations, idempotency
+and cleanup, including Worker exit and restart recovery. Neither Engine/Gateway
+addresses nor caller credentials are built into the Worker. Check Tasks remain
+ordinary independent Tasks.
+
+`createProbeTask(definitions, invoke)` remains available for explicit legacy
+adapters and existing immutable Bundles; the HTTP adapter below is not the normal
+new-Worker path and cannot provide host-crash lifecycle guarantees.
 
 `/execution` exports `createCheckInvoker({service, client, caller, timeoutMs, cleanupTimeoutMs?,
 authorize})`. `service` is the existing TaskService or authenticated HTTP TaskClient;

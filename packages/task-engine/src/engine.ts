@@ -42,7 +42,6 @@ import {
   type SubmitOptions,
   type Subscription,
   TaskError,
-  taskSchemaUri,
   type TaskMessageRecord,
   type TaskPage,
   type TaskQuery,
@@ -52,6 +51,7 @@ import {
   type TaskSnapshot,
   type TaskSummary,
   type TaskTypeDiscovery,
+  taskSchemaUri,
   timestamp,
   ulid,
   validateRunProgress,
@@ -70,6 +70,11 @@ import {
 
 type CompiledType = RegisteredType & InputContract & { resultContract: JsonContract };
 export interface EngineLimits extends CatalogLimits, ObservationLimits {
+  maxChildDepth: number;
+  maxChildConcurrent: number;
+  maxChildTotal: number;
+  childTimeoutMs: number;
+  childCleanupMs: number;
   maxTasks: number;
   maxEvents: number;
   maxPayloadBytes: number;
@@ -89,6 +94,8 @@ export interface EngineLimits extends CatalogLimits, ObservationLimits {
   inFlight: number;
 }
 export interface EngineOptions {
+  invokeTask?: import("./type-supervisor.js").TypeChannel["invokeTask"];
+  confirmChildRelease?: (runId: string) => Promise<void>;
   logs?: Partial<RunLogLimits>;
   store: Store;
   types: readonly RegisteredType[];
@@ -101,6 +108,11 @@ export interface EngineOptions {
   loadBundle?: (binding: Binding) => Promise<() => void>;
 }
 export const defaultEngineLimits: Readonly<EngineLimits> = Object.freeze({
+  maxChildDepth: 4,
+  maxChildConcurrent: 4,
+  maxChildTotal: 64,
+  childTimeoutMs: 30_000,
+  childCleanupMs: 5000,
   maxTasks: 10_000,
   maxEvents: 100_000,
   maxPayloadBytes: 65_536,
@@ -319,6 +331,7 @@ export class TaskEngine implements TaskService {
             },
       },
       {
+        ...(this.options.invokeTask ? { invokeTask: this.options.invokeTask } : {}),
         dispatch: async (id, generation) => {
           this.dispatch(id, generation);
           const run = this.view.facts.runs[id]!;
@@ -365,7 +378,10 @@ export class TaskEngine implements TaskService {
           if (run && !run.exit && run.stopRequested && !run.stoppingAt)
             this.commit([this.runEvent("run.stopping", run, {})]);
         },
-        exited: async (id, fact) => this.exited(id, fact),
+        exited: async (id, fact) => {
+          this.exited(id, fact);
+          await this.options.confirmChildRelease?.(id);
+        },
         released: (id) => this.released(id),
         lost: (ids, error) => {
           for (const id of ids) {
@@ -697,6 +713,9 @@ export class TaskEngine implements TaskService {
       input,
       request: prepared?.intent ?? (raw as TaskRequest),
       binding: {
+        ...(this.view.facts.submissions[requestId]?.composition
+          ? { compositionId: requestId }
+          : {}),
         type: raw.type,
         version,
         contractRevision: type.revision,
@@ -991,9 +1010,9 @@ export class TaskEngine implements TaskService {
     b: Pick<RunRecord, "binding" | "input">,
   ): boolean {
     return (
-      (["type", "version", "contractRevision", "environment", "scope"] as const).every(
-        (field) => a.binding[field] === b.binding[field],
-      ) &&
+      (
+        ["type", "version", "contractRevision", "environment", "scope", "compositionId"] as const
+      ).every((field) => a.binding[field] === b.binding[field]) &&
       canonical(a.binding.inputSchema) === canonical(b.binding.inputSchema) &&
       (a.binding.bundle
         ? compileInputSchema(a.binding.inputSchema)
@@ -1123,15 +1142,23 @@ export class TaskEngine implements TaskService {
       )
     )
       return;
+    const depth = this.view.facts.submissions[task.request.requestId]?.composition?.depth ?? 0;
     const isolated = this.allocationLimits.has(task.binding.type);
-    const count = [...this.allocations.values()].filter((group) =>
-      isolated
-        ? group.exemplar.binding.type === task.binding.type
-        : !this.allocationLimits.has(group.exemplar.binding.type),
+    const count = [...this.allocations.values()].filter(
+      (group) =>
+        (this.view.facts.submissions[group.exemplar.request.requestId]?.composition?.depth ?? 0) ===
+          depth &&
+        (isolated
+          ? group.exemplar.binding.type === task.binding.type
+          : !this.allocationLimits.has(group.exemplar.binding.type)),
     ).length;
     if (
       count >=
-      (isolated ? this.allocationLimits.get(task.binding.type)! : this.limits.maxConcurrent)
+      (depth > 0
+        ? this.limits.maxChildConcurrent
+        : isolated
+          ? this.allocationLimits.get(task.binding.type)!
+          : this.limits.maxConcurrent)
     )
       return;
     const id = newId(this.clock.now());

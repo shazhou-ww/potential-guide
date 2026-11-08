@@ -75,6 +75,7 @@ export async function startService(raw: ServiceConfig) {
         : {}),
     }),
     ...policy,
+    authorizeChild: ({ caller }) => policy.authorize(caller, "submit", config.scope),
   });
   origin = server.url;
   let ui: Awaited<ReturnType<typeof startUiServer>> | undefined;
