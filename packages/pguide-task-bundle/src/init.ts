@@ -7,7 +7,7 @@ import { taskBuildSchemaUri } from "./authoring.js";
 const typebox = "@sinclair/typebox";
 const typeboxVersion = "0.34.52";
 const sdk = "@potential-guide/task-sdk";
-const sdkVersion = "0.1.0-rc.0";
+const sdkVersion = "0.1.0-rc.2";
 const dependencyFields = [
   "dependencies",
   "devDependencies",

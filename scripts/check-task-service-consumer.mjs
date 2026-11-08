@@ -18,7 +18,7 @@ import {spawn} from "node:child_process";
 import {once} from "node:events";
 import {mkdir,readFile,writeFile} from "node:fs/promises";
 import {createServer} from "node:http";
-import {delimiter,resolve} from "node:path";
+import {delimiter,dirname,join,resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {MemoryIpfsClient} from "@potential-guide/task-engine/testing";
 import {createIpfsGatewayClient} from "@potential-guide/task-engine";
@@ -38,7 +38,8 @@ await mkdir(resolve(home,"pguide"),{recursive:true});
 await writeFile(resolve(home,"pguide/config.jsonc"),"{broken");
 await mkdir(".pguide");
 await writeFile(".pguide/config.jsonc",'{"task-engine.port":"excluded"}');
-const env={...process.env,APPDATA:home,XDG_CONFIG_HOME:home,PATH:resolve("node_modules/.bin")+delimiter+process.env.PATH};
+const systemPaths=process.platform==="win32"?[join(process.env.SystemRoot??"C:\\\\Windows","System32")]:["/usr/bin","/bin"];
+const env={...process.env,APPDATA:home,XDG_CONFIG_HOME:home,PATH:[resolve("node_modules/.bin"),dirname(process.execPath),...systemPaths].join(delimiter)};
 await writeFile("signal-wrapper.mjs",'process.on("message",()=>process.emit("SIGTERM"));await import('+JSON.stringify(pathToFileURL(cli).href)+');');
 const bounded=(p,label)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(Error(label)),15000).unref())]);
 await writeFile("task.yaml",JSON.stringify({
@@ -93,7 +94,7 @@ for(const combined of [false,true])for(const layer of ["user","file","cli","isol
  child.stderr.on("data",chunk=>errors+=chunk);
  try{
   const ready=await bounded(new Promise((done,reject)=>{
-   child.once("error",reject);child.once("exit",()=>reject(Error(errors)));
+   child.once("error",reject);child.once("exit",(code,signal)=>reject(Error("Packed service exited "+code+" ("+signal+"): "+errors+"\\n"+text)));
    child.stdout.on("data",chunk=>{text+=chunk;for(const line of text.split("\\n")){try{const value=JSON.parse(line);if(value.event==="ready")done(value)}catch{}}});
   }),"packed service readiness timeout");
   pid=ready.pid;

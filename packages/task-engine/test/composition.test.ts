@@ -8,7 +8,7 @@ import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { buildTaskBundle } from "@potential-guide/pguide-task-bundle/build";
 import { reduce, type Store, type StoreView, taskSchemaUri } from "@potential-guide/task-protocol";
 import { createTaskEngine, newId } from "../src/index.js";
-import { MemoryStore } from "../src/testing.js";
+import { MemoryStore, VirtualClock } from "../src/testing.js";
 
 const caller = { scope: "composition", subject: "external-caller" };
 async function until(check: () => boolean, milliseconds = 10_000) {
@@ -144,7 +144,7 @@ test("generic host-mediated child Tasks", { timeout: 30_000 }, async (t) => {
       limits: {
         maxConcurrent: 1,
         maxChildConcurrent: 1,
-        stopGraceMs: 50,
+        stopGraceMs: 1000,
         forceExitWaitMs: 1000,
         childCleanupMs: 2000,
       },
@@ -163,8 +163,9 @@ test("generic host-mediated child Tasks", { timeout: 30_000 }, async (t) => {
     cid: string,
     mode = "normal",
     timeoutMs = 5000,
+    requestAt = Date.now(),
   ) {
-    const requestId = newId();
+    const requestId = newId(requestAt);
     await engine.submit({ requestId, bundle: cid, value: 7, mode, timeoutMs }, caller);
     const decision = await engine.getRequestStatus(requestId, { waitMs: 5000 }, caller);
     assert.equal(decision.status, "accepted", JSON.stringify(decision));
@@ -297,14 +298,14 @@ test("generic host-mediated child Tasks", { timeout: 30_000 }, async (t) => {
         },
       ),
     );
-  for (const mode of ["cancel", "parent-timeout", "early-exit"])
+  for (const mode of ["cancel", "early-exit"])
     await t.test(`${mode} cancels and releases descendants`, () =>
       run(async (engine, store) => {
         const id = await submit(
           engine,
           artifacts.parent.cid,
           mode.endsWith("exit") ? mode : "slow",
-          mode === "parent-timeout" ? 150 : 5000,
+          5000,
         );
         await until(() =>
           Object.values(store.read().facts.submissions).some(
@@ -327,6 +328,41 @@ test("generic host-mediated child Tasks", { timeout: 30_000 }, async (t) => {
         }
       }),
     );
+  await t.test("parent-timeout cancels and releases already dispatched descendants", async () => {
+    const clock = new VirtualClock(Date.now());
+    await run(
+      async (engine, store) => {
+        const id = await submit(engine, artifacts.parent.cid, "slow", 10_000, clock.now());
+        await until(() => {
+          engine.tick();
+          const parent = engine.getTask(id, caller);
+          if (["failed", "stopped"].includes(parent.stage))
+            assert.fail(`Parent ended before child dispatch: ${JSON.stringify(parent)}`);
+          return Object.values(store.read().facts.submissions).some((record) => {
+            if (!record.composition || record.decision.status !== "accepted") return false;
+            const run = engine.getTask(record.decision.taskId, caller).run;
+            return !!run && engine.getRun(run.runId, caller).stage === "running";
+          });
+        });
+        const child = Object.values(store.read().facts.submissions).find(
+          (record) => record.composition,
+        )!;
+        assert.equal(child.decision.status, "accepted");
+        if (child.decision.status !== "accepted") throw new Error("Expected dispatched child.");
+        clock.advance(10_001);
+        engine.tick();
+        await settled(engine, id);
+        await engine.waitForTaskRelease(id, caller);
+        assert.equal(engine.getTask(child.decision.taskId, caller).canceled, true);
+        await engine.waitForTaskRelease(child.decision.taskId, caller);
+        const parentRun = engine.getRun(engine.getTask(id, caller).run!.runId, caller);
+        assert.equal(parentRun.stopRequested?.reason, "no_active_demand");
+        assert.ok(parentRun.reclaimedAt);
+        assert.equal(parentRun.cleanupUnknown, undefined);
+      },
+      { clock },
+    );
+  });
   await t.test(
     "killed parent cleans descendants without inventing parent resource-release proof",
     async () => {

@@ -138,6 +138,35 @@ release requires separate approval and an explicit change to that restriction.
 
 ## Generic Task Engine release preparation
 
+### Task Context composition follow-up
+
+The next RC batch includes host-mediated child Tasks, multiple content gateways,
+version-bound Check documentation, and the standalone Engine configuration.
+Publish the following changed packages in dependency order, after exact-main CI
+and `Release verification (v1)` succeed:
+
+1. `task-protocol` `0.1.0-rc.2`.
+2. `task-sdk` and `task-engine` `0.1.0-rc.2`.
+3. `pguide-task-bundle` `0.1.0-rc.2`, `task-engine-server` `0.1.0-rc.3`,
+   and `check-sdk` `0.2.0-rc.1`.
+4. `pguide-task-engine` `0.1.0-rc.4` and `check-environment` `0.2.0-rc.1`.
+
+Keep `task-engine-http`, `task-engine-storage`, `task-engine-webui`, and CLI Core
+at their existing published versions. Retain `workspace:^` source ranges; packing
+must use the new minimum versions for changed dependencies. Newly initialized
+Task packages pin `task-sdk` `0.1.0-rc.2`, and the Check text example pins the
+matching author/runtime candidates. `probe-sdk` and `ipfs-content` remain private;
+this batch does not publish them or publish/pin any CAR. Existing Bundles remain
+immutable; rebuilding a Bundle and updating a consumer CID is a separate action.
+
+The parent-timeout regression uses an explicit virtual clock only after observing
+a dispatched child, then asserts cancellation and actual release. It must not
+assume that Worker startup completes inside a 150 ms wall-clock admission budget.
+The fixture's graceful-stop allowance is separate from the logical Task deadline;
+forced-exit and unknown-cleanup tests remain enabled.
+
+### Previous Bundle normalization batch
+
 The approved configuration scope is the exact internal runtime closure of
 `pguide-task-bundle` and `pguide-task-engine`, not the entire release inventory.
 Publish only after each upstream version is available, in these groups:

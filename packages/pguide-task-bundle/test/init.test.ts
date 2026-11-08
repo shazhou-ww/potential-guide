@@ -66,7 +66,7 @@ test("init creates a standalone minimal package that builds deterministically an
       private: true,
       type: "module",
       engines: { node: ">=22.13.0" },
-      dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
+      dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.2" },
       scripts: {
         build: "pguide task-bundle build task.build.yaml",
         clean: `node -e "for (const path of ['dist', 'dist.car']) require('node:fs').rmSync(path, { recursive: true, force: true })"`,
@@ -233,7 +233,7 @@ test("init reuses the nearest ancestor package and preserves unrelated fields an
     assert.equal(result.cleanScriptAdded, false);
     assert.deepEqual(await readJson(packageFile), {
       ...manifest,
-      dependencies: { existing: "workspace:*", [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
+      dependencies: { existing: "workspace:*", [typebox]: "0.34.52", [sdk]: "0.1.0-rc.2" },
     });
     assert.equal(await readFile(outer, "utf8"), '{"private":true}\n');
     assert.equal(await readFile(join(target, "src", "keep.ts"), "utf8"), "keep");
@@ -274,7 +274,7 @@ test("init adds clean independently of build and removes only the task output", 
       packageFile,
       JSON.stringify({
         private: true,
-        dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
+        dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.2" },
         scripts: { build: "custom-build" },
       }),
     );
@@ -331,7 +331,7 @@ test("init only adds the dependency to ancestor packages without introducing scr
     assert.equal(result.cleanScriptAdded, false);
     assert.deepEqual(await readJson(result.packageFile), {
       private: true,
-      dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.0" },
+      dependencies: { [typebox]: "0.34.52", [sdk]: "0.1.0-rc.2" },
     });
   });
 });
