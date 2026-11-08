@@ -1,0 +1,31 @@
+
+npm warn tarball tarball data for @potential-guide/probe-sdk@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-probe-sdk-0.1.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/probe-sdk@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-probe-sdk-0.1.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/pguide-task-bundle@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-pguide-task-bundle-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/pguide-task-bundle@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-pguide-task-bundle-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine-server@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-server-0.1.0-rc.2.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine-server@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-server-0.1.0-rc.2.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine-http@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-http-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine-http@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-http-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/check-sdk@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-check-sdk-0.2.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/check-sdk@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-check-sdk-0.2.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/ipfs-content@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-ipfs-content-0.1.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/ipfs-content@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-ipfs-content-0.1.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-protocol@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-protocol-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-protocol@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-protocol-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-sdk@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-sdk-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-sdk@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-sdk-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/cli-core@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-cli-core-0.3.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/cli-core@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-cli-core-0.3.0-rc.0.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine-storage@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-storage-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm warn tarball tarball data for @potential-guide/task-engine-storage@file:C:/Users/Wei/.copilot/session-state/***/files/probe%20delivery%20final/packs/potential-guide-task-engine-storage-0.1.0-rc.1.tgz (null) seems to be corrupted. Trying again.
+npm error code ENOENT
+npm error syscall open
+npm error path C:\Users\Wei\.copilot\session-state\***\files\probe%20delivery%20final\packs\potential-guide-check-sdk-0.2.0-rc.0.tgz
+npm error errno -4058
+npm error enoent ENOENT: no such file or directory, open 'C:\Users\Wei\.copilot\session-state\***\files\probe%20delivery%20final\packs\potential-guide-check-sdk-0.2.0-rc.0.tgz'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: C:\Users\Wei\AppData\Local\npm-cache\_logs\2026-11-08T02_14_43_263Z-debug-0.log

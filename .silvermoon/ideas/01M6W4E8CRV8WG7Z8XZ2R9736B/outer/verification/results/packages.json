@@ -1,0 +1,73 @@
+{
+  "sourceCommit": "5428223891ebd6a049048aa5d8eb7e3cd972e017",
+  "packages": [
+    {
+      "name": "@potential-guide/probe-sdk",
+      "version": "0.1.0-rc.0",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-probe-sdk-0.1.0-rc.0.tgz",
+      "sha256": "efd8ee44142bc51070f419a75115c661a4b2d62f6d96729e4ccf920cbca7290e"
+    },
+    {
+      "name": "@potential-guide/pguide-task-bundle",
+      "version": "0.1.0-rc.1",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-pguide-task-bundle-0.1.0-rc.1.tgz",
+      "sha256": "f01a6f517f0f53b6cbaa75f509a49eb9ad173d483f299adb2a1af07f866f0864"
+    },
+    {
+      "name": "@potential-guide/task-engine-server",
+      "version": "0.1.0-rc.2",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-task-engine-server-0.1.0-rc.2.tgz",
+      "sha256": "9de5b9a8d4c59f97b3e61b9054f0fbde12fec8a27a5900059e8df2d72db61116"
+    },
+    {
+      "name": "@potential-guide/task-engine-http",
+      "version": "0.1.0-rc.1",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-task-engine-http-0.1.0-rc.1.tgz",
+      "sha256": "5e17aed4f6fcab5abde878c2fa4852fd7ad17d01dc11336d447682c9c5c158b0"
+    },
+    {
+      "name": "@potential-guide/check-sdk",
+      "version": "0.2.0-rc.0",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-check-sdk-0.2.0-rc.0.tgz",
+      "sha256": "69e5775126885c33091e31ec3249851d8decdbe32a31d7737d00fd4fe6313686"
+    },
+    {
+      "name": "@potential-guide/ipfs-content",
+      "version": "0.1.0-rc.0",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-ipfs-content-0.1.0-rc.0.tgz",
+      "sha256": "9910f9b6da113a58e32b9a0cf9d7e812b4d5ee66b54976acdbf731e81848d4f6"
+    },
+    {
+      "name": "@potential-guide/task-protocol",
+      "version": "0.1.0-rc.1",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-task-protocol-0.1.0-rc.1.tgz",
+      "sha256": "7d93d3573e08d3665ec8db50702dd467630c11cb506da6f5af731d6833983e62"
+    },
+    {
+      "name": "@potential-guide/task-sdk",
+      "version": "0.1.0-rc.1",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-task-sdk-0.1.0-rc.1.tgz",
+      "sha256": "c6fd701d7381528dcebe6673c5be37e5c75e1d6438de9a4142e6cc2695ba4c40"
+    },
+    {
+      "name": "@potential-guide/cli-core",
+      "version": "0.3.0-rc.0",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-cli-core-0.3.0-rc.0.tgz",
+      "sha256": "09498be807e126fb8c46fff7a46bd6db45977f531535634da3db02c26aa24af7"
+    },
+    {
+      "name": "@potential-guide/task-engine",
+      "version": "0.1.0-rc.1",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-task-engine-0.1.0-rc.1.tgz",
+      "sha256": "5899adb5ac11879f31d9dd8971c2d6ac024b2d30d09deff090293d8e2e2d55e8"
+    },
+    {
+      "name": "@potential-guide/task-engine-storage",
+      "version": "0.1.0-rc.1",
+      "tarball": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\packs\\potential-guide-task-engine-storage-0.1.0-rc.1.tgz",
+      "sha256": "f9c3e978e24164dc807f04eda9f2743600a977a470c713f3724caa4f735d543f"
+    }
+  ],
+  "consumer": "C:\\Users\\Wei\\.copilot\\session-state\\09a7a898-838d-4cda-b3db-5845852ce7bc\\files\\probe-delivery-verified\\consumer",
+  "node": "v24.12.0"
+}

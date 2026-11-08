@@ -18,10 +18,10 @@
 
 ### Deployment steps
 
-- [ ] **D-S01:** 交付代表性 Probe Task Bundle
-- [ ] **D-S02:** 验证独立消费者
+- [x] **D-S01:** 交付代表性 Probe Task Bundle
+- [x] **D-S02:** 验证独立消费者
 
 ### Deployment acceptance criteria
 
-- [ ] **D-AC01:** 精确成品可获取
-- [ ] **D-AC02:** 消费结果与文档一致
+- [x] **D-AC01:** 精确成品可获取
+- [x] **D-AC02:** 消费结果与文档一致
