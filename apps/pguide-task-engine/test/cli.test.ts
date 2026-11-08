@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -52,11 +52,15 @@ test("standalone and pguide discovery, --config, --cwd, isolation and foreground
       : `#!/bin/sh\nexec "${process.execPath}" "${cli}" "$@"\n`,
   );
   await chmod(shim, 0o755);
+  const systemPaths =
+    process.platform === "win32"
+      ? [join(process.env.SystemRoot ?? "C:\\Windows", "System32")]
+      : ["/usr/bin", "/bin"];
   const env = {
     ...process.env,
     APPDATA: user,
     XDG_CONFIG_HOME: user,
-    PATH: bin + delimiter + process.env.PATH,
+    PATH: [bin, dirname(process.execPath), ...systemPaths].join(delimiter),
   };
   await mkdir(join(directory, "work", ".pguide"), { recursive: true });
   const cwd = join(directory, "work");

@@ -10,6 +10,7 @@ import { Worker } from "node:worker_threads";
 import { checkTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
 import { buildTask, checkTaskBuild } from "../src/authoring.js";
 import { initTaskBundle } from "../src/init.js";
+import { fileSymlink } from "./file-symlink.js";
 
 const execute = promisify(execFile);
 const typebox = "@sinclair/typebox";
@@ -182,7 +183,7 @@ test("init preserves an existing gitignore byte for byte and excludes it from wr
 });
 test("init rejects directory, linked and hardlinked gitignore paths before writing templates", async (t) => {
   for (const kind of ["directory", "link", "broken-link", "hardlink"])
-    await t.test(kind, async () => {
+    await t.test(kind, async (context) => {
       await fixture(async (root) => {
         const target = join(root, "task");
         await mkdir(target);
@@ -191,7 +192,14 @@ test("init rejects directory, linked and hardlinked gitignore paths before writi
         const ignoreFile = join(target, ".gitignore");
         if (kind === "directory") await mkdir(ignoreFile);
         else if (kind === "hardlink") await link(original, ignoreFile);
-        else await symlink(kind === "broken-link" ? join(root, "missing") : original, ignoreFile);
+        else if (
+          !(await fileSymlink(
+            context,
+            kind === "broken-link" ? join(root, "missing") : original,
+            ignoreFile,
+          ))
+        )
+          return;
         await assert.rejects(initTaskBundle(target), /gitignore must be a regular, unlinked file/);
         assert.deepEqual(await readdir(target), [".gitignore"]);
         assert.equal(await readFile(original, "utf8"), "keep\n");
@@ -394,7 +402,7 @@ test("collisions and non-directory src paths never overwrite existing files or m
 });
 test("directory links, linked manifests and broken template links fail without following them", async (t) => {
   for (const kind of ["target", "src", "manifest", "hardlinked-manifest", "broken-template"])
-    await t.test(kind, async () => {
+    await t.test(kind, async (context) => {
       await fixture(async (root) => {
         const outside = join(root, "outside");
         const target = join(root, "task");
@@ -411,11 +419,20 @@ test("directory links, linked manifests and broken template links fail without f
             join(target, "src"),
             process.platform === "win32" ? "junction" : "dir",
           );
-        else if (kind === "manifest") await symlink(original, join(target, "package.json"));
-        else if (kind === "hardlinked-manifest") await link(original, join(target, "package.json"));
+        else if (kind === "manifest") {
+          if (!(await fileSymlink(context, original, join(target, "package.json")))) return;
+        } else if (kind === "hardlinked-manifest")
+          await link(original, join(target, "package.json"));
         else {
           await mkdir(join(target, "src"));
-          await symlink(join(outside, "missing.ts"), join(target, "src", "main.ts"));
+          if (
+            !(await fileSymlink(
+              context,
+              join(outside, "missing.ts"),
+              join(target, "src", "main.ts"),
+            ))
+          )
+            return;
         }
         await assert.rejects(initTaskBundle(target), /link|overwrite/);
         assert.deepEqual(await readdir(outside), ["package.json"]);

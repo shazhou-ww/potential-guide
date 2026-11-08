@@ -1,23 +1,14 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import fs, {
-  link,
-  mkdir,
-  open,
-  readFile,
-  rename,
-  rm,
-  symlink,
-  utimes,
-  writeFile,
-} from "node:fs/promises";
+import fs, { link, mkdir, open, readFile, rename, rm, utimes, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { join, resolve } from "node:path";
 import test, { type TestContext } from "node:test";
 import { encodeContentCar } from "../src/car.js";
 import { taskBundleLimits as artifactLimits, taskSchemaUri } from "@potential-guide/task-protocol";
 import { checkTaskArtifact, readTaskArtifact } from "../src/artifact.js";
+import { fileSymlink } from "./file-symlink.js";
 
 async function fixture(t: TestContext) {
   const root = resolve(".cache", `car-file-${randomUUID()}`);
@@ -67,7 +58,7 @@ test("CAR input rejects hard links on both the original and alias paths", async 
 test("CAR input rejects symbolic links without reading their target", async (t) => {
   const source = await fixture(t);
   const alias = join(source.root, "alias.car");
-  await symlink(source.file, alias, "file");
+  if (!(await fileSymlink(t, source.file, alias))) return;
   await assert.rejects(readTaskArtifact(alias), /without links/);
 });
 
