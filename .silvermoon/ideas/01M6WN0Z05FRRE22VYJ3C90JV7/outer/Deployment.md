@@ -25,6 +25,8 @@ Windows 上仅使用已经存在的两份作者 CAR 和 dist 入口；执行前�
 
 另用独占故障数据库和操作自有的延迟 HTTP endpoint，使设备 Probe 的网络 Check 确实运行中：先通过 HTTP 撤回并等待父/子 `reclaimedAt`，再提交不同输入、确认持久父子关联后按准确 PID 强制停止 Engine。用同一 SQLite 重启，检查原请求/任务 ID 不变、未完成父/子需求已停止或取消、丢失的物理释放证明保持 unknown。不将 Windows 强制进程终止报告为优雅信号退出，不用撤回 ACK 代替释放证明。
 
+本机服务策略要求所有 POST 带 `Content-Type: application/json`，包括无 body 的 cancel。原始默认 TaskClient 的无 body 撤回在实测中被明确拒绝，未发生撤回；操作调用方通过现有 `headers` 配置声明 JSON 写入再验证。不修改 Client/Engine 代码，不把该策略拒绝报告为释放成功；故障输入严格使用父 Probe 已声明的业务字段。
+
 ## Acceptance criteria
 
 ### D-AC01: 正常运行流程可复现
