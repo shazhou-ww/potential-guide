@@ -88,6 +88,35 @@ Task Engine 应用默认测试曾因 PATH 中已有全局 `pguide-task-engine.CM
 未以该错误为理由安装额外依赖。所有实际命令、关键输出及失败摘要见
 [验证记录](./evidence-validation.txt)。
 
+## Inner 门禁反馈修正
+
+父代理在本次门禁复核中独立运行
+`pnpm --filter @potential-guide/task-engine exec tsx --test test\composition.test.ts`，
+报告 **20/20 通过**。这是父代理提供的外部复核结果；未提供完整 stdout 或时长，
+本证据不补造这些数据，也不将该复核解释为 acceptInner。
+
+修正独立提交入口的宽泛 catch：TaskError、认证/校验错误、非法 JSON 回复和
+明确非暂态 TLS 错误保持原样传播。仅明确的暂态网络错误、无更具体分类的
+fetch 网络失败或传输 TimeoutError 查询原 request ID；不会第二次 submit。
+重整开始/完成和未知状态均显式输出；重整失败以 AggregateError 保存原 cause、
+两次错误和原 request ID。入口在同一脚本导出可测试 runner，import 不读输入、
+构建 Bundle 或启动 Engine。
+
+观察中的每次等待都受统一截止时间约束；截止后的状态查询/撤回使用独立清理预算。
+撤回 ACK 不声称物理释放，preparing 或清理失败明确报告不确定性。宿主
+invokeChild/cleanupChildren 的不确定错误也保留 primary/cleanup 原因与关联 ID；
+恢复回归现检查底层“物理释放未知”的具体原因没有被汇总错误抹掉。
+
+本次复验：
+
+- `node --test scripts\submit-probe-objective.test.mjs`：**15/15 通过**，
+  覆盖正常提交、已知拒绝/forbidden、回复丢失、重整失败、观察截止、清理预算和惰性 import。
+- 父代理上述同一组合命令由本代理再次执行：**20/20 通过**。
+- `pnpm exec tsc -b packages\task-engine --pretty false`：**退出 0**。
+- 最终 `pnpm check`：**退出 1**，仍为未修改的 pguide-task-bundle Windows symlink
+  EPERM；该包 **119 tests / 112 pass / 7 fail**。sources/build/layers/format/lint/typecheck
+  已完成，不声称整仓通过。详见[反馈复验记录](./feedback-validation.txt)。
+
 ## 尚未承诺的能力
 
 - Worker 不是安全沙箱，父任意 OS 副作用的强杀/崩溃清理仍可未知。

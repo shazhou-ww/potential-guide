@@ -470,6 +470,10 @@ test("generic host-mediated child Tasks", { timeout: 30_000 }, async (t) => {
           code: "reclamation_unconfirmed",
         });
         assert.ok(errors.length > 0);
+        assert.match(
+          (errors[0] as { message: string }).message,
+          /unconfirmed child cleanup: reclamation_unconfirmed: Physical resource release is unknown/,
+        );
         assert.ok(Object.values(snapshot.facts.runs).some((run) => run.cleanupUnknown));
         assert.equal(
           Object.values(snapshot.facts.submissions).filter((record) => record.composition).length,

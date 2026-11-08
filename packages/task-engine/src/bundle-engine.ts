@@ -64,9 +64,9 @@ function bounded<T>(action: () => Promise<T>, signal: AbortSignal): Promise<T> {
 async function pause(signal: AbortSignal): Promise<void> {
   await bounded(() => new Promise((resolve) => setTimeout(resolve, 10)), signal);
 }
-function failure(error: unknown): ErrorFact {
+function failure(error: unknown, fallback = "invalid_bundle"): ErrorFact {
   return {
-    code: error instanceof TaskError ? error.code : "invalid_bundle",
+    code: error instanceof TaskError ? error.code : fallback,
     message:
       error instanceof TaskError ? error.message.slice(0, 512) : "Bundle preparation failed.",
   };
@@ -591,11 +591,24 @@ export class TaskEngine implements TaskService {
       if (record) {
         try {
           await this.cleanupChild(record);
-        } catch {
-          throw new TaskError(
-            "reclamation_unknown",
-            `Child request ${record.request.requestId} cleanup unconfirmed; inspect its durable parent association.`,
+        } catch (cleanup) {
+          const original = failure(
+            primary,
+            primary instanceof Error ? primary.name : "child_failure",
           );
+          const cleanupError = failure(cleanup, "cleanup_failure");
+          const uncertain = new TaskError(
+            "reclamation_unknown",
+            `Child request ${record.request.requestId} cleanup unconfirmed; primary: ${original.code.slice(0, 32)}: ${original.message.slice(0, 120)}; cleanup: ${cleanupError.code.slice(0, 32)}: ${cleanupError.message.slice(0, 120)}.`,
+            {
+              requestId: record.request.requestId,
+              parentRunId: context.runId,
+              primary: { ...original },
+              cleanup: { ...cleanupError },
+            },
+          );
+          uncertain.cause = primary;
+          throw uncertain;
         }
       }
       throw primary;
@@ -636,11 +649,22 @@ export class TaskEngine implements TaskService {
       (record) => record.composition?.parentRunId === parentRunId,
     );
     const results = await Promise.allSettled(records.map((record) => this.cleanupChild(record)));
-    if (results.some((result) => result.status === "rejected"))
-      throw new TaskError(
+    const rejected = results.filter((result) => result.status === "rejected");
+    if (rejected.length) {
+      const first = failure(rejected[0]!.reason, "cleanup_failure");
+      const uncertain = new TaskError(
         "reclamation_unknown",
-        `Parent ${parentRunId} has unconfirmed child cleanup.`,
+        `Parent ${parentRunId} has unconfirmed child cleanup: ${first.code.slice(0, 32)}: ${first.message.slice(0, 200)}`,
+        {
+          parentRunId,
+          errors: rejected
+            .slice(0, 16)
+            .map((result) => ({ ...failure(result.reason, "cleanup_failure") })),
+        },
       );
+      uncertain.cause = new AggregateError(rejected.slice(0, 16).map((result) => result.reason));
+      throw uncertain;
+    }
   }
   private reject(id: string, error: unknown): void {
     const current = this.core.facts().facts.submissions[id];

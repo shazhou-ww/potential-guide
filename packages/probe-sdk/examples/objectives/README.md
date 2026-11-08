@@ -51,6 +51,14 @@ third submits only the CID and JSON business input; it neither builds a Bundle
 nor starts an Engine or content source. Optional HTTP credentials belong in the
 caller's `PGUIDE_TASK_AUTHORIZATION`, never the Worker.
 
+Known authorization/validation failures propagate directly. Only identified
+retryable transport failures reconcile status using the original request ID;
+reconciliation is explicitly logged and never resubmits. Failed reconciliation
+retains the original cause and both errors. Observation has a 125-second budget;
+deadline cleanup has a separate 5-second budget and reports cancellation or
+uncertainty without claiming physical resource release. Importing the script is
+inert; its exported runner is covered by `submit-probe-objective.test.mjs`.
+
 Monorepo input contains `toolchain.tools`, `workspace.directories` and
 `standardization.repositoryRoot`; device input contains `runtime.tools`,
 `storage.directories` and `gateway: {dns: [], http: [{url:

@@ -1,0 +1,96 @@
+EXTERNAL RESULT: 父代理独立门禁复核；完整 stdout 和时长未提供。
+COMMAND: pnpm --filter @potential-guide/task-engine exec tsx --test test\composition.test.ts
+RESULT: 20/20 pass (parent-reported; not an acceptance)
+
+COMMAND: node --test scripts\submit-probe-objective.test.mjs
+EXIT: 0
+✔ successful submission returns the existing Engine result without reconciliation (1.1406ms)
+✔ known admission rejection retains its code and does not reconcile (0.3431ms)
+✔ nontransport Access denied is propagated unchanged (0.1941ms)
+✔ nontransport Wrong root is propagated unchanged (0.1008ms)
+✔ nontransport HTTP 403 is propagated unchanged (0.0911ms)
+✔ nontransport Invalid author input is propagated unchanged (0.1199ms)
+✔ nontransport Unexpected end of JSON input is propagated unchanged (0.0841ms)
+✔ nontransport fetch failed is propagated unchanged (0.1067ms)
+✔ lost response reconciles only by the original ID and retains primary diagnostics (0.587ms)
+✔ failed reconciliation preserves both errors, original cause and request identity (0.3373ms)
+✔ observation deadline cancels known demand without claiming physical release (0.262ms)
+✔ a stalled submit is bounded and cleanup reconciles its same request ID (18.3565ms)
+✔ cleanup failure keeps deadline context and explicitly reports uncertainty (0.3727ms)
+✔ cleanup itself has an independent finite budget (15.4049ms)
+✔ import is inert; the runner neither starts an Engine nor builds a Bundle (142.7625ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 333.8104
+
+COMMAND: pnpm --filter @potential-guide/task-engine exec tsx --test test\composition.test.ts
+EXIT: 0
+▶ generic host-mediated child Tasks
+  ✔ capacity one has distinct parent, child and grandchild lanes (368.1846ms)
+  ✔ lost acknowledgement retry reuses one durable child identity (200.1951ms)
+  ✔ actual dropped IPC reply retries by original key without duplicate admission (357.2666ms)
+  ✔ completed parent restart preserves proof without reauthorizing historical children (231.956ms)
+  ✔ mismatch fails explicitly (106.7118ms)
+  ✔ invalid-input fails explicitly (155.4326ms)
+  ✔ invalid-result fails explicitly (216.6541ms)
+  ✔ conflict fails explicitly (173.3613ms)
+  ✔ concurrent fails explicitly (173.1864ms)
+  ✔ timeout fails explicitly (209.0852ms)
+  ✔ authorization is host-owned and denied by default (93.5855ms)
+  ✔ depth quota is bounded (214.6738ms)
+  ✔ total quota is bounded (200.5535ms)
+  ✔ cancel cancels and releases descendants (142.509ms)
+  ✔ parent-timeout cancels and releases descendants (212.4104ms)
+  ✔ early-exit cancels and releases descendants (216.3689ms)
+  ✔ killed parent cleans descendants without inventing parent resource-release proof (248.0733ms)
+  ✔ cancel while child content is preparing cannot later create an orphan Task (229.0274ms)
+  ✔ restart cancels persisted descendants and retains explicit unknown release (206.3792ms)
+✔ generic host-mediated child Tasks (4298.5516ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5355.4906
+
+COMMAND: pnpm exec tsc -b packages\task-engine --pretty false
+EXIT: 0 (no output)
+
+COMMAND: pnpm check
+EXIT: 1
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+$ biome format .
+ Tasks:    35 successful, 35 total
+$ turbo run typecheck && tsc -p tsconfig.test.json --pretty false
+ Tasks:    35 successful, 35 total
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+ Tasks:    35 successful, 35 total
+ Tasks:    9 successful, 9 total
+@potential-guide/objective-pilot:test: pguide evidence write failed: D:\Code\potential-guide.worktrees\pnpm-check-performance-validation\packages\objective-pilot\.cache\evidence-kY8YAA\28593d83-fa3d-4a23-adc1-25d390a19cca\events.jsonl
+@potential-guide/pguide-task-bundle:test: ℹ tests 119
+@potential-guide/pguide-task-bundle:test: ℹ suites 0
+@potential-guide/pguide-task-bundle:test: ℹ pass 112
+@potential-guide/pguide-task-bundle:test: ℹ fail 7
+@potential-guide/pguide-task-bundle:test: ℹ cancelled 0
+@potential-guide/pguide-task-bundle:test: ℹ skipped 0
+@potential-guide/pguide-task-bundle:test: ℹ todo 0
+@potential-guide/pguide-task-bundle:test: ℹ duration_ms 21183.2167
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\car-file-53686a5e-b451-486e-8703-19a669165ee5\bundle.car' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\car-file-53686a5e-b451-486e-8703-19a669165ee5\alias.car'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\21083faa-0d3a-44b3-ae97-ff1ac3fe9d75\custom-ignore' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\21083faa-0d3a-44b3-ae97-ff1ac3fe9d75\task\.gitignore'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\40014abe-1bec-44ae-82dd-ce045a9f9e9c\missing' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\40014abe-1bec-44ae-82dd-ce045a9f9e9c\task\.gitignore'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\6422f8d3-a3a1-4799-8bb6-0ab20c728076\outside\package.json' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\6422f8d3-a3a1-4799-8bb6-0ab20c728076\task\package.json'
+@potential-guide/pguide-task-bundle:test:   Error: EPERM: operation not permitted, symlink 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\2cc92606-e2bc-430c-96f4-edcfb7f0c1c0\outside\missing.ts' -> 'D:\Code\potential-guide.worktrees\silvermoon-task-context-composition-followup\packages\pguide-task-bundle\.cache\task-init\2cc92606-e2bc-430c-96f4-edcfb7f0c1c0\task\src\main.ts'
+ Tasks:    46 successful, 49 total
+Failed:    @potential-guide/pguide-task-bundle#test
+ ERROR  run failed: command  exited (1)
