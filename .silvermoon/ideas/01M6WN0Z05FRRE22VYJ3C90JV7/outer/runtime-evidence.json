@@ -1,0 +1,3530 @@
+{
+  "status": "verified",
+  "platform": "win32",
+  "node": "v24.12.0",
+  "startedAt": "2026-11-08T09:00:19.380Z",
+  "finishedAt": "2026-11-08T09:00:34.715Z",
+  "checkedContractRevision": "4fdde2f8320c261b42dde60a4108a835247de2cc",
+  "contractPrimary": "b99913b7664be05f83f0b6fe9b6b2ad20e8f0473",
+  "controller": {
+    "pid": 57484,
+    "command": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-run-933101f1.mjs"
+    ]
+  },
+  "scope": "outer-composition-01M6WN0Z05FRRE22VYJ3C90JV7",
+  "operation": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699",
+  "controlCallerHeaders": {
+    "Content-Type": "application/json"
+  },
+  "artifacts": [
+    {
+      "kind": "monorepo-standard",
+      "car": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\packages\\probe-sdk\\examples\\objectives\\monorepo-standard\\dist\\monorepo-standard.car",
+      "cid": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+      "sha256": "47262421bfa80b2c0edb7d0b587a05c3bdcfab2b95c7be440bd415ca8d6fb244",
+      "workerSha256": "92c273640758334807fae7567b8cbbcf123d27eeaf3706eb55750ecf0a09b7ea",
+      "hostInvocationVerified": true,
+      "fixedDemoAbsent": true,
+      "children": {
+        "resources/checks/toolchain": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "resources/checks/workspace": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "resources/checks/policy": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm"
+      }
+    },
+    {
+      "kind": "task-engine-device",
+      "car": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\packages\\probe-sdk\\examples\\objectives\\task-engine-device\\dist\\task-engine-device.car",
+      "cid": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+      "sha256": "0a39d49660926d9d2709795e0bd854f0bdb252acd7cb689c1e5d531011a3f98d",
+      "workerSha256": "7b63883edbcd263552ca287232c8ec47c98c33028a587e937755b94c47068bb2",
+      "hostInvocationVerified": true,
+      "fixedDemoAbsent": true,
+      "children": {
+        "resources/checks/runtime": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+        "resources/checks/storage": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+        "resources/checks/gateway": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+      }
+    }
+  ],
+  "artifactBytesUnchanged": true,
+  "source": {
+    "url": "http://127.0.0.1:51259",
+    "pid": 52704,
+    "roots": [
+      "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+      "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4"
+    ]
+  },
+  "processes": [
+    {
+      "label": "read-only-prebuilt-CAR-source",
+      "pid": 52704,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\serve-task-cars.mjs",
+        "0",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\packages\\probe-sdk\\examples\\objectives\\monorepo-standard\\dist\\monorepo-standard.car",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\packages\\probe-sdk\\examples\\objectives\\task-engine-device\\dist\\task-engine-device.car"
+      ],
+      "startedAt": "2026-11-08T09:00:19.530Z",
+      "stop": {
+        "pid": 52704,
+        "method": "Windows 按准确 PID 强制终止；不作为优雅关闭证明"
+      },
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "exitedAt": "2026-11-08T09:00:34.714Z"
+    },
+    {
+      "label": "normal-A",
+      "pid": 56520,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\apps\\pguide-task-engine\\dist\\main.js",
+        "--no-global-config",
+        "--no-ui",
+        "--port",
+        "0",
+        "--database",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\normal-A.sqlite",
+        "--scope",
+        "outer-composition-01M6WN0Z05FRRE22VYJ3C90JV7",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:51259"
+      ],
+      "startedAt": "2026-11-08T09:00:20.136Z",
+      "stop": {
+        "pid": 56520,
+        "method": "Windows 按准确 PID 强制终止；不作为优雅关闭证明"
+      },
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "exitedAt": "2026-11-08T09:00:24.514Z"
+    },
+    {
+      "label": "A-monorepo-standard",
+      "pid": 52508,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\submit-probe-objective.mjs",
+        "http://127.0.0.1:51272",
+        "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\A-monorepo-standard.json"
+      ],
+      "startedAt": "2026-11-08T09:00:20.875Z",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "exitedAt": "2026-11-08T09:00:22.900Z"
+    },
+    {
+      "label": "A-task-engine-device",
+      "pid": 51064,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\submit-probe-objective.mjs",
+        "http://127.0.0.1:51272",
+        "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\A-task-engine-device.json"
+      ],
+      "startedAt": "2026-11-08T09:00:22.921Z",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "exitedAt": "2026-11-08T09:00:24.473Z"
+    },
+    {
+      "label": "normal-A-restarted",
+      "pid": 45988,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\apps\\pguide-task-engine\\dist\\main.js",
+        "--no-global-config",
+        "--no-ui",
+        "--port",
+        "0",
+        "--database",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\normal-A.sqlite",
+        "--scope",
+        "outer-composition-01M6WN0Z05FRRE22VYJ3C90JV7",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:51259"
+      ],
+      "startedAt": "2026-11-08T09:00:24.530Z",
+      "stop": {
+        "pid": 45988,
+        "method": "Windows 按准确 PID 强制终止；不作为优雅关闭证明"
+      },
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "exitedAt": "2026-11-08T09:00:25.480Z"
+    },
+    {
+      "label": "normal-B",
+      "pid": 30552,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\apps\\pguide-task-engine\\dist\\main.js",
+        "--no-global-config",
+        "--no-ui",
+        "--port",
+        "0",
+        "--database",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\normal-B.sqlite",
+        "--scope",
+        "outer-composition-01M6WN0Z05FRRE22VYJ3C90JV7",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:51259"
+      ],
+      "startedAt": "2026-11-08T09:00:25.499Z",
+      "stop": {
+        "pid": 30552,
+        "method": "Windows 按准确 PID 强制终止；不作为优雅关闭证明"
+      },
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "exitedAt": "2026-11-08T09:00:29.953Z"
+    },
+    {
+      "label": "B-monorepo-standard",
+      "pid": 50868,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\submit-probe-objective.mjs",
+        "http://127.0.0.1:55798",
+        "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\B-monorepo-standard.json"
+      ],
+      "startedAt": "2026-11-08T09:00:26.230Z",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "exitedAt": "2026-11-08T09:00:28.306Z"
+    },
+    {
+      "label": "B-task-engine-device",
+      "pid": 53552,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\submit-probe-objective.mjs",
+        "http://127.0.0.1:55798",
+        "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\B-task-engine-device.json"
+      ],
+      "startedAt": "2026-11-08T09:00:28.323Z",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "exitedAt": "2026-11-08T09:00:29.913Z"
+    },
+    {
+      "label": "controlled-faults",
+      "pid": 34256,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\apps\\pguide-task-engine\\dist\\main.js",
+        "--no-global-config",
+        "--no-ui",
+        "--port",
+        "0",
+        "--database",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\faults.sqlite",
+        "--scope",
+        "outer-composition-01M6WN0Z05FRRE22VYJ3C90JV7",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:51259"
+      ],
+      "startedAt": "2026-11-08T09:00:29.975Z",
+      "stop": {
+        "pid": 34256,
+        "method": "Windows 按准确 PID 强制终止；不作为优雅关闭证明"
+      },
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "exitedAt": "2026-11-08T09:00:33.751Z"
+    },
+    {
+      "label": "controlled-cancel",
+      "pid": 53628,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\submit-probe-objective.mjs",
+        "http://127.0.0.1:59969",
+        "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\controlled-cancel.json"
+      ],
+      "startedAt": "2026-11-08T09:00:30.726Z",
+      "exit": {
+        "code": 1,
+        "signal": null
+      },
+      "exitedAt": "2026-11-08T09:00:33.028Z"
+    },
+    {
+      "label": "controlled-crash",
+      "pid": 54416,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\scripts\\submit-probe-objective.mjs",
+        "http://127.0.0.1:59969",
+        "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\controlled-crash.json"
+      ],
+      "startedAt": "2026-11-08T09:00:33.060Z",
+      "exit": {
+        "code": 1,
+        "signal": null
+      },
+      "exitedAt": "2026-11-08T09:00:33.742Z"
+    },
+    {
+      "label": "controlled-faults-recovered",
+      "pid": 9132,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\apps\\pguide-task-engine\\dist\\main.js",
+        "--no-global-config",
+        "--no-ui",
+        "--port",
+        "0",
+        "--database",
+        "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\faults.sqlite",
+        "--scope",
+        "outer-composition-01M6WN0Z05FRRE22VYJ3C90JV7",
+        "--ipfs-gateway-url",
+        "http://127.0.0.1:51259"
+      ],
+      "startedAt": "2026-11-08T09:00:33.771Z",
+      "stop": {
+        "pid": 9132,
+        "method": "Windows 按准确 PID 强制终止；不作为优雅关闭证明"
+      },
+      "exit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "exitedAt": "2026-11-08T09:00:34.693Z"
+    }
+  ],
+  "normal": [
+    {
+      "label": "A-monorepo-standard",
+      "engine": "http://127.0.0.1:51272",
+      "callerPid": 52508,
+      "callerExit": {
+        "code": 0,
+        "signal": null
+      },
+      "parent": {
+        "task": {
+          "requestId": "01M6X66846NPCFHPGK97E6N87B",
+          "taskId": "01M6X668WKQGHK8Y1STQ067SV7",
+          "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+          "stage": "completed",
+          "canceled": false,
+          "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+          "receivedAt": "2026-11-08T09:00:21.780Z",
+          "deadlineAt": "2026-11-08T09:02:21.780Z",
+          "result": {
+            "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+            "documentation": {
+              "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+            },
+            "currentLevel": {
+              "id": "terminal",
+              "documentation": {
+                "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+              }
+            },
+            "checks": []
+          }
+        },
+        "run": {
+          "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "stage": "completed",
+          "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+          "startedAt": "2026-11-08T09:00:21.865Z",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 36,
+            "occurredAt": "2026-11-08T09:00:22.882Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.887Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+            "taskId": "01M6X669VEC0RXGBT8KEZG4KV4",
+            "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+            "parent": {
+              "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "depth": 1,
+              "key": "check:policy",
+              "path": "resources/checks/policy"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+            "receivedAt": "2026-11-08T09:00:22.766Z",
+            "deadlineAt": "2026-11-08T09:00:52.766Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X669VR8BX21KFTVYRAJMSQ",
+            "parent": {
+              "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "depth": 1,
+              "key": "check:policy",
+              "path": "resources/checks/policy"
+            },
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+            "startedAt": "2026-11-08T09:00:22.820Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 33,
+              "occurredAt": "2026-11-08T09:00:22.852Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:22.856Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+            "taskId": "01M6X669J4TRE8R72MVEN22VQQ",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "depth": 1,
+              "key": "check:repository",
+              "path": "resources/checks/workspace"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+            "receivedAt": "2026-11-08T09:00:22.468Z",
+            "deadlineAt": "2026-11-08T09:00:52.468Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X669JFZPTPYHXCQBGE2D98",
+            "parent": {
+              "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "depth": 1,
+              "key": "check:repository",
+              "path": "resources/checks/workspace"
+            },
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+            "startedAt": "2026-11-08T09:00:22.527Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 24,
+              "occurredAt": "2026-11-08T09:00:22.552Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:22.556Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66900MQRYF76TFE19QRKK",
+            "taskId": "01M6X66972TWQSWE3SCMQ2EZBZ",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "depth": 1,
+              "key": "check:node",
+              "path": "resources/checks/toolchain"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+            "receivedAt": "2026-11-08T09:00:22.115Z",
+            "deadlineAt": "2026-11-08T09:00:52.115Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X6697DAP0XFY90JPRRXTTP",
+            "parent": {
+              "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+              "depth": 1,
+              "key": "check:node",
+              "path": "resources/checks/toolchain"
+            },
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:37",
+            "startedAt": "2026-11-08T09:00:22.183Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 15,
+              "occurredAt": "2026-11-08T09:00:22.239Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:22.242Z"
+          }
+        }
+      ]
+    },
+    {
+      "label": "A-task-engine-device",
+      "engine": "http://127.0.0.1:51272",
+      "callerPid": 51064,
+      "callerExit": {
+        "code": 0,
+        "signal": null
+      },
+      "parent": {
+        "task": {
+          "requestId": "01M6X66A43Q29BZA1XMJ5VXWTA",
+          "taskId": "01M6X66AT1CW2AZA088DZPNK83",
+          "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+          "stage": "completed",
+          "canceled": false,
+          "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+          "receivedAt": "2026-11-08T09:00:23.746Z",
+          "deadlineAt": "2026-11-08T09:02:23.746Z",
+          "result": {
+            "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+            "documentation": {
+              "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+            },
+            "currentLevel": {
+              "id": "terminal",
+              "documentation": {
+                "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+              }
+            },
+            "checks": []
+          }
+        },
+        "run": {
+          "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "stage": "completed",
+          "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+          "startedAt": "2026-11-08T09:00:23.823Z",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 72,
+            "occurredAt": "2026-11-08T09:00:24.451Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.457Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+            "taskId": "01M6X66BBAXYNGMJ19ASEMQAZD",
+            "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+            "parent": {
+              "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "receivedAt": "2026-11-08T09:00:24.298Z",
+            "deadlineAt": "2026-11-08T09:00:54.297Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66BC2HY3SET6HERJCE2XT",
+            "parent": {
+              "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "startedAt": "2026-11-08T09:00:24.367Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 69,
+              "occurredAt": "2026-11-08T09:00:24.416Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:24.422Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+            "taskId": "01M6X66B1HJE9FVCX9C0VMTV0T",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "receivedAt": "2026-11-08T09:00:23.985Z",
+            "deadlineAt": "2026-11-08T09:00:53.985Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66B1RDZVRT0NNN031VTYK",
+            "parent": {
+              "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "startedAt": "2026-11-08T09:00:24.033Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 60,
+              "occurredAt": "2026-11-08T09:00:24.064Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:24.069Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+            "taskId": "01M6X66AXF3VS2RQ9N3YB3KY11",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "receivedAt": "2026-11-08T09:00:23.855Z",
+            "deadlineAt": "2026-11-08T09:00:53.854Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66AXQZD6MZ390N4DHP11K",
+            "parent": {
+              "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "startedAt": "2026-11-08T09:00:23.903Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 51,
+              "occurredAt": "2026-11-08T09:00:23.962Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:23.967Z"
+          }
+        }
+      ]
+    },
+    {
+      "label": "B-monorepo-standard",
+      "engine": "http://127.0.0.1:55798",
+      "callerPid": 50868,
+      "callerExit": {
+        "code": 0,
+        "signal": null
+      },
+      "parent": {
+        "task": {
+          "requestId": "01M6X66DBMWGTCR6C3XJX8HQ0E",
+          "taskId": "01M6X66E4N7Q45M04WG4XG3PZ8",
+          "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+          "stage": "completed",
+          "canceled": false,
+          "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+          "receivedAt": "2026-11-08T09:00:27.158Z",
+          "deadlineAt": "2026-11-08T09:02:27.158Z",
+          "result": {
+            "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+            "documentation": {
+              "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+            },
+            "currentLevel": {
+              "id": "terminal",
+              "documentation": {
+                "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+              }
+            },
+            "checks": []
+          }
+        },
+        "run": {
+          "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "stage": "completed",
+          "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+          "startedAt": "2026-11-08T09:00:27.244Z",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 36,
+            "occurredAt": "2026-11-08T09:00:28.287Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:28.293Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66EXPD9JN5W3HQ6G4N2Y4",
+            "taskId": "01M6X66F3PXZASW60WK8GE174R",
+            "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+            "parent": {
+              "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "depth": 1,
+              "key": "check:policy",
+              "path": "resources/checks/policy"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+            "receivedAt": "2026-11-08T09:00:28.150Z",
+            "deadlineAt": "2026-11-08T09:00:58.149Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66F4BA5ARX9WMYAKXKPX4",
+            "parent": {
+              "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "depth": 1,
+              "key": "check:policy",
+              "path": "resources/checks/policy"
+            },
+            "stage": "completed",
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+            "startedAt": "2026-11-08T09:00:28.217Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 33,
+              "occurredAt": "2026-11-08T09:00:28.249Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:28.254Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66EMDHYXWSSW0JN6HQ4ET",
+            "taskId": "01M6X66ETNTV7MFRFQASY4X32E",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "depth": 1,
+              "key": "check:repository",
+              "path": "resources/checks/workspace"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+            "receivedAt": "2026-11-08T09:00:27.861Z",
+            "deadlineAt": "2026-11-08T09:00:57.860Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66EV1ZXSXNTWD2KJFVEC7",
+            "parent": {
+              "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "depth": 1,
+              "key": "check:repository",
+              "path": "resources/checks/workspace"
+            },
+            "stage": "completed",
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+            "startedAt": "2026-11-08T09:00:27.922Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 24,
+              "occurredAt": "2026-11-08T09:00:27.948Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:27.952Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66E823AA4XYJ0JTVW80QY",
+            "taskId": "01M6X66EF2K0N6D200KCXVDT7V",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "depth": 1,
+              "key": "check:node",
+              "path": "resources/checks/toolchain"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+            "receivedAt": "2026-11-08T09:00:27.491Z",
+            "deadlineAt": "2026-11-08T09:00:57.491Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66EG8308CWHE7W1M5YVK7",
+            "parent": {
+              "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+              "depth": 1,
+              "key": "check:node",
+              "path": "resources/checks/toolchain"
+            },
+            "stage": "completed",
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:37",
+            "startedAt": "2026-11-08T09:00:27.576Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 15,
+              "occurredAt": "2026-11-08T09:00:27.636Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:27.640Z"
+          }
+        }
+      ]
+    },
+    {
+      "label": "B-task-engine-device",
+      "engine": "http://127.0.0.1:55798",
+      "callerPid": 53552,
+      "callerExit": {
+        "code": 0,
+        "signal": null
+      },
+      "parent": {
+        "task": {
+          "requestId": "01M6X66FCY018RWKD3D2ZKXWN5",
+          "taskId": "01M6X66G2ZRVRSBHVDE53PS5XQ",
+          "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+          "stage": "completed",
+          "canceled": false,
+          "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+          "receivedAt": "2026-11-08T09:00:29.152Z",
+          "deadlineAt": "2026-11-08T09:02:29.152Z",
+          "result": {
+            "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+            "documentation": {
+              "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+            },
+            "currentLevel": {
+              "id": "terminal",
+              "documentation": {
+                "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+              }
+            },
+            "checks": []
+          }
+        },
+        "run": {
+          "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "stage": "completed",
+          "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+          "startedAt": "2026-11-08T09:00:29.234Z",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 72,
+            "occurredAt": "2026-11-08T09:00:29.891Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:29.897Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66GDFR4GED2RQ3A4C3H78",
+            "taskId": "01M6X66GMEZ10GNX5KXY3NAZFM",
+            "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+            "parent": {
+              "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+            "receivedAt": "2026-11-08T09:00:29.711Z",
+            "deadlineAt": "2026-11-08T09:00:59.711Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66GNRQ1YS0R1JV97RJ9SH",
+            "parent": {
+              "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "completed",
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+            "startedAt": "2026-11-08T09:00:29.804Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 69,
+              "occurredAt": "2026-11-08T09:00:29.857Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:29.862Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66GA7C3435TSZMJE02SH7",
+            "taskId": "01M6X66GAH5VXSNZ97FY2VCD24",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+            "receivedAt": "2026-11-08T09:00:29.393Z",
+            "deadlineAt": "2026-11-08T09:00:59.393Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66GARZE7RYDMSK1DGWJGY",
+            "parent": {
+              "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+            "startedAt": "2026-11-08T09:00:29.440Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 60,
+              "occurredAt": "2026-11-08T09:00:29.473Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:29.478Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66G68MGEXQ2RQEZSN88AH",
+            "taskId": "01M6X66G6G82E39BEEAEANMYRD",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+            "receivedAt": "2026-11-08T09:00:29.265Z",
+            "deadlineAt": "2026-11-08T09:00:59.265Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66G6SJF7T8S0W37YS70ZV",
+            "parent": {
+              "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "revision": "3b842996-7e20-40d9-ba38-b2aee731279d:73",
+            "startedAt": "2026-11-08T09:00:29.315Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 51,
+              "occurredAt": "2026-11-08T09:00:29.372Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:29.376Z"
+          }
+        }
+      ]
+    }
+  ],
+  "persistence": {
+    "originalEngine": "http://127.0.0.1:51272",
+    "restartedEngine": "http://127.0.0.1:55788",
+    "sameDataDomain": true,
+    "persisted": [
+      {
+        "parent": {
+          "task": {
+            "requestId": "01M6X66846NPCFHPGK97E6N87B",
+            "taskId": "01M6X668WKQGHK8Y1STQ067SV7",
+            "bundle": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "receivedAt": "2026-11-08T09:00:21.780Z",
+            "deadlineAt": "2026-11-08T09:02:21.780Z",
+            "result": {
+              "objective": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+              "documentation": {
+                "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/objective.md"
+              },
+              "currentLevel": {
+                "id": "terminal",
+                "documentation": {
+                  "en": "ipfs://bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy/resources/references/en/levels/terminal.md"
+                }
+              },
+              "checks": []
+            }
+          },
+          "run": {
+            "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "startedAt": "2026-11-08T09:00:21.865Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 36,
+              "occurredAt": "2026-11-08T09:00:22.882Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:22.887Z"
+          }
+        },
+        "children": [
+          {
+            "task": {
+              "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+              "taskId": "01M6X669VEC0RXGBT8KEZG4KV4",
+              "bundle": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm",
+              "parent": {
+                "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "depth": 1,
+                "key": "check:policy",
+                "path": "resources/checks/policy"
+              },
+              "stage": "completed",
+              "canceled": false,
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "receivedAt": "2026-11-08T09:00:22.766Z",
+              "deadlineAt": "2026-11-08T09:00:52.766Z",
+              "result": {
+                "pass": true,
+                "documentation": {
+                  "en": "ipfs://bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm/resources/references/en/check.md"
+                }
+              }
+            },
+            "run": {
+              "runId": "01M6X669VR8BX21KFTVYRAJMSQ",
+              "parent": {
+                "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "depth": 1,
+                "key": "check:policy",
+                "path": "resources/checks/policy"
+              },
+              "stage": "completed",
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "startedAt": "2026-11-08T09:00:22.820Z",
+              "exit": {
+                "basis": "worker",
+                "code": 0,
+                "forced": false,
+                "sequence": 33,
+                "occurredAt": "2026-11-08T09:00:22.852Z"
+              },
+              "reclaimedAt": "2026-11-08T09:00:22.856Z"
+            }
+          },
+          {
+            "task": {
+              "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+              "taskId": "01M6X669J4TRE8R72MVEN22VQQ",
+              "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+              "parent": {
+                "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "depth": 1,
+                "key": "check:repository",
+                "path": "resources/checks/workspace"
+              },
+              "stage": "completed",
+              "canceled": false,
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "receivedAt": "2026-11-08T09:00:22.468Z",
+              "deadlineAt": "2026-11-08T09:00:52.468Z",
+              "result": {
+                "pass": true,
+                "documentation": {
+                  "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+                }
+              }
+            },
+            "run": {
+              "runId": "01M6X669JFZPTPYHXCQBGE2D98",
+              "parent": {
+                "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "depth": 1,
+                "key": "check:repository",
+                "path": "resources/checks/workspace"
+              },
+              "stage": "completed",
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "startedAt": "2026-11-08T09:00:22.527Z",
+              "exit": {
+                "basis": "worker",
+                "code": 0,
+                "forced": false,
+                "sequence": 24,
+                "occurredAt": "2026-11-08T09:00:22.552Z"
+              },
+              "reclaimedAt": "2026-11-08T09:00:22.556Z"
+            }
+          },
+          {
+            "task": {
+              "requestId": "01M6X66900MQRYF76TFE19QRKK",
+              "taskId": "01M6X66972TWQSWE3SCMQ2EZBZ",
+              "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+              "parent": {
+                "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "depth": 1,
+                "key": "check:node",
+                "path": "resources/checks/toolchain"
+              },
+              "stage": "completed",
+              "canceled": false,
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "receivedAt": "2026-11-08T09:00:22.115Z",
+              "deadlineAt": "2026-11-08T09:00:52.115Z",
+              "result": {
+                "pass": true,
+                "documentation": {
+                  "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+                }
+              }
+            },
+            "run": {
+              "runId": "01M6X6697DAP0XFY90JPRRXTTP",
+              "parent": {
+                "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+                "depth": 1,
+                "key": "check:node",
+                "path": "resources/checks/toolchain"
+              },
+              "stage": "completed",
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "startedAt": "2026-11-08T09:00:22.183Z",
+              "exit": {
+                "basis": "worker",
+                "code": 0,
+                "forced": false,
+                "sequence": 15,
+                "occurredAt": "2026-11-08T09:00:22.239Z"
+              },
+              "reclaimedAt": "2026-11-08T09:00:22.242Z"
+            }
+          }
+        ]
+      },
+      {
+        "parent": {
+          "task": {
+            "requestId": "01M6X66A43Q29BZA1XMJ5VXWTA",
+            "taskId": "01M6X66AT1CW2AZA088DZPNK83",
+            "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+            "stage": "completed",
+            "canceled": false,
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "receivedAt": "2026-11-08T09:00:23.746Z",
+            "deadlineAt": "2026-11-08T09:02:23.746Z",
+            "result": {
+              "objective": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+              "documentation": {
+                "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/objective.md"
+              },
+              "currentLevel": {
+                "id": "terminal",
+                "documentation": {
+                  "en": "ipfs://bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4/resources/references/en/levels/terminal.md"
+                }
+              },
+              "checks": []
+            }
+          },
+          "run": {
+            "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+            "stage": "completed",
+            "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+            "startedAt": "2026-11-08T09:00:23.823Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 72,
+              "occurredAt": "2026-11-08T09:00:24.451Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:24.457Z"
+          }
+        },
+        "children": [
+          {
+            "task": {
+              "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+              "taskId": "01M6X66BBAXYNGMJ19ASEMQAZD",
+              "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+              "parent": {
+                "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "depth": 1,
+                "key": "check:gateway",
+                "path": "resources/checks/gateway"
+              },
+              "stage": "completed",
+              "canceled": false,
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "receivedAt": "2026-11-08T09:00:24.298Z",
+              "deadlineAt": "2026-11-08T09:00:54.297Z",
+              "result": {
+                "pass": true,
+                "documentation": {
+                  "en": "ipfs://bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4/resources/references/en/check.md"
+                }
+              }
+            },
+            "run": {
+              "runId": "01M6X66BC2HY3SET6HERJCE2XT",
+              "parent": {
+                "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "depth": 1,
+                "key": "check:gateway",
+                "path": "resources/checks/gateway"
+              },
+              "stage": "completed",
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "startedAt": "2026-11-08T09:00:24.367Z",
+              "exit": {
+                "basis": "worker",
+                "code": 0,
+                "forced": false,
+                "sequence": 69,
+                "occurredAt": "2026-11-08T09:00:24.416Z"
+              },
+              "reclaimedAt": "2026-11-08T09:00:24.422Z"
+            }
+          },
+          {
+            "task": {
+              "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+              "taskId": "01M6X66B1HJE9FVCX9C0VMTV0T",
+              "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+              "parent": {
+                "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "depth": 1,
+                "key": "check:storage",
+                "path": "resources/checks/storage"
+              },
+              "stage": "completed",
+              "canceled": false,
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "receivedAt": "2026-11-08T09:00:23.985Z",
+              "deadlineAt": "2026-11-08T09:00:53.985Z",
+              "result": {
+                "pass": true,
+                "documentation": {
+                  "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+                }
+              }
+            },
+            "run": {
+              "runId": "01M6X66B1RDZVRT0NNN031VTYK",
+              "parent": {
+                "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "depth": 1,
+                "key": "check:storage",
+                "path": "resources/checks/storage"
+              },
+              "stage": "completed",
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "startedAt": "2026-11-08T09:00:24.033Z",
+              "exit": {
+                "basis": "worker",
+                "code": 0,
+                "forced": false,
+                "sequence": 60,
+                "occurredAt": "2026-11-08T09:00:24.064Z"
+              },
+              "reclaimedAt": "2026-11-08T09:00:24.069Z"
+            }
+          },
+          {
+            "task": {
+              "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+              "taskId": "01M6X66AXF3VS2RQ9N3YB3KY11",
+              "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+              "parent": {
+                "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "depth": 1,
+                "key": "check:runtime",
+                "path": "resources/checks/runtime"
+              },
+              "stage": "completed",
+              "canceled": false,
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "receivedAt": "2026-11-08T09:00:23.855Z",
+              "deadlineAt": "2026-11-08T09:00:53.854Z",
+              "result": {
+                "pass": true,
+                "documentation": {
+                  "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+                }
+              }
+            },
+            "run": {
+              "runId": "01M6X66AXQZD6MZ390N4DHP11K",
+              "parent": {
+                "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+                "depth": 1,
+                "key": "check:runtime",
+                "path": "resources/checks/runtime"
+              },
+              "stage": "completed",
+              "revision": "a2ce61eb-629d-46e3-aa49-89b181e724b1:73",
+              "startedAt": "2026-11-08T09:00:23.903Z",
+              "exit": {
+                "basis": "worker",
+                "code": 0,
+                "forced": false,
+                "sequence": 51,
+                "occurredAt": "2026-11-08T09:00:23.962Z"
+              },
+              "reclaimedAt": "2026-11-08T09:00:23.967Z"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "cancellation": {
+    "requestId": "01M6X66HR1ET2JQ3AP2MHQ4P3D",
+    "before": {
+      "parent": {
+        "task": {
+          "requestId": "01M6X66HR1ET2JQ3AP2MHQ4P3D",
+          "taskId": "01M6X66JFTEB0F98B3EJJNATKX",
+          "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+          "stage": "running",
+          "canceled": false,
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+          "receivedAt": "2026-11-08T09:00:31.611Z",
+          "deadlineAt": "2026-11-08T09:02:31.611Z"
+        },
+        "run": {
+          "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "stage": "running",
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+          "startedAt": "2026-11-08T09:00:31.700Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+            "taskId": "01M6X66KNT17QWXXCZP6ZHFCKQ",
+            "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "running",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+            "receivedAt": "2026-11-08T09:00:32.826Z",
+            "deadlineAt": "2026-11-08T09:01:02.825Z"
+          },
+          "run": {
+            "runId": "01M6X66KP6DFK5RFXW2B9F4BE8",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "running",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+            "startedAt": "2026-11-08T09:00:32.892Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+            "taskId": "01M6X66KC5YD3HPCS56NGGWJ2W",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+            "receivedAt": "2026-11-08T09:00:32.517Z",
+            "deadlineAt": "2026-11-08T09:01:02.516Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66KCG6VBHV5ZH3GYBPRHC",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+            "startedAt": "2026-11-08T09:00:32.573Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 24,
+              "occurredAt": "2026-11-08T09:00:32.603Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:32.607Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+            "taskId": "01M6X66K1SSQBGC180G1ET8J0H",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+            "receivedAt": "2026-11-08T09:00:32.185Z",
+            "deadlineAt": "2026-11-08T09:01:02.184Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66K26ZG0XVDZ16ADWMG38",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:31",
+            "startedAt": "2026-11-08T09:00:32.243Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 15,
+              "occurredAt": "2026-11-08T09:00:32.299Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:32.303Z"
+          }
+        }
+      ]
+    },
+    "acknowledgement": {
+      "requestId": "01M6X66HR1ET2JQ3AP2MHQ4P3D",
+      "taskId": "01M6X66JFTEB0F98B3EJJNATKX",
+      "seriesId": "01M6X66JFTEB0F98B3EJJNATKX",
+      "stage": "running",
+      "receivedAt": "2026-11-08T09:00:31.611Z",
+      "eligibleAt": "2026-11-08T09:00:31.611Z",
+      "deadlineAt": "2026-11-08T09:02:31.611Z",
+      "timestamp": "2026-11-08T09:00:32.973Z",
+      "updatedAt": "2026-11-08T09:00:32.965Z",
+      "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:33",
+      "dataDomain": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd",
+      "canceled": true,
+      "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+      "name": "Prepare this device for Task Engine",
+      "canceledAt": "2026-11-08T09:00:32.965Z",
+      "run": {
+        "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+        "startedAt": "2026-11-08T09:00:31.700Z",
+        "matchedAt": "2026-11-08T09:00:31.700Z"
+      },
+      "changed": true
+    },
+    "acknowledgementIsNotReleaseProof": true,
+    "after": {
+      "parent": {
+        "task": {
+          "requestId": "01M6X66HR1ET2JQ3AP2MHQ4P3D",
+          "taskId": "01M6X66JFTEB0F98B3EJJNATKX",
+          "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+          "stage": "failed",
+          "canceled": true,
+          "canceledAt": "2026-11-08T09:00:32.965Z",
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+          "receivedAt": "2026-11-08T09:00:31.611Z",
+          "deadlineAt": "2026-11-08T09:02:31.611Z",
+          "error": {
+            "code": "type_channel_failure",
+            "message": "This operation was aborted"
+          }
+        },
+        "run": {
+          "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "stage": "failed",
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+          "startedAt": "2026-11-08T09:00:31.700Z",
+          "stopRequested": {
+            "occurredAt": "2026-11-08T09:00:32.969Z",
+            "sequence": 33,
+            "reason": "no_active_demand"
+          },
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 41,
+            "occurredAt": "2026-11-08T09:00:33.009Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.014Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+            "taskId": "01M6X66KNT17QWXXCZP6ZHFCKQ",
+            "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "stopped",
+            "canceled": true,
+            "canceledAt": "2026-11-08T09:00:32.974Z",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+            "receivedAt": "2026-11-08T09:00:32.826Z",
+            "deadlineAt": "2026-11-08T09:01:02.825Z"
+          },
+          "run": {
+            "runId": "01M6X66KP6DFK5RFXW2B9F4BE8",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "stopped",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+            "startedAt": "2026-11-08T09:00:32.892Z",
+            "stopRequested": {
+              "occurredAt": "2026-11-08T09:00:32.979Z",
+              "sequence": 35,
+              "reason": "no_active_demand"
+            },
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 38,
+              "occurredAt": "2026-11-08T09:00:32.993Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:32.997Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+            "taskId": "01M6X66KC5YD3HPCS56NGGWJ2W",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+            "receivedAt": "2026-11-08T09:00:32.517Z",
+            "deadlineAt": "2026-11-08T09:01:02.516Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66KCG6VBHV5ZH3GYBPRHC",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+            "startedAt": "2026-11-08T09:00:32.573Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 24,
+              "occurredAt": "2026-11-08T09:00:32.603Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:32.607Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+            "taskId": "01M6X66K1SSQBGC180G1ET8J0H",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+            "receivedAt": "2026-11-08T09:00:32.185Z",
+            "deadlineAt": "2026-11-08T09:01:02.184Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66K26ZG0XVDZ16ADWMG38",
+            "parent": {
+              "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:42",
+            "startedAt": "2026-11-08T09:00:32.243Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 15,
+              "occurredAt": "2026-11-08T09:00:32.299Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:32.303Z"
+          }
+        }
+      ]
+    },
+    "callerPid": 53628,
+    "callerExit": {
+      "code": 1,
+      "signal": null
+    }
+  },
+  "crash": {
+    "requestId": "01M6X66M141ABG7YDG9991B0R9",
+    "before": {
+      "parent": {
+        "task": {
+          "requestId": "01M6X66M141ABG7YDG9991B0R9",
+          "taskId": "01M6X66M1Z4J00451J404S4590",
+          "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+          "stage": "running",
+          "canceled": false,
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+          "receivedAt": "2026-11-08T09:00:33.215Z",
+          "deadlineAt": "2026-11-08T09:02:33.215Z"
+        },
+        "run": {
+          "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "stage": "running",
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+          "startedAt": "2026-11-08T09:00:33.320Z"
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66MDT69WAYXEG72J4M076",
+            "taskId": "01M6X66ME5HPHQB9G0SZMEWCDW",
+            "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "running",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+            "receivedAt": "2026-11-08T09:00:33.605Z",
+            "deadlineAt": "2026-11-08T09:01:03.605Z"
+          },
+          "run": {
+            "runId": "01M6X66MEDM9BHKTFS64K1YQFE",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "running",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+            "startedAt": "2026-11-08T09:00:33.654Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+            "taskId": "01M6X66MAK83RQWCQNQ7EVNQBF",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+            "receivedAt": "2026-11-08T09:00:33.491Z",
+            "deadlineAt": "2026-11-08T09:01:03.491Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66MAV3M1K5BCNR73BEB2M",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+            "startedAt": "2026-11-08T09:00:33.544Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 65,
+              "occurredAt": "2026-11-08T09:00:33.575Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:33.583Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+            "taskId": "01M6X66M6BJJS86YPETCQGN7CE",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+            "receivedAt": "2026-11-08T09:00:33.355Z",
+            "deadlineAt": "2026-11-08T09:01:03.354Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66M6KE7VT52F093RWQCV9",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:72",
+            "startedAt": "2026-11-08T09:00:33.407Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 56,
+              "occurredAt": "2026-11-08T09:00:33.463Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:33.469Z"
+          }
+        }
+      ]
+    },
+    "recovered": {
+      "parent": {
+        "task": {
+          "requestId": "01M6X66M141ABG7YDG9991B0R9",
+          "taskId": "01M6X66M1Z4J00451J404S4590",
+          "bundle": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+          "stage": "stopped",
+          "canceled": false,
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+          "receivedAt": "2026-11-08T09:00:33.215Z",
+          "deadlineAt": "2026-11-08T09:02:33.215Z"
+        },
+        "run": {
+          "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "stage": "stopped",
+          "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+          "startedAt": "2026-11-08T09:00:33.320Z",
+          "exit": {
+            "basis": "recovery",
+            "sequence": 73,
+            "occurredAt": "2026-11-08T09:00:34.566Z"
+          },
+          "cleanupUnknown": {
+            "reason": "Recovery does not prove physical exit or cleanup.",
+            "observedAt": "2026-11-08T09:00:34.566Z"
+          }
+        }
+      },
+      "children": [
+        {
+          "task": {
+            "requestId": "01M6X66MDT69WAYXEG72J4M076",
+            "taskId": "01M6X66ME5HPHQB9G0SZMEWCDW",
+            "bundle": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "stopped",
+            "canceled": true,
+            "canceledAt": "2026-11-08T09:00:34.609Z",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+            "receivedAt": "2026-11-08T09:00:33.605Z",
+            "deadlineAt": "2026-11-08T09:01:03.605Z"
+          },
+          "run": {
+            "runId": "01M6X66MEDM9BHKTFS64K1YQFE",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:gateway",
+              "path": "resources/checks/gateway"
+            },
+            "stage": "stopped",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+            "startedAt": "2026-11-08T09:00:33.654Z",
+            "exit": {
+              "basis": "recovery",
+              "sequence": 74,
+              "occurredAt": "2026-11-08T09:00:34.571Z"
+            },
+            "cleanupUnknown": {
+              "reason": "Recovery does not prove physical exit or cleanup.",
+              "observedAt": "2026-11-08T09:00:34.571Z"
+            }
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+            "taskId": "01M6X66MAK83RQWCQNQ7EVNQBF",
+            "bundle": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+            "receivedAt": "2026-11-08T09:00:33.491Z",
+            "deadlineAt": "2026-11-08T09:01:03.491Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66MAV3M1K5BCNR73BEB2M",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:storage",
+              "path": "resources/checks/storage"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+            "startedAt": "2026-11-08T09:00:33.544Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 65,
+              "occurredAt": "2026-11-08T09:00:33.575Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:33.583Z"
+          }
+        },
+        {
+          "task": {
+            "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+            "taskId": "01M6X66M6BJJS86YPETCQGN7CE",
+            "bundle": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "canceled": false,
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+            "receivedAt": "2026-11-08T09:00:33.355Z",
+            "deadlineAt": "2026-11-08T09:01:03.354Z",
+            "result": {
+              "pass": true,
+              "documentation": {
+                "en": "ipfs://bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4/resources/references/en/check.md"
+              }
+            }
+          },
+          "run": {
+            "runId": "01M6X66M6KE7VT52F093RWQCV9",
+            "parent": {
+              "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+              "depth": 1,
+              "key": "check:runtime",
+              "path": "resources/checks/runtime"
+            },
+            "stage": "completed",
+            "revision": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd:75",
+            "startedAt": "2026-11-08T09:00:33.407Z",
+            "exit": {
+              "basis": "worker",
+              "code": 0,
+              "forced": false,
+              "sequence": 56,
+              "occurredAt": "2026-11-08T09:00:33.463Z"
+            },
+            "reclaimedAt": "2026-11-08T09:00:33.469Z"
+          }
+        }
+      ]
+    },
+    "replay": {
+      "status": "accepted",
+      "requestId": "01M6X66M141ABG7YDG9991B0R9",
+      "taskId": "01M6X66M1Z4J00451J404S4590"
+    },
+    "physicalReleaseConfirmed": false,
+    "sameDataDomain": true,
+    "noDuplicateTasksOrRuns": true,
+    "callerPid": 54416,
+    "callerExit": {
+      "code": 1,
+      "signal": null
+    },
+    "callerDiagnostics": "{\"event\":\"submission\",\"requestId\":\"01M6X66M141ABG7YDG9991B0R9\",\"bundle\":\"bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4\"}\nnode:internal/deps/undici/undici:15845\r\n      Error.captureStackTrace(err);\r\n            ^\r\n\r\nTypeError: fetch failed\r\n    at node:internal/deps/undici/undici:15845:13\r\n    at async TaskClient.request (file:///D:/Code/potential-guide.worktrees/silvermoon-task-context-composition-followup/packages/task-engine-http/dist/client.js:9:26)\r\n    at async submitProbeObjective (file:///D:/Code/potential-guide.worktrees/silvermoon-task-context-composition-followup/scripts/submit-probe-objective.mjs:117:20)\r\n    at async main (file:///D:/Code/potential-guide.worktrees/silvermoon-task-context-composition-followup/scripts/submit-probe-objective.mjs:178:16)\r\n    at async file:///D:/Code/potential-guide.worktrees/silvermoon-task-context-composition-followup/scripts/submit-probe-objective.mjs:186:85 {\r\n  [cause]: Error: read ECONNRESET\r\n      at TCP.onStreamRead (node:internal/stream_base_commons:216:20) {\r\n    errno: -4077,\r\n    code: 'ECONNRESET',\r\n    syscall: 'read'\r\n  }\r\n}\r\n\r\nNode.js v24.12.0"
+  },
+  "databases": [
+    {
+      "label": "normal-A-before-restart",
+      "database": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\normal-A.sqlite",
+      "metadata": {
+        "store_id": "a2ce61eb-629d-46e3-aa49-89b181e724b1",
+        "watermark": 73,
+        "floor": 0
+      },
+      "projectionVersion": 5,
+      "sqliteVersion": 5,
+      "databaseBytes": 380928,
+      "databaseSha256": "b1cd7784f0a294fb694e1a34c813d559a852732fcd626b3405de71c27b0b043b",
+      "checkpointSha256": "e2b9ec9830148c91f00c963a11e890da827403490e80568bfcd457a5034e8c07",
+      "verifiedEventCount": 73,
+      "eventKinds": {
+        "window.advanced": 9,
+        "submission.preparing": 8,
+        "task.created": 8,
+        "submission.resolved": 8,
+        "run.started": 8,
+        "run.dispatched": 8,
+        "run.outcome": 8,
+        "run.exited": 8,
+        "run.reclaimed": 8
+      },
+      "tasks": [
+        {
+          "taskId": "01M6X668WKQGHK8Y1STQ067SV7",
+          "requestId": "01M6X66846NPCFHPGK97E6N87B"
+        },
+        {
+          "taskId": "01M6X66972TWQSWE3SCMQ2EZBZ",
+          "requestId": "01M6X66900MQRYF76TFE19QRKK",
+          "compositionId": "01M6X66900MQRYF76TFE19QRKK"
+        },
+        {
+          "taskId": "01M6X669J4TRE8R72MVEN22VQQ",
+          "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+          "compositionId": "01M6X669BRVTC8CXSPHFNMGSVW"
+        },
+        {
+          "taskId": "01M6X669VEC0RXGBT8KEZG4KV4",
+          "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+          "compositionId": "01M6X669NGV9HN9XN3C03ZNH44"
+        },
+        {
+          "taskId": "01M6X66AT1CW2AZA088DZPNK83",
+          "requestId": "01M6X66A43Q29BZA1XMJ5VXWTA"
+        },
+        {
+          "taskId": "01M6X66AXF3VS2RQ9N3YB3KY11",
+          "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+          "compositionId": "01M6X66AX5QZ24CMPMTXQZ3QG8"
+        },
+        {
+          "taskId": "01M6X66B1HJE9FVCX9C0VMTV0T",
+          "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+          "compositionId": "01M6X66B15SVAAEZ1QDQB312WY"
+        },
+        {
+          "taskId": "01M6X66BBAXYNGMJ19ASEMQAZD",
+          "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+          "compositionId": "01M6X66B4ETNGD3MPSZRH3EK2P"
+        }
+      ],
+      "associations": [
+        {
+          "requestId": "01M6X66900MQRYF76TFE19QRKK",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66900MQRYF76TFE19QRKK",
+            "taskId": "01M6X66972TWQSWE3SCMQ2EZBZ"
+          },
+          "parentRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+            "taskId": "01M6X669J4TRE8R72MVEN22VQQ"
+          },
+          "parentRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+            "taskId": "01M6X669VEC0RXGBT8KEZG4KV4"
+          },
+          "parentRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy",
+          "cid": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm"
+        },
+        {
+          "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+            "taskId": "01M6X66AXF3VS2RQ9N3YB3KY11"
+          },
+          "parentRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+            "taskId": "01M6X66B1HJE9FVCX9C0VMTV0T"
+          },
+          "parentRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+            "taskId": "01M6X66BBAXYNGMJ19ASEMQAZD"
+          },
+          "parentRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        }
+      ],
+      "runs": [
+        {
+          "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 36,
+            "occurredAt": "2026-11-08T09:00:22.882Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.887Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X6697DAP0XFY90JPRRXTTP",
+          "compositionId": "01M6X66900MQRYF76TFE19QRKK",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 15,
+            "occurredAt": "2026-11-08T09:00:22.239Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.242Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X669JFZPTPYHXCQBGE2D98",
+          "compositionId": "01M6X669BRVTC8CXSPHFNMGSVW",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 24,
+            "occurredAt": "2026-11-08T09:00:22.552Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.556Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X669VR8BX21KFTVYRAJMSQ",
+          "compositionId": "01M6X669NGV9HN9XN3C03ZNH44",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 33,
+            "occurredAt": "2026-11-08T09:00:22.852Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.856Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 72,
+            "occurredAt": "2026-11-08T09:00:24.451Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.457Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66AXQZD6MZ390N4DHP11K",
+          "compositionId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 51,
+            "occurredAt": "2026-11-08T09:00:23.962Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:23.967Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66B1RDZVRT0NNN031VTYK",
+          "compositionId": "01M6X66B15SVAAEZ1QDQB312WY",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 60,
+            "occurredAt": "2026-11-08T09:00:24.064Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.069Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66BC2HY3SET6HERJCE2XT",
+          "compositionId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 69,
+            "occurredAt": "2026-11-08T09:00:24.416Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.422Z",
+          "outcome": "completed"
+        }
+      ]
+    },
+    {
+      "label": "normal-A-after-restart",
+      "database": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\normal-A.sqlite",
+      "metadata": {
+        "store_id": "a2ce61eb-629d-46e3-aa49-89b181e724b1",
+        "watermark": 73,
+        "floor": 0
+      },
+      "projectionVersion": 5,
+      "sqliteVersion": 5,
+      "databaseBytes": 380928,
+      "databaseSha256": "b1cd7784f0a294fb694e1a34c813d559a852732fcd626b3405de71c27b0b043b",
+      "checkpointSha256": "e2b9ec9830148c91f00c963a11e890da827403490e80568bfcd457a5034e8c07",
+      "verifiedEventCount": 73,
+      "eventKinds": {
+        "window.advanced": 9,
+        "submission.preparing": 8,
+        "task.created": 8,
+        "submission.resolved": 8,
+        "run.started": 8,
+        "run.dispatched": 8,
+        "run.outcome": 8,
+        "run.exited": 8,
+        "run.reclaimed": 8
+      },
+      "tasks": [
+        {
+          "taskId": "01M6X668WKQGHK8Y1STQ067SV7",
+          "requestId": "01M6X66846NPCFHPGK97E6N87B"
+        },
+        {
+          "taskId": "01M6X66972TWQSWE3SCMQ2EZBZ",
+          "requestId": "01M6X66900MQRYF76TFE19QRKK",
+          "compositionId": "01M6X66900MQRYF76TFE19QRKK"
+        },
+        {
+          "taskId": "01M6X669J4TRE8R72MVEN22VQQ",
+          "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+          "compositionId": "01M6X669BRVTC8CXSPHFNMGSVW"
+        },
+        {
+          "taskId": "01M6X669VEC0RXGBT8KEZG4KV4",
+          "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+          "compositionId": "01M6X669NGV9HN9XN3C03ZNH44"
+        },
+        {
+          "taskId": "01M6X66AT1CW2AZA088DZPNK83",
+          "requestId": "01M6X66A43Q29BZA1XMJ5VXWTA"
+        },
+        {
+          "taskId": "01M6X66AXF3VS2RQ9N3YB3KY11",
+          "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+          "compositionId": "01M6X66AX5QZ24CMPMTXQZ3QG8"
+        },
+        {
+          "taskId": "01M6X66B1HJE9FVCX9C0VMTV0T",
+          "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+          "compositionId": "01M6X66B15SVAAEZ1QDQB312WY"
+        },
+        {
+          "taskId": "01M6X66BBAXYNGMJ19ASEMQAZD",
+          "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+          "compositionId": "01M6X66B4ETNGD3MPSZRH3EK2P"
+        }
+      ],
+      "associations": [
+        {
+          "requestId": "01M6X66900MQRYF76TFE19QRKK",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66900MQRYF76TFE19QRKK",
+            "taskId": "01M6X66972TWQSWE3SCMQ2EZBZ"
+          },
+          "parentRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X669BRVTC8CXSPHFNMGSVW",
+            "taskId": "01M6X669J4TRE8R72MVEN22VQQ"
+          },
+          "parentRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X669NGV9HN9XN3C03ZNH44",
+            "taskId": "01M6X669VEC0RXGBT8KEZG4KV4"
+          },
+          "parentRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "rootRunId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy",
+          "cid": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm"
+        },
+        {
+          "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+            "taskId": "01M6X66AXF3VS2RQ9N3YB3KY11"
+          },
+          "parentRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66B15SVAAEZ1QDQB312WY",
+            "taskId": "01M6X66B1HJE9FVCX9C0VMTV0T"
+          },
+          "parentRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+            "taskId": "01M6X66BBAXYNGMJ19ASEMQAZD"
+          },
+          "parentRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "rootRunId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        }
+      ],
+      "runs": [
+        {
+          "runId": "01M6X668X9PCJ4TD785CXJGR1M",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 36,
+            "occurredAt": "2026-11-08T09:00:22.882Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.887Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X6697DAP0XFY90JPRRXTTP",
+          "compositionId": "01M6X66900MQRYF76TFE19QRKK",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 15,
+            "occurredAt": "2026-11-08T09:00:22.239Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.242Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X669JFZPTPYHXCQBGE2D98",
+          "compositionId": "01M6X669BRVTC8CXSPHFNMGSVW",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 24,
+            "occurredAt": "2026-11-08T09:00:22.552Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.556Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X669VR8BX21KFTVYRAJMSQ",
+          "compositionId": "01M6X669NGV9HN9XN3C03ZNH44",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 33,
+            "occurredAt": "2026-11-08T09:00:22.852Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:22.856Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66ATKCBPHQ8VVYEZCTHS8",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 72,
+            "occurredAt": "2026-11-08T09:00:24.451Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.457Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66AXQZD6MZ390N4DHP11K",
+          "compositionId": "01M6X66AX5QZ24CMPMTXQZ3QG8",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 51,
+            "occurredAt": "2026-11-08T09:00:23.962Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:23.967Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66B1RDZVRT0NNN031VTYK",
+          "compositionId": "01M6X66B15SVAAEZ1QDQB312WY",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 60,
+            "occurredAt": "2026-11-08T09:00:24.064Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.069Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66BC2HY3SET6HERJCE2XT",
+          "compositionId": "01M6X66B4ETNGD3MPSZRH3EK2P",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 69,
+            "occurredAt": "2026-11-08T09:00:24.416Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:24.422Z",
+          "outcome": "completed"
+        }
+      ]
+    },
+    {
+      "label": "normal-B",
+      "database": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\normal-B.sqlite",
+      "metadata": {
+        "store_id": "3b842996-7e20-40d9-ba38-b2aee731279d",
+        "watermark": 73,
+        "floor": 0
+      },
+      "projectionVersion": 5,
+      "sqliteVersion": 5,
+      "databaseBytes": 380928,
+      "databaseSha256": "36dcbbbcf5574b4027d1efe4080fbf617760edfde42ddc9f6f981b36d417d8f5",
+      "checkpointSha256": "189dad52c0c6e60382e95b2fce931e1b3a32021adcb8ff290aa3a8730dd965b7",
+      "verifiedEventCount": 73,
+      "eventKinds": {
+        "window.advanced": 9,
+        "submission.preparing": 8,
+        "task.created": 8,
+        "submission.resolved": 8,
+        "run.started": 8,
+        "run.dispatched": 8,
+        "run.outcome": 8,
+        "run.exited": 8,
+        "run.reclaimed": 8
+      },
+      "tasks": [
+        {
+          "taskId": "01M6X66E4N7Q45M04WG4XG3PZ8",
+          "requestId": "01M6X66DBMWGTCR6C3XJX8HQ0E"
+        },
+        {
+          "taskId": "01M6X66EF2K0N6D200KCXVDT7V",
+          "requestId": "01M6X66E823AA4XYJ0JTVW80QY",
+          "compositionId": "01M6X66E823AA4XYJ0JTVW80QY"
+        },
+        {
+          "taskId": "01M6X66ETNTV7MFRFQASY4X32E",
+          "requestId": "01M6X66EMDHYXWSSW0JN6HQ4ET",
+          "compositionId": "01M6X66EMDHYXWSSW0JN6HQ4ET"
+        },
+        {
+          "taskId": "01M6X66F3PXZASW60WK8GE174R",
+          "requestId": "01M6X66EXPD9JN5W3HQ6G4N2Y4",
+          "compositionId": "01M6X66EXPD9JN5W3HQ6G4N2Y4"
+        },
+        {
+          "taskId": "01M6X66G2ZRVRSBHVDE53PS5XQ",
+          "requestId": "01M6X66FCY018RWKD3D2ZKXWN5"
+        },
+        {
+          "taskId": "01M6X66G6G82E39BEEAEANMYRD",
+          "requestId": "01M6X66G68MGEXQ2RQEZSN88AH",
+          "compositionId": "01M6X66G68MGEXQ2RQEZSN88AH"
+        },
+        {
+          "taskId": "01M6X66GAH5VXSNZ97FY2VCD24",
+          "requestId": "01M6X66GA7C3435TSZMJE02SH7",
+          "compositionId": "01M6X66GA7C3435TSZMJE02SH7"
+        },
+        {
+          "taskId": "01M6X66GMEZ10GNX5KXY3NAZFM",
+          "requestId": "01M6X66GDFR4GED2RQ3A4C3H78",
+          "compositionId": "01M6X66GDFR4GED2RQ3A4C3H78"
+        }
+      ],
+      "associations": [
+        {
+          "requestId": "01M6X66E823AA4XYJ0JTVW80QY",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66E823AA4XYJ0JTVW80QY",
+            "taskId": "01M6X66EF2K0N6D200KCXVDT7V"
+          },
+          "parentRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "depth": 1,
+          "key": "check:node",
+          "path": "resources/checks/toolchain",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66EMDHYXWSSW0JN6HQ4ET",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66EMDHYXWSSW0JN6HQ4ET",
+            "taskId": "01M6X66ETNTV7MFRFQASY4X32E"
+          },
+          "parentRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "depth": 1,
+          "key": "check:repository",
+          "path": "resources/checks/workspace",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66EXPD9JN5W3HQ6G4N2Y4",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66EXPD9JN5W3HQ6G4N2Y4",
+            "taskId": "01M6X66F3PXZASW60WK8GE174R"
+          },
+          "parentRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "rootRunId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "depth": 1,
+          "key": "check:policy",
+          "path": "resources/checks/policy",
+          "cid": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm"
+        },
+        {
+          "requestId": "01M6X66G68MGEXQ2RQEZSN88AH",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66G68MGEXQ2RQEZSN88AH",
+            "taskId": "01M6X66G6G82E39BEEAEANMYRD"
+          },
+          "parentRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66GA7C3435TSZMJE02SH7",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66GA7C3435TSZMJE02SH7",
+            "taskId": "01M6X66GAH5VXSNZ97FY2VCD24"
+          },
+          "parentRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66GDFR4GED2RQ3A4C3H78",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66GDFR4GED2RQ3A4C3H78",
+            "taskId": "01M6X66GMEZ10GNX5KXY3NAZFM"
+          },
+          "parentRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "rootRunId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        }
+      ],
+      "runs": [
+        {
+          "runId": "01M6X66E5AMF2A24PH41ZWE7ZC",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 36,
+            "occurredAt": "2026-11-08T09:00:28.287Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:28.293Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66EG8308CWHE7W1M5YVK7",
+          "compositionId": "01M6X66E823AA4XYJ0JTVW80QY",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 15,
+            "occurredAt": "2026-11-08T09:00:27.636Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:27.640Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66EV1ZXSXNTWD2KJFVEC7",
+          "compositionId": "01M6X66EMDHYXWSSW0JN6HQ4ET",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 24,
+            "occurredAt": "2026-11-08T09:00:27.948Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:27.952Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66F4BA5ARX9WMYAKXKPX4",
+          "compositionId": "01M6X66EXPD9JN5W3HQ6G4N2Y4",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 33,
+            "occurredAt": "2026-11-08T09:00:28.249Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:28.254Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66G3QAKC39MV9VS2W74ZJ",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 72,
+            "occurredAt": "2026-11-08T09:00:29.891Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:29.897Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66G6SJF7T8S0W37YS70ZV",
+          "compositionId": "01M6X66G68MGEXQ2RQEZSN88AH",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 51,
+            "occurredAt": "2026-11-08T09:00:29.372Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:29.376Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66GARZE7RYDMSK1DGWJGY",
+          "compositionId": "01M6X66GA7C3435TSZMJE02SH7",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 60,
+            "occurredAt": "2026-11-08T09:00:29.473Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:29.478Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66GNRQ1YS0R1JV97RJ9SH",
+          "compositionId": "01M6X66GDFR4GED2RQ3A4C3H78",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 69,
+            "occurredAt": "2026-11-08T09:00:29.857Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:29.862Z",
+          "outcome": "completed"
+        }
+      ]
+    },
+    {
+      "label": "crash-before-recovery",
+      "database": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\faults.sqlite",
+      "metadata": {
+        "store_id": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd",
+        "watermark": 72,
+        "floor": 0
+      },
+      "projectionVersion": 5,
+      "sqliteVersion": 5,
+      "databaseBytes": 380928,
+      "databaseSha256": "5261c36f96e34b843b259ec09710c390ef09567335cbf4ca747687a5dd5831c9",
+      "checkpointSha256": "3770d1f4f592bc032a522b4090bec69856c8cc996d014cf78df65d80cca9b214",
+      "verifiedEventCount": 72,
+      "eventKinds": {
+        "window.advanced": 9,
+        "submission.preparing": 8,
+        "task.created": 8,
+        "submission.resolved": 8,
+        "run.started": 8,
+        "run.dispatched": 8,
+        "run.outcome": 5,
+        "run.exited": 6,
+        "run.reclaimed": 6,
+        "task.canceled": 2,
+        "run.stop.requested": 2,
+        "run.stopping": 2
+      },
+      "tasks": [
+        {
+          "taskId": "01M6X66JFTEB0F98B3EJJNATKX",
+          "requestId": "01M6X66HR1ET2JQ3AP2MHQ4P3D",
+          "canceledAt": "2026-11-08T09:00:32.965Z"
+        },
+        {
+          "taskId": "01M6X66K1SSQBGC180G1ET8J0H",
+          "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+          "compositionId": "01M6X66JQPHGTRPCM7DRCYS1K0"
+        },
+        {
+          "taskId": "01M6X66KC5YD3HPCS56NGGWJ2W",
+          "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+          "compositionId": "01M6X66K5PSQK3K21XR636WYDP"
+        },
+        {
+          "taskId": "01M6X66KNT17QWXXCZP6ZHFCKQ",
+          "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "compositionId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "canceledAt": "2026-11-08T09:00:32.974Z"
+        },
+        {
+          "taskId": "01M6X66M1Z4J00451J404S4590",
+          "requestId": "01M6X66M141ABG7YDG9991B0R9"
+        },
+        {
+          "taskId": "01M6X66M6BJJS86YPETCQGN7CE",
+          "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+          "compositionId": "01M6X66M62NGQ6FBC7QQSKFZCW"
+        },
+        {
+          "taskId": "01M6X66MAK83RQWCQNQ7EVNQBF",
+          "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+          "compositionId": "01M6X66MA6W3BSWJJVTHXPCHQH"
+        },
+        {
+          "taskId": "01M6X66ME5HPHQB9G0SZMEWCDW",
+          "requestId": "01M6X66MDT69WAYXEG72J4M076",
+          "compositionId": "01M6X66MDT69WAYXEG72J4M076"
+        }
+      ],
+      "associations": [
+        {
+          "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+            "taskId": "01M6X66K1SSQBGC180G1ET8J0H"
+          },
+          "parentRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+            "taskId": "01M6X66KC5YD3HPCS56NGGWJ2W"
+          },
+          "parentRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+            "taskId": "01M6X66KNT17QWXXCZP6ZHFCKQ"
+          },
+          "parentRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        },
+        {
+          "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+            "taskId": "01M6X66M6BJJS86YPETCQGN7CE"
+          },
+          "parentRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+            "taskId": "01M6X66MAK83RQWCQNQ7EVNQBF"
+          },
+          "parentRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66MDT69WAYXEG72J4M076",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66MDT69WAYXEG72J4M076",
+            "taskId": "01M6X66ME5HPHQB9G0SZMEWCDW"
+          },
+          "parentRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        }
+      ],
+      "runs": [
+        {
+          "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 41,
+            "occurredAt": "2026-11-08T09:00:33.009Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.014Z",
+          "outcome": "failed"
+        },
+        {
+          "runId": "01M6X66K26ZG0XVDZ16ADWMG38",
+          "compositionId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 15,
+            "occurredAt": "2026-11-08T09:00:32.299Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:32.303Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66KCG6VBHV5ZH3GYBPRHC",
+          "compositionId": "01M6X66K5PSQK3K21XR636WYDP",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 24,
+            "occurredAt": "2026-11-08T09:00:32.603Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:32.607Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66KP6DFK5RFXW2B9F4BE8",
+          "compositionId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 38,
+            "occurredAt": "2026-11-08T09:00:32.993Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:32.997Z"
+        },
+        {
+          "runId": "01M6X66M27NEYR62EXNQ3YS0EM"
+        },
+        {
+          "runId": "01M6X66M6KE7VT52F093RWQCV9",
+          "compositionId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 56,
+            "occurredAt": "2026-11-08T09:00:33.463Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.469Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66MAV3M1K5BCNR73BEB2M",
+          "compositionId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 65,
+            "occurredAt": "2026-11-08T09:00:33.575Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.583Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66MEDM9BHKTFS64K1YQFE",
+          "compositionId": "01M6X66MDT69WAYXEG72J4M076"
+        }
+      ]
+    },
+    {
+      "label": "crash-after-recovery",
+      "database": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\.cache\\outer-composition-90148dc7-379a-4547-9d01-a0a9c9f0a699\\faults.sqlite",
+      "metadata": {
+        "store_id": "2ebd7d7b-1e56-48ae-adc4-71e9477b1efd",
+        "watermark": 76,
+        "floor": 0
+      },
+      "projectionVersion": 5,
+      "sqliteVersion": 5,
+      "databaseBytes": 380928,
+      "databaseSha256": "5261c36f96e34b843b259ec09710c390ef09567335cbf4ca747687a5dd5831c9",
+      "checkpointSha256": "bf49952fa9b51a76b92ff80c09acf62fbfecdb6343afb675405e3b338f56343c",
+      "verifiedEventCount": 76,
+      "eventKinds": {
+        "window.advanced": 10,
+        "submission.preparing": 8,
+        "task.created": 8,
+        "submission.resolved": 8,
+        "run.started": 8,
+        "run.dispatched": 8,
+        "run.outcome": 5,
+        "run.exited": 8,
+        "run.reclaimed": 6,
+        "task.canceled": 3,
+        "run.stop.requested": 2,
+        "run.stopping": 2
+      },
+      "tasks": [
+        {
+          "taskId": "01M6X66JFTEB0F98B3EJJNATKX",
+          "requestId": "01M6X66HR1ET2JQ3AP2MHQ4P3D",
+          "canceledAt": "2026-11-08T09:00:32.965Z"
+        },
+        {
+          "taskId": "01M6X66K1SSQBGC180G1ET8J0H",
+          "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+          "compositionId": "01M6X66JQPHGTRPCM7DRCYS1K0"
+        },
+        {
+          "taskId": "01M6X66KC5YD3HPCS56NGGWJ2W",
+          "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+          "compositionId": "01M6X66K5PSQK3K21XR636WYDP"
+        },
+        {
+          "taskId": "01M6X66KNT17QWXXCZP6ZHFCKQ",
+          "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "compositionId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "canceledAt": "2026-11-08T09:00:32.974Z"
+        },
+        {
+          "taskId": "01M6X66M1Z4J00451J404S4590",
+          "requestId": "01M6X66M141ABG7YDG9991B0R9"
+        },
+        {
+          "taskId": "01M6X66M6BJJS86YPETCQGN7CE",
+          "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+          "compositionId": "01M6X66M62NGQ6FBC7QQSKFZCW"
+        },
+        {
+          "taskId": "01M6X66MAK83RQWCQNQ7EVNQBF",
+          "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+          "compositionId": "01M6X66MA6W3BSWJJVTHXPCHQH"
+        },
+        {
+          "taskId": "01M6X66ME5HPHQB9G0SZMEWCDW",
+          "requestId": "01M6X66MDT69WAYXEG72J4M076",
+          "compositionId": "01M6X66MDT69WAYXEG72J4M076",
+          "canceledAt": "2026-11-08T09:00:34.609Z"
+        }
+      ],
+      "associations": [
+        {
+          "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+            "taskId": "01M6X66K1SSQBGC180G1ET8J0H"
+          },
+          "parentRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66K5PSQK3K21XR636WYDP",
+            "taskId": "01M6X66KC5YD3HPCS56NGGWJ2W"
+          },
+          "parentRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+            "taskId": "01M6X66KNT17QWXXCZP6ZHFCKQ"
+          },
+          "parentRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "rootRunId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        },
+        {
+          "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+            "taskId": "01M6X66M6BJJS86YPETCQGN7CE"
+          },
+          "parentRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "depth": 1,
+          "key": "check:runtime",
+          "path": "resources/checks/runtime",
+          "cid": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4"
+        },
+        {
+          "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+            "taskId": "01M6X66MAK83RQWCQNQ7EVNQBF"
+          },
+          "parentRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "depth": 1,
+          "key": "check:storage",
+          "path": "resources/checks/storage",
+          "cid": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe"
+        },
+        {
+          "requestId": "01M6X66MDT69WAYXEG72J4M076",
+          "decision": {
+            "status": "accepted",
+            "requestId": "01M6X66MDT69WAYXEG72J4M076",
+            "taskId": "01M6X66ME5HPHQB9G0SZMEWCDW"
+          },
+          "parentRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "rootRunId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "depth": 1,
+          "key": "check:gateway",
+          "path": "resources/checks/gateway",
+          "cid": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        }
+      ],
+      "runs": [
+        {
+          "runId": "01M6X66JGH9W2C56YKV4CHNXTH",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 41,
+            "occurredAt": "2026-11-08T09:00:33.009Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.014Z",
+          "outcome": "failed"
+        },
+        {
+          "runId": "01M6X66K26ZG0XVDZ16ADWMG38",
+          "compositionId": "01M6X66JQPHGTRPCM7DRCYS1K0",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 15,
+            "occurredAt": "2026-11-08T09:00:32.299Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:32.303Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66KCG6VBHV5ZH3GYBPRHC",
+          "compositionId": "01M6X66K5PSQK3K21XR636WYDP",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 24,
+            "occurredAt": "2026-11-08T09:00:32.603Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:32.607Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66KP6DFK5RFXW2B9F4BE8",
+          "compositionId": "01M6X66KF5DW1Q06EJ9NE6KBMN",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 38,
+            "occurredAt": "2026-11-08T09:00:32.993Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:32.997Z"
+        },
+        {
+          "runId": "01M6X66M27NEYR62EXNQ3YS0EM",
+          "exit": {
+            "basis": "recovery",
+            "sequence": 73,
+            "occurredAt": "2026-11-08T09:00:34.566Z"
+          },
+          "cleanupUnknown": {
+            "reason": "Recovery does not prove physical exit or cleanup.",
+            "observedAt": "2026-11-08T09:00:34.566Z"
+          }
+        },
+        {
+          "runId": "01M6X66M6KE7VT52F093RWQCV9",
+          "compositionId": "01M6X66M62NGQ6FBC7QQSKFZCW",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 56,
+            "occurredAt": "2026-11-08T09:00:33.463Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.469Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66MAV3M1K5BCNR73BEB2M",
+          "compositionId": "01M6X66MA6W3BSWJJVTHXPCHQH",
+          "exit": {
+            "basis": "worker",
+            "code": 0,
+            "forced": false,
+            "sequence": 65,
+            "occurredAt": "2026-11-08T09:00:33.575Z"
+          },
+          "reclaimedAt": "2026-11-08T09:00:33.583Z",
+          "outcome": "completed"
+        },
+        {
+          "runId": "01M6X66MEDM9BHKTFS64K1YQFE",
+          "compositionId": "01M6X66MDT69WAYXEG72J4M076",
+          "exit": {
+            "basis": "recovery",
+            "sequence": 74,
+            "occurredAt": "2026-11-08T09:00:34.571Z"
+          },
+          "cleanupUnknown": {
+            "reason": "Recovery does not prove physical exit or cleanup.",
+            "observedAt": "2026-11-08T09:00:34.571Z"
+          }
+        }
+      ]
+    }
+  ],
+  "preflight": {
+    "status": "failed",
+    "failure": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   'bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy',\n+   'bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4'\n-   'bafybeib3v65w6g6hyaucwpvy35iaxd2brvhljb3trzdh7vypbzddrc22ci',\n-   'bafybeibdxrdvxucnxpx6z6u3znyszzklsg5nwtn6bvx25oy4koc25m4jiu'\n  ]\n",
+    "artifacts": [
+      {
+        "kind": "monorepo-standard",
+        "car": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\packages\\probe-sdk\\examples\\objectives\\monorepo-standard\\dist\\monorepo-standard.car",
+        "cid": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+        "sha256": "47262421bfa80b2c0edb7d0b587a05c3bdcfab2b95c7be440bd415ca8d6fb244",
+        "children": {
+          "resources/checks/toolchain": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+          "resources/checks/workspace": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+          "resources/checks/policy": "bafybeiei2ltfzfltrgj2svvrtvihzjcf2cabmj2bfy2mvmecjgu7vakplm"
+        }
+      },
+      {
+        "kind": "task-engine-device",
+        "car": "D:\\Code\\potential-guide.worktrees\\silvermoon-task-context-composition-followup\\packages\\probe-sdk\\examples\\objectives\\task-engine-device\\dist\\task-engine-device.car",
+        "cid": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "sha256": "0a39d49660926d9d2709795e0bd854f0bdb252acd7cb689c1e5d531011a3f98d",
+        "children": {
+          "resources/checks/runtime": "bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4",
+          "resources/checks/storage": "bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe",
+          "resources/checks/gateway": "bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4"
+        }
+      }
+    ],
+    "serviceProcessesStarted": 0,
+    "cleanup": {
+      "allOwnedProcessesExited": true,
+      "slowServerClosed": true,
+      "allSlowConnectionsClosed": true,
+      "errors": [],
+      "operationDataRemoved": true
+    }
+  },
+  "inputCorrection": {
+    "status": "failed",
+    "failure": "controlled-cancel independent network Check observation timed out",
+    "normalCompleted": [
+      {
+        "label": "A-monorepo-standard",
+        "engine": "http://127.0.0.1:58322",
+        "cid": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+        "taskId": "01M6X5991KTHW63VNZ5YH59WRA"
+      },
+      {
+        "label": "A-task-engine-device",
+        "engine": "http://127.0.0.1:58322",
+        "cid": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "taskId": "01M6X59AZQ8SCH70194W59PAG0"
+      },
+      {
+        "label": "B-monorepo-standard",
+        "engine": "http://127.0.0.1:63148",
+        "cid": "bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy",
+        "taskId": "01M6X59EBNAZP9EY0K8KFW6ZMX"
+      },
+      {
+        "label": "B-task-engine-device",
+        "engine": "http://127.0.0.1:63148",
+        "cid": "bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4",
+        "taskId": "01M6X59G9K035NBRKRZZG00YHW"
+      }
+    ],
+    "issue": "探索性输入包含父 Probe 业务契约未声明的 checkTimeoutMs；已移除该字段，不修改运行库或制品。",
+    "controlledCallerExit": {
+      "code": 3221226505,
+      "signal": null
+    },
+    "cleanup": {
+      "allOwnedProcessesExited": true,
+      "slowServerClosed": true,
+      "allSlowConnectionsClosed": true,
+      "errors": [],
+      "operationDataRemoved": true
+    }
+  },
+  "headerCorrection": {
+    "status": "failed",
+    "failure": "Local service request policy denied access.",
+    "method": "通过现有 TaskClient.headers 配置为 POST 声明 application/json；不改变库或服务策略。",
+    "acknowledgementReceived": false,
+    "cleanup": {
+      "allOwnedProcessesExited": true,
+      "slowServerClosed": true,
+      "allSlowConnectionsClosed": true,
+      "errors": [],
+      "operationDataRemoved": true
+    }
+  },
+  "samplingCorrection": {
+    "status": "failed",
+    "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'stopping'\n- 'stopped'\n        ^\n",
+    "method": "Task 与 Run 来自不同 HTTP snapshot revision，不把两次读取当原子快照；等待终态 Task 和真实 reclaimedAt 同时满足。",
+    "cleanup": {
+      "allOwnedProcessesExited": true,
+      "slowServerClosed": true,
+      "allSlowConnectionsClosed": true,
+      "errors": [],
+      "operationDataRemoved": true
+    }
+  },
+  "slowEndpoint": "http://127.0.0.1:51261",
+  "slowRequests": [
+    {
+      "path": "/controlled-cancel",
+      "receivedAt": "2026-11-08T09:00:32.923Z",
+      "closed": true,
+      "closedAt": "2026-11-08T09:00:32.985Z"
+    },
+    {
+      "path": "/controlled-crash",
+      "receivedAt": "2026-11-08T09:00:33.685Z",
+      "closed": true,
+      "closedAt": "2026-11-08T09:00:33.733Z"
+    }
+  ],
+  "cleanup": {
+    "allOwnedProcessesExited": true,
+    "slowServerClosed": true,
+    "allSlowConnectionsClosed": true,
+    "errors": [],
+    "operationDataRemoved": true
+  }
+}
