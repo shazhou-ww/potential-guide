@@ -10,6 +10,13 @@ Windows 上仅使用已经存在的两份作者 CAR 和 dist 入口；执行前�
 
 全部服务使用 OS 分配的 loopback 端口和本次操作独占的 `.cache\outer-composition-<唯一值>` 数据目录，记录实际 URL、PID、命令和 SQLite 数据域。默认本机策略没有 token，不向证据写入凭据。
 
+现存 CAR 的实际根与 Inner 的历史双端口运行记录不同；首次预检因此停止，尚未启动服务。本阶段不重建旧制品、不改写 Inner，而固定当前可读 CAR 的实际身份：已验证其中含通用 `task-invoke`、不含旧固定端口/演示身份，嵌入 Check pins 与作者 YAML 一致。后续两个端口都使用下面同一份现存字节：
+
+| 作者包 | 当前预构建 Probe CID | CAR SHA-256 |
+| --- | --- | --- |
+| monorepo-standard | `bafybeiakytjzp72xbnzsqsxjyp3rldsfetqe3frj2qg3y37rg565rt6asy` | `47262421bfa80b2c0edb7d0b587a05c3bdcfab2b95c7be440bd415ca8d6fb244` |
+| task-engine-device | `bafybeibl6wqhhbh2pn7nimgyemqz36ixjsyjmeo66sefacyrg6qbc2dbr4` | `0a39d49660926d9d2709795e0bd854f0bdb252acd7cb689c1e5d531011a3f98d` |
+
 ### D-S02: 验证配置变更与故障处理
 
 换服务端口复用相同 Probe CAR/CID；在受控运行中验证取消、服务重启和资源释放，不改变共享服务或公共内容。
