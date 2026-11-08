@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import spawn from "cross-spawn";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -41,6 +41,19 @@ export async function buildWorkspace(args = [], run = spawn.sync, cacheInputs = 
     ]);
   for (const command of commands) {
     const result = run("pnpm", command, { cwd: root, env, stdio: "inherit" });
+    if (result.error) throw result.error;
+    if (result.status !== 0) return result.status ?? 1;
+  }
+  if (args.length === 0) {
+    const result = run(
+      process.execPath,
+      [join(root, "scripts", "run-probe-objectives.mjs"), "build"],
+      {
+        cwd: root,
+        env,
+        stdio: "inherit",
+      },
+    );
     if (result.error) throw result.error;
     if (result.status !== 0) return result.status ?? 1;
   }

@@ -165,6 +165,12 @@ assume that Worker startup completes inside a 150 ms wall-clock admission budget
 The fixture's graceful-stop allowance is separate from the logical Task deadline;
 forced-exit and unknown-cleanup tests remain enabled.
 
+Unfiltered workspace builds also build the two local Probe author examples after
+Environment Check verification, so clean checkouts have their generated definition
+imports before repository checks run. This is offline preparation against pinned
+local Check DAGs, not Probe execution or content publication. Filtered package
+release builds retain their original dependency closure and never run that step.
+
 ### Previous Bundle normalization batch
 
 The approved configuration scope is the exact internal runtime closure of

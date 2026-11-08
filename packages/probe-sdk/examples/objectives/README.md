@@ -27,6 +27,11 @@ loopback-only HTTP gateway on an OS-selected port and capacity-one execution lan
 content. Run `objectives:build` and `objectives:run` separately to inspect and
 reuse the generated CARs under each package's ignored `dist/` directory.
 
+An unfiltered root `pnpm build` also builds these CARs and their generated
+definitions after verifying Environment Checks, so repository checks work from
+a clean checkout. Filtered package builds do not run this preparation. Neither
+build path starts an Engine or publishes/pins content.
+
 ## Build once, submit to a separately started Engine
 
 The local convenience command is not deployment. First build the CARs with

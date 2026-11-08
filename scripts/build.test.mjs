@@ -70,3 +70,41 @@ test("failed builds cannot run acceptance or return a successful publishing buil
       /Invalid filtered build plan/,
     );
 });
+
+test("full builds generate Probe example imports only after accepting Environment Checks", async () => {
+  const calls = [];
+  const code = await buildWorkspace(
+    [],
+    (command, args) => {
+      calls.push({ command, args });
+      return { status: 0 };
+    },
+    async () => "inputs",
+  );
+  assert.equal(code, 0);
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls[0].args, ["exec", "turbo", "run", "build"]);
+  assert.deepEqual(calls[1].args, [
+    "exec",
+    "turbo",
+    "run",
+    "verify",
+    "--filter=@potential-guide/check-environment",
+  ]);
+  assert.equal(calls[2].command, process.execPath);
+  assert.match(calls[2].args[0], /run-probe-objectives\.mjs$/);
+  assert.equal(calls[2].args[1], "build");
+});
+
+test("Probe example preparation failures fail the full build explicitly", async () => {
+  const failure = new Error("Pinned Check CID mismatch");
+  for (const result of [{ status: 9 }, { error: failure }]) {
+    const build = buildWorkspace(
+      [],
+      (command) => (command === process.execPath ? result : { status: 0 }),
+      async () => "inputs",
+    );
+    if (result.error) await assert.rejects(build, (error) => error === failure);
+    else assert.equal(await build, 9);
+  }
+});
