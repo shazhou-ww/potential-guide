@@ -139,6 +139,13 @@ page and empty checks. Every returned node has complete per-language IPFS URIs.
 Mapping, execution, cancellation and invalid result errors are invocation failures,
 not fabricated Problems.
 
+## Runnable Objective packages
+
+The authored Probe packages under [`examples/objectives`](./examples/objectives/README.md)
+define monorepo standardization and local Task Engine device readiness as
+reusable Probe Task Bundles. They include stable author YAML, Worker source,
+References, and a local build/run command; they are not test-only fixtures.
+
 ## Compatibility and distribution
 
 Check author YAML simultaneously removes redundant `references`; generated Check

@@ -36,7 +36,10 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "lint": "biome lint .",
     "test": "tsx --test \"test/*.test.ts\"",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "objectives:build": "pnpm run build && node ../../scripts/build.mjs --filter=@potential-guide/check-environment... && node ../../scripts/run-probe-objectives.mjs build",
+    "objectives:run": "node ../../scripts/run-probe-objectives.mjs run",
+    "objectives:local": "pnpm run objectives:build && node ../../scripts/run-probe-objectives.mjs run"
   },
   "engines": {
     "node": ">=22.13.0"

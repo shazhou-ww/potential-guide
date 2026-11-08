@@ -1,0 +1,36 @@
+name: Standardize this monorepo
+kind: monorepo-standard
+source:
+  root: src
+  entry: src/main.ts
+  contract: src/contract.ts
+languages: [en]
+referenceRoot: references
+bundles:
+  toolchain:
+    source:
+      kind: ipfs
+      cid: bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a
+  workspace:
+    source:
+      kind: ipfs
+      cid: bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe
+  policy:
+    source:
+      kind: ipfs
+      cid: bafybeia3bpqxern3vs56ewbryvztv2ayodqdt55du5v3s7xrtz24b3eyya
+checks:
+  node:
+    bundle: toolchain
+    inputMapping: toolchain
+  repository:
+    bundle: workspace
+    inputMapping: workspace
+  policy:
+    bundle: policy
+    inputMapping: standardization
+levels:
+  - id: environment-ready
+    checks: [node, repository]
+  - id: monorepo-standardized
+    checks: [policy]

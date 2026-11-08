@@ -1,0 +1,36 @@
+name: Prepare this device for Task Engine
+kind: task-engine-device
+source:
+  root: src
+  entry: src/main.ts
+  contract: src/contract.ts
+languages: [en]
+referenceRoot: references
+bundles:
+  runtime:
+    source:
+      kind: ipfs
+      cid: bafybeifydrqggqypfapxiwt2bpovdprxae6iysrjhiua3d2jebico74u7a
+  storage:
+    source:
+      kind: ipfs
+      cid: bafybeicx45guntfoueeddml532gfayxuvo5jhujuf4q2wasnef4ysyrfhe
+  gateway:
+    source:
+      kind: ipfs
+      cid: bafybeibgc2yxmiynaq3m64ptpch6bi4ion7pqx5zh7tda6bfkxqx7ie7si
+checks:
+  runtime:
+    bundle: runtime
+    inputMapping: runtime
+  storage:
+    bundle: storage
+    inputMapping: storage
+  gateway:
+    bundle: gateway
+    inputMapping: gateway
+levels:
+  - id: device-runtime-ready
+    checks: [runtime, storage]
+  - id: content-gateway-ready
+    checks: [gateway]
