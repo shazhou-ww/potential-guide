@@ -1,8 +1,8 @@
-import type { TaskCallback, TaskContext } from "@potential-guide/task-sdk";
 import {
   bundleCid,
   validateBundleReference,
-} from "@potential-guide/task-protocol/bundle-reference";
+} from "@silvermoon-work/task-protocol/bundle-reference";
+import type { TaskCallback, TaskContext } from "@silvermoon-work/task-sdk";
 import type { CheckObservation, CheckResult } from "./contracts.js";
 import { assertLanguages, assertProblemCodes } from "./definition.js";
 

@@ -1,11 +1,5 @@
 protocol:
   - "@potential-guide/ipfs-content"
-  - "@potential-guide/task-protocol"
-  - "@potential-guide/task-sdk"
-  - "@potential-guide/task-engine"
-  - "@potential-guide/task-engine-http"
-  - "@potential-guide/task-engine-storage"
-  - "@potential-guide/task-engine-server"
   - "@potential-guide/check-runtime-files"
   - "@potential-guide/effects"
   - "@potential-guide/pilot-protocol"
@@ -17,13 +11,11 @@ business:
   - "@potential-guide/objective-regulator"
   - "@potential-guide/regulation-coordinator"
 tools:
-  - "@potential-guide/pguide-task-engine"
-  - "@potential-guide/task-engine-webui"
   - "@potential-guide/test-tree"
   - pguide
   - "@potential-guide/cli-core"
   - "@potential-guide/pguide-config"
-  - "@potential-guide/pguide-task-bundle"
+  - "@potential-guide/task-authoring"
   - "@potential-guide/pguide-agents"
   - "@potential-guide/cli-runtime"
   - "@potential-guide/pguide-regulate"
@@ -38,7 +30,7 @@ tools:
 deferredExternalization:
   - "@potential-guide/git-source"
 developmentTools:
-  "@potential-guide/pguide-task-bundle":
+  "@potential-guide/task-authoring":
     - packages/check-environment/build.mjs
     - packages/check-environment/verify.mjs
     - packages/check-sdk/examples/text/build.mjs

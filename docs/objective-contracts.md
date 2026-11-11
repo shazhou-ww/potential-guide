@@ -138,7 +138,7 @@ layer resolves returned dependency `requirements` against real observations and
 rechecks the original check; the Host does not interpret Objective dependencies.
 The old Host execution path is retired. Static declarations remain valid,
 but CLI execution does not fall back to that protocol; author Task Bundles for the
-[generic Engine](axis/task-engine-contracts/task-bundle.md) explicitly.
+[generic Engine](https://github.com/silvermoon-work/task-engine) explicitly.
 
 Upgrade a v2 source in a new commit only after migrating its entrypoints,
 resources, dependency handling and fixtures. Changing only `$schema` is not a

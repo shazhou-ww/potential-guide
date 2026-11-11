@@ -44,15 +44,18 @@ From the repository root, in separate Windows terminals:
 
 ```powershell
 node scripts\serve-task-cars.mjs 0 packages\probe-sdk\examples\objectives\monorepo-standard\dist\monorepo-standard.car packages\probe-sdk\examples\objectives\task-engine-device\dist\task-engine-device.car
-node apps\pguide-task-engine\dist\main.js --no-global-config --port 0 --database .cache\my-probe-service\tasks.sqlite --ipfs-gateway-url <content-source-URL>
+pnpm exec task-engine --help
 node scripts\submit-probe-objective.mjs <Engine-URL> <Probe-CID> .\business-input.json
 ```
 
-Create the uniquely named data directory beforehand. The first process exposes
+Install `@silvermoon-work/task-engine-cli` and use its upstream help to configure
+and start an Engine against the content source. Engine flags and lifecycle are
+owned by [silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine),
+not by `pguide`. The first process exposes
 only verified prebuilt CAR blocks and `/health` on loopback; it neither builds nor
-publishes/pins. Its ready JSON contains URL, PID and immutable roots. The second
-starts a persistent Engine with host-owned same-scope child authorization. The
-third submits only the CID and JSON business input; it neither builds a Bundle
+publishes/pins. Its ready JSON contains URL, PID and immutable roots.
+The submit script uses the configured external Engine with host-owned child
+authorization. It submits only the CID and JSON business input; it neither builds a Bundle
 nor starts an Engine or content source. Optional HTTP credentials belong in the
 caller's `PGUIDE_TASK_AUTHORIZATION`, never the Worker.
 

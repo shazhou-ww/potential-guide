@@ -4,7 +4,7 @@ Host-based execution and the old local artifact inspection CLI/codecs are
 retired. `pguide validate artifact`, the Pilot scaffold/validate commands and
 the old probe command are removed. Legacy regulate/continue wrappers still
 reject execution. New execution uses
-[Task Bundles](axis/task-engine-contracts/task-bundle.md).
+[Task Bundles](https://github.com/silvermoon-work/task-engine).
 Consumption, validation and recovery examples below document historical
 formats and the retired workflow, not active CLI capabilities.
 The `check-artifacts` library and its local verification packs are also retired.

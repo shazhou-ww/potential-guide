@@ -1,41 +1,10 @@
 import { join } from "node:path";
 
-export const taskEngineReleaseIds = [
-  "cli-core",
-  "task-protocol",
-  "task-sdk",
-  "task-engine-http",
-  "task-engine-storage",
-  "task-engine-webui",
-  "pguide-task-bundle",
-  "task-engine",
-  "task-engine-server",
-  "pguide-task-engine",
-];
-
 export function releasePackageDirectory({ directory, workspace }) {
   return join(workspace ?? "packages", directory);
 }
 
 export const releasePackages = [
-  {
-    id: "pguide-task-bundle",
-    directory: "pguide-task-bundle",
-    name: "@potential-guide/pguide-task-bundle",
-    bins: ["pguide-task-bundle"],
-  },
-  ...[
-    ["task-protocol", ["reduce", "project", "isTimedOut", "json"]],
-    ["task-engine", ["createTaskEngine", "newId"]],
-    ["task-engine-http", ["createTaskHandler"]],
-    ["task-engine-storage", ["openSqliteStore"]],
-  ].map(([directory, requiredExports]) => ({
-    id: directory,
-    directory,
-    name: `@potential-guide/${directory}`,
-    requiredExports,
-    bins: [],
-  })),
   ...[
     "objective-monorepo-standard",
     "objective-package-standard",
@@ -221,51 +190,6 @@ export const releasePackages = [
     bins: ["pguide-objectives"],
   },
   {
-    id: "pguide-task-engine",
-    workspace: "apps",
-    directory: "pguide-task-engine",
-    name: "@potential-guide/pguide-task-engine",
-    bins: ["pguide-task-engine"],
-    requiredFiles: ["settings.json"],
-  },
-  {
-    id: "task-engine-webui",
-    workspace: "apps",
-    directory: "task-engine-webui",
-    name: "@potential-guide/task-engine-webui",
-    bins: [],
-    sourceOutputDirectory: "dist/src/",
-    requiredFiles: [
-      "dist/src/server.js",
-      "dist/src/server.d.ts",
-      "dist/public/index.html",
-      "dist/public/app.js",
-      "dist/public/style.css",
-    ],
-  },
-  {
-    id: "task-sdk",
-    directory: "task-sdk",
-    name: "@potential-guide/task-sdk",
-    requiredExports: ["runTask", "RunFailure"],
-    bins: [],
-  },
-  {
-    id: "task-engine-server",
-    directory: "task-engine-server",
-    name: "@potential-guide/task-engine-server",
-    requiredExports: ["startTaskServer"],
-    bins: [],
-    forbiddenFiles: ["dist/main.js"],
-    forbiddenDependencies: [
-      "@potential-guide/check-task",
-      "@potential-guide/probe-task",
-      "@potential-guide/check-artifacts",
-      "@potential-guide/checker-host",
-      "@potential-guide/objective-host",
-    ],
-  },
-  {
     id: "check-sdk",
     directory: "check-sdk",
     name: "@potential-guide/check-sdk",
@@ -345,8 +269,7 @@ export function parseReleaseTag(tag) {
   if (!releaseVersion.test(version)) {
     throw new Error(`Release tags require a valid 0.x stable or RC version: ${tag}.`);
   }
-  if (taskEngineReleaseIds.includes(selected.id) && !version.includes("-rc.")) {
-    throw new Error(`Task Engine releases require an RC version: ${tag}.`);
-  }
+  if (selected.id === "cli-core" && !version.includes("-rc."))
+    throw new Error(`CLI Core releases require an RC version: ${tag}.`);
   return { ...selected, version, distTag: version.includes("-rc.") ? "rc" : "latest" };
 }

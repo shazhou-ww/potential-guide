@@ -1,9 +1,9 @@
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyCheckResources } from "@potential-guide/check-sdk/authoring";
-import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
-import { prepareEnvironment } from "./prepare.mjs";
+import { readTaskArtifact } from "@potential-guide/task-authoring";
 import { acceptChecks, readReferences } from "./build.mjs";
+import { prepareEnvironment } from "./prepare.mjs";
 
 /** Uncached acceptance boundary, also run before packing restored build outputs. */
 export async function verifyEnvironment(root, acceptedOnly = false) {

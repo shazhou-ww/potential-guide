@@ -37,10 +37,10 @@
     "@sinclair/typebox": "catalog:"
   },
   "devDependencies": {
-    "@potential-guide/task-sdk": "workspace:^",
-    "@potential-guide/task-engine": "workspace:^",
-    "@potential-guide/task-protocol": "workspace:^",
-    "@potential-guide/pguide-task-bundle": "workspace:^",
+    "@silvermoon-work/task-sdk": "catalog:",
+    "@silvermoon-work/task-engine": "catalog:",
+    "@silvermoon-work/task-protocol": "catalog:",
+    "@potential-guide/task-authoring": "workspace:^",
     "yaml": "catalog:"
   },
   "publishConfig": {

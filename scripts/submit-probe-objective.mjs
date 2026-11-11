@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { newId } from "../packages/task-engine/dist/identity.js";
-import { TaskClient } from "../packages/task-engine-http/dist/index.js";
-import { TaskError } from "../packages/task-protocol/dist/index.js";
+import { newId } from "@silvermoon-work/task-engine";
+import { TaskClient } from "@silvermoon-work/task-engine-http";
+import { TaskError } from "@silvermoon-work/task-protocol";
 
 function describe(error) {
   return {

@@ -39,6 +39,12 @@
     "typecheck": "turbo run typecheck && tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
+    "@silvermoon-work/task-builder": "catalog:",
+    "@silvermoon-work/task-engine": "catalog:",
+    "@silvermoon-work/task-engine-cli": "catalog:",
+    "@silvermoon-work/task-engine-http": "catalog:",
+    "@silvermoon-work/task-builder-cli": "catalog:",
+    "@silvermoon-work/task-protocol": "catalog:",
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
     "cross-spawn": "catalog:",

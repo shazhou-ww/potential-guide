@@ -7,10 +7,9 @@ and the extensible `pguide` command line:
   handles, current-value observations, and dependency-scoped replacement.
 - `@potential-guide/git-source` observes Git refs and provides immutable,
   commit-bound repository snapshots without depending on Objective concepts.
-- The [generic Task engine](./docs/task-engine.md) accepts declarative input
-  Schemas, derives validation/structural equality, and exposes authorized current
-  type discovery with optional submission revision guards. Check/Probe use type
-  version 2; historical contracts are never silently reinterpreted.
+- This repository defines Check and Objective tasks. Generic task execution,
+  protocols, worker SDKs and compilation are owned by
+  [silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine).
 - [`@potential-guide/check-sdk`](./packages/check-sdk/README.md) authors standalone
   checks as standard Task Bundles, as demonstrated by
   [`check-environment`](./packages/check-environment/README.md).
@@ -80,7 +79,7 @@ needed by Worker validation without silently repairing drift. Objective staging 
 `pnpm test` builds or restores them instead of rebuilding every Worker unconditionally.
 
 Run `pnpm consumers:check` for the full isolated package-consumer suite (including
-production dependency isolation, authoring, SDK, task bundles and services), and
+production dependency isolation, Objective packages and CLI extensions), and
 `pnpm deployment:verify` for the same full consumer suite plus npm installation,
 CLI discovery and runtime deployment checks. Full delivery validation is
 `pnpm check && pnpm deployment:verify`; it does not publish packages. CI runs
@@ -117,7 +116,7 @@ the repository so missing author dependencies cannot resolve from ancestor works
 No replacement command packages are created in advance.
 
 New checks use [Check SDK](./packages/check-sdk/README.md) and ordinary
-[Task Bundles](./packages/pguide-task-bundle/README.md).
+[external Task Builder](https://github.com/silvermoon-work/task-engine/tree/main/packages/task-builder-cli).
 [Environment checks](./packages/check-environment/README.md) demonstrate the
 standard authoring, Reference and result contracts.
 
@@ -126,17 +125,18 @@ pguide config path
 pguide agents list
 pguide objectives list
 pguide diagnose
-pguide task-bundle init my-task
-pguide task-bundle check author my-task/task.build.yaml
-pguide task-bundle build my-task/task.build.yaml
+pnpm add -D @silvermoon-work/task-builder-cli@canary @silvermoon-work/task-engine-cli@canary
+pnpm exec task-builder init my-task
+pnpm exec task-builder build my-task/task.build.yaml
+pnpm exec task-engine --help
 ```
 
-`task-bundle` and `task-engine` are optional extensions, not bundled default
-commands. Install their packages explicitly; upload/import/pin generated CARs
-with a caller-authorized external tool, then submit their exact CIDs to Engine.
-The new `task-bundle check`, `config validate` and `agents validate` operations
-remain supported. See [CLI guide](./packages/pguide/README.md) and
-[service configuration](./docs/task-server.md).
+The external `task-builder` and `task-engine` CLIs are not `pguide` extensions.
+Follow their upstream help for construction, publication and execution; old
+`pguide task-bundle` and `pguide task-engine` commands are no longer provided here.
+The catalog pins verified external canary releases because `latest` may still
+refer to a bootstrap placeholder. `config validate` and `agents validate` remain
+supported. See the [CLI guide](./packages/pguide/README.md).
 
 Repository Objective declarations and their shared business implementations
 remain available, but are not executed through the removed Pilot command.

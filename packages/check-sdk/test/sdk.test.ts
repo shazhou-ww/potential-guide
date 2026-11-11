@@ -4,15 +4,16 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildTask, toTaskSchema } from "@potential-guide/pguide-task-bundle";
 import {
+  buildTask,
   inspectTaskArtifact,
   readTaskArtifact,
-} from "@potential-guide/pguide-task-bundle/artifact";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
-import { compileJsonSchema } from "@potential-guide/task-protocol";
-import type { TaskContext } from "@potential-guide/task-sdk";
+  toTaskSchema,
+} from "@potential-guide/task-authoring";
+import { createTaskEngine, newId } from "@silvermoon-work/task-engine";
+import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@silvermoon-work/task-engine/testing";
+import { compileJsonSchema } from "@silvermoon-work/task-protocol";
+import type { TaskContext } from "@silvermoon-work/task-sdk";
 import { Type } from "@sinclair/typebox";
 import { build } from "esbuild";
 import { parse, stringify } from "yaml";
@@ -395,7 +396,7 @@ test("single/multilanguage and zero-code authoring freeze exact resource bytes",
         await rm(join(directory, "references/en/problems"), { recursive: true });
         await writeFile(
           join(directory, "src/main.ts"),
-          `import {createCheckTask} from "@potential-guide/check-sdk";import {runTask} from "@potential-guide/task-sdk";import {languages,problemCodes} from "../dist/definitions/text.js";runTask(createCheckTask(problemCodes,languages,async()=>[]));`,
+          `import {createCheckTask} from "@potential-guide/check-sdk";import {runTask} from "@silvermoon-work/task-sdk";import {languages,problemCodes} from "../dist/definitions/text.js";runTask(createCheckTask(problemCodes,languages,async()=>[]));`,
         );
       }
       await writeFile(file, stringify(config));

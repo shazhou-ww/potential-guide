@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { promisify } from "node:util";
-import { TaskError } from "../packages/task-protocol/dist/index.js";
+import { TaskError } from "@silvermoon-work/task-protocol";
 import { submitProbeObjective } from "./submit-probe-objective.mjs";
 
 const requestId = "01M6WN0Z05FRRE22VYJ3C90JV7";

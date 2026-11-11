@@ -17,7 +17,7 @@ const exports = {};
 const descriptions = [];
 const workspaces = (
   await Promise.all(
-    ["packages", "apps"].map(async (group) =>
+    ["packages"].map(async (group) =>
       (await readdir(resolve(root, group))).map((directory) => resolve(root, group, directory)),
     ),
   )

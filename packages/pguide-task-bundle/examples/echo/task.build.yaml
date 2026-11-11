@@ -1,9 +1,0 @@
-$schema: https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json
-name: Typed Echo
-runtime:
-  minVersion: "22.13.0"
-source:
-  mode: explicit
-  entry: main.ts
-  contract: contract.ts
-outDirectory: dist

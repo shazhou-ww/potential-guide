@@ -39,10 +39,14 @@ All generated inputs are under `dist/`; definitions at
 derived from YAML and imported by both
 business code and its contract. Run preparation before TypeScript.
 
-Call the ordinary `buildTask(prepared.buildFile)` from
-`@potential-guide/pguide-task-bundle` next. It consumes only the fixed staged
-business inputs. Read its CAR with `readTaskArtifact` and call
-`verifyCheckResources(prepared, artifact.files)` before accepting any output.
+Build the prepared file with `task-builder build <prepared.buildFile>` from
+`@silvermoon-work/task-builder-cli`. Generic compilation and execution now belong
+to [silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine);
+install `@silvermoon-work/task-engine-cli` for execution. The private
+`@potential-guide/task-authoring` workspace integrates that external builder
+with repository builds. Read verified CARs through
+`@silvermoon-work/task-builder/car` and call
+`verifyCheckResources(prepared, artifact.files)` before accepting output.
 The exact resource set and binary list must match; default UTF-8 text bytes are
 compared after CRLF/lone-CR to LF normalization, binary bytes exactly. BOM and all
 other bytes remain significant. The complete supplied Bundle is validated first.

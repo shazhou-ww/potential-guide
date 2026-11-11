@@ -8,13 +8,12 @@ import { fileURLToPath } from "node:url";
 import { prepareCheck, verifyCheckResources } from "../packages/check-sdk/dist/authoring.js";
 import { readContentTree } from "../packages/ipfs-content/dist/index.js";
 import { MemoryIpfsClient } from "../packages/ipfs-content/dist/testing.js";
-import { readTaskArtifact } from "../packages/pguide-task-bundle/dist/artifact.js";
-import { buildTask } from "../packages/pguide-task-bundle/dist/authoring.js";
+import { readTaskArtifact, buildTask } from "../packages/task-authoring/dist/index.js";
 import { prepareProbe, verifyProbeResources } from "../packages/probe-sdk/dist/authoring.js";
-import { createTaskEngine, newId } from "../packages/task-engine/dist/index.js";
-import { MemoryStore } from "../packages/task-engine/dist/testing.js";
-import { createTaskHandler } from "../packages/task-engine-http/dist/index.js";
-import { TaskError } from "../packages/task-protocol/dist/index.js";
+import { createTaskEngine, newId } from "@silvermoon-work/task-engine";
+import { MemoryStore } from "@silvermoon-work/task-engine/testing";
+import { createTaskHandler } from "@silvermoon-work/task-engine-http";
+import { TaskError } from "@silvermoon-work/task-protocol";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");

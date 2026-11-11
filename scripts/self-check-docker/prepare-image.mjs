@@ -27,50 +27,18 @@ assert.equal(registry.protocol, "https:");
 assert.equal(registry.username + registry.password + registry.search + registry.hash, "");
 const { parse } = createRequire("/source/packages/pilot-protocol/package.json")("yaml");
 const workspace = parse(await readFile("/source/pnpm-workspace.yaml", "utf8"));
-const uiRoot = "/source/apps/task-engine-webui";
-const uiManifest = JSON.parse(await readFile(join(uiRoot, "package.json"), "utf8"));
-const uiBuildDependencies = [
-  "@tailwindcss/cli",
-  "@types/jsdom",
-  "@types/react",
-  "@types/react-dom",
-  "esbuild",
-  "jsdom",
-  "linkedom",
-  "tailwindcss",
-  "tw-animate-css",
-];
 const toolchainVersions = {
   typescript: "5.9.3",
   "@types/node": "22.20.5",
   "@types/cross-spawn": "6.0.6",
-  "@types/semver": workspace.catalog["@types/semver"],
   "undici-types": "6.21.0",
 };
-assert.match(
-  toolchainVersions["@types/semver"],
-  /^\d+\.\d+\.\d+$/u,
-  "@types/semver: use the exact source catalog version",
-);
 for (const name of ["typescript", "@types/node", "@types/cross-spawn"]) {
   assert.equal(
     workspace.catalog[name],
     toolchainVersions[name],
     `${name}: isolated toolchain must match the selected source catalog`,
   );
-}
-for (const name of uiBuildDependencies) {
-  assert.equal(
-    uiManifest.devDependencies[name],
-    "catalog:",
-    `${name}: expected UI catalog dependency`,
-  );
-  assert.match(
-    workspace.catalog[name],
-    /^\d+\.\d+\.\d+$/u,
-    `${name}: use the exact source catalog version`,
-  );
-  toolchainVersions[name] = workspace.catalog[name];
 }
 await mkdir("/toolchain");
 run(
@@ -97,29 +65,33 @@ for (const [name, version] of Object.entries(toolchainVersions)) {
   assert.equal(manifest.version, version);
 }
 await mkdir("/source/node_modules/@types", { recursive: true });
-for (const name of ["node", "cross-spawn", "semver"]) {
-  await symlink(`/toolchain/node_modules/@types/${name}`, `/source/node_modules/@types/${name}`);
+for (const name of ["node", "cross-spawn"]) {
+  await cp(`/toolchain/node_modules/@types/${name}`, `/source/node_modules/@types/${name}`, {
+    recursive: true,
+  });
 }
-for (const name of uiBuildDependencies) {
-  const destination = join(uiRoot, "node_modules", name);
-  await mkdir(join(destination, ".."), { recursive: true });
-  await symlink(join("/toolchain/node_modules", name), destination);
-}
-await symlink("/toolchain/node_modules/typescript", "/source/node_modules/typescript");
+await mkdir("/source/node_modules/@silvermoon-work", { recursive: true });
+await symlink(
+  "/source/packages/check-sdk/node_modules/@silvermoon-work/task-sdk",
+  "/source/node_modules/@silvermoon-work/task-sdk",
+);
+for (const name of ["typescript", "undici-types"])
+  await cp(`/toolchain/node_modules/${name}`, `/source/node_modules/${name}`, {
+    recursive: true,
+  });
 await mkdir("/source/packages/check-environment/node_modules/@potential-guide", {
   recursive: true,
 });
 await symlink(
-  "/source/packages/pguide-task-bundle",
-  "/source/packages/check-environment/node_modules/@potential-guide/pguide-task-bundle",
+  "/source/packages/task-authoring",
+  "/source/packages/check-environment/node_modules/@potential-guide/task-authoring",
 );
 run(
   process.execPath,
   [
     "/toolchain/node_modules/typescript/bin/tsc",
     "-b",
-    "/source/packages/task-protocol/tsconfig.json",
-    "/source/packages/task-sdk/tsconfig.json",
+    "/source/packages/task-authoring/tsconfig.json",
     "/source/packages/check-sdk/tsconfig.json",
     "--pretty",
     "false",
@@ -138,7 +110,6 @@ run(
   ],
   "/source",
 );
-run("npm", ["--prefix", uiRoot, "run", "build"], "/source");
 run(process.execPath, ["/source/packages/check-environment/build.mjs"], "/source");
 
 await mkdir("/packs");
@@ -217,7 +188,7 @@ run(
   "/opt/objective",
 );
 const provenance = JSON.parse(await readFile("/harness/provenance.json", "utf8"));
-provenance.buildMethod = "frozen-prod-plus-tsc-ui-and-environment-build";
+provenance.buildMethod = "frozen-prod-plus-tsc-and-external-task-builder";
 provenance.toolchainVersions = toolchainVersions;
 provenance.toolchainLockSha256 = createHash("sha256")
   .update(await readFile("/toolchain/package-lock.json"))

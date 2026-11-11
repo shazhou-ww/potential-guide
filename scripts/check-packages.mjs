@@ -8,56 +8,11 @@ import { verificationPackages } from "./release-packages.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const pnpmCommand = "pnpm";
-const sdkOnly = process.argv.includes("--task-sdk");
-const serviceOnly = process.argv.includes("--task-service");
-const authoringOnly = process.argv.includes("--bundle-authoring");
 const structureOnly = process.argv.includes("--structure");
 for (const argument of process.argv.slice(2))
-  if (!["--task-sdk", "--task-service", "--bundle-authoring", "--structure"].includes(argument))
-    throw new Error(
-      `Unsupported consumer scope ${argument}; use --task-sdk for generic Worker isolation.`,
-    );
-if ([sdkOnly, serviceOnly, authoringOnly, structureOnly].filter(Boolean).length > 1)
-  throw new Error("Select only one consumer scope.");
-const authoringPackages = new Set([
-  "pguide",
-  "@potential-guide/pguide-task-bundle",
-  "@potential-guide/task-engine",
-]);
-if (authoringOnly) {
-  const pending = [...authoringPackages];
-  for (const name of pending) {
-    const entry = verificationPackages.find((entry) => entry.name === name);
-    assert.ok(entry, `Missing verification package ${name}.`);
-    const manifest = JSON.parse(
-      await readFile(
-        join(root, entry.workspace ?? "packages", entry.directory, "package.json"),
-        "utf8",
-      ),
-    );
-    for (const [dependency, version] of Object.entries({
-      ...manifest.dependencies,
-      ...manifest.optionalDependencies,
-    }))
-      if (version.startsWith("workspace:") && !authoringPackages.has(dependency)) {
-        authoringPackages.add(dependency);
-        pending.push(dependency);
-      }
-  }
-}
-const sdkPackages = new Set([
-  "pguide-cli-core",
-  "pguide-task-bundle",
-  "task-engine",
-  "task-protocol",
-  "task-sdk",
-]);
-const packages =
-  sdkOnly || authoringOnly
-    ? verificationPackages.filter((entry) =>
-        authoringOnly ? authoringPackages.has(entry.name) : sdkPackages.has(entry.directory),
-      )
-    : verificationPackages;
+  if (argument !== "--structure")
+    throw new Error(`Unsupported consumer scope ${argument}; use --structure for artifact checks.`);
+const packages = verificationPackages;
 const manifests = new Map();
 
 function run(command, args, cwd = root, env = process.env, expectedCode = 0) {
@@ -188,21 +143,7 @@ try {
   }
   if (structureOnly)
     console.log("Package structure verified; run pnpm consumers:check for isolated consumers.");
-  else
-    await checkPackageConsumers(
-      root,
-      destination,
-      packages,
-      tarballs,
-      run,
-      sdkOnly
-        ? "task-sdk"
-        : serviceOnly
-          ? "task-service"
-          : authoringOnly
-            ? "bundle-authoring"
-            : undefined,
-    );
+  else await checkPackageConsumers(root, destination, packages, tarballs, run);
 } finally {
   if (process.env.PGUIDE_KEEP_PACK_CONSUMERS === "1")
     console.log(`Owned consumer fixtures retained: ${destination}`);

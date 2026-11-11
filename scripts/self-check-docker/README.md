@@ -36,9 +36,9 @@ unapproved mirror. This setting exists only in the build stage; the runtime
 container still has no network or registry configuration.
 It installs pnpm 11.22.0 and only production workspace dependencies using the
 frozen source lockfile with lifecycle scripts disabled. It builds all packages
-through the root TypeScript project references, then runs the UI package's
-existing build script to produce its esbuild server/browser bundles and
-Tailwind stylesheet, without installing or substituting Turbo.
+through the root TypeScript project references, then builds and verifies the
+retained Environment Check tasks through the external Task Builder. No generic
+engine, service or Web UI is built in this repository.
 The isolated `/toolchain` compiler installation pins
 TypeScript 5.9.3, `@types/node` 22.20.5, `@types/cross-spawn` 6.0.6 and
 `undici-types` 6.21.0, also with lifecycle scripts disabled. Before installing
@@ -46,19 +46,13 @@ the toolchain, the build reads the selected source catalog using the production
 `yaml` dependency of objective-pilot and rejects mismatched compiler/Node/
 cross-spawn declaration versions. This does not change source manifests or
 the source lockfile.
-The source catalog also supplies `@types/semver`, linked into the source type
-root for compiling the runtime-version policies.
-UI build dependencies use their exact existing source catalog versions:
-`esbuild`, `@tailwindcss/cli`, `tailwindcss`, `tw-animate-css`,
-`@types/react`, `@types/react-dom`, `@types/jsdom`, `jsdom`, and `linkedom`.
-The last three are needed because the UI's TypeScript project includes tests
-and fixtures. They are linked only into the build-stage UI workspace;
-the toolchain's bin directory supplies `tsc` and `tailwindcss` to the existing
-build script. No package versions or source manifests are changed.
-The script is invoked with `npm --prefix ... run build`, which runs the existing
-manifest command without installing source workspace development dependencies.
-Required-file checks still reject missing server declarations, browser
-JavaScript, HTML or CSS before the UI tarball is packed.
+The production Check SDK dependency supplies `@silvermoon-work/task-sdk` for
+Check Worker imports. Compiler declarations are copied into the source tree,
+not linked outside the external builder's confined workspace. Generic construction belongs to
+`@silvermoon-work/task-builder-cli`, and execution to
+`@silvermoon-work/task-engine-cli` in
+[silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine).
+The private repository integration does not implement a compiler or Engine.
 
 It then packs every release package, installs an explicitly selected CLI-command consumer with local tarball
 overrides, and verifies the complete internal dependency graph using the
@@ -66,7 +60,7 @@ deployment consumer helpers. It never publishes or fetches a replacement
 published pguide/internal package. Consumer third-party resolution and apt
 repositories are not hermetically pinned; the installed npm lock hash is
 recorded, not a claim of byte-identical images. Provenance also records
-`buildMethod: frozen-prod-plus-tsc-ui-and-environment-build`, the exact toolchain
+`buildMethod: frozen-prod-plus-tsc-and-external-task-builder`, the exact toolchain
 versions and its separate npm lockfile SHA-256. The toolchain is not covered by
 the repository's frozen install. This build is **not** a full repository
 `pnpm check`; the parent/operator runs repository checks independently.

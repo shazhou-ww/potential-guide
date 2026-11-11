@@ -3,30 +3,29 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { dirname, join, resolve } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
-import { prepareCheck } from "@potential-guide/check-sdk/authoring";
+import { setTimeout as delay } from "node:timers/promises";
 import { createCheckResult } from "@potential-guide/check-sdk";
+import { prepareCheck } from "@potential-guide/check-sdk/authoring";
 import {
+  type IpfsClient,
   readContentTree,
   validateContentCar,
-  type IpfsClient,
 } from "@potential-guide/ipfs-content";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
-import { buildTask, toTaskSchema } from "@potential-guide/pguide-task-bundle";
-import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { MemoryStore } from "@potential-guide/task-engine/testing";
-import { createTaskHandler } from "@potential-guide/task-engine-http";
+import { buildTask, readTaskArtifact, toTaskSchema } from "@potential-guide/task-authoring";
+import { createTaskEngine, newId } from "@silvermoon-work/task-engine";
+import { MemoryStore } from "@silvermoon-work/task-engine/testing";
+import { createTaskHandler } from "@silvermoon-work/task-engine-http";
 import {
   compileJsonSchema,
   readTaskBundle,
   TaskError,
   type TaskSnapshot,
-} from "@potential-guide/task-protocol";
-import type { TaskContext } from "@potential-guide/task-sdk";
+} from "@silvermoon-work/task-protocol";
+import type { TaskContext } from "@silvermoon-work/task-sdk";
 import { parse, stringify } from "yaml";
-import { prepareProbe, verifyProbeResources, type ProbeBuild } from "../src/authoring.js";
+import { type ProbeBuild, prepareProbe, verifyProbeResources } from "../src/authoring.js";
 import { createProbeResultSchema } from "../src/contracts.js";
 import { createCheckInvoker } from "../src/execution.js";
 import { createProbeTask } from "../src/index.js";
@@ -38,14 +37,14 @@ async function put(root: string, path: string, value: string | Uint8Array) {
   await writeFile(join(root, path), value);
 }
 async function fixture() {
-  const directory = resolve(".cache", `probe-${randomUUID()}`);
+  const directory = resolve(import.meta.dirname, "../.cache", `probe-${randomUUID()}`);
   const child = join(directory, "child");
   await put(
     child,
     "src/main.ts",
     `
 import {createCheckTask} from "@potential-guide/check-sdk";
-import {runTask} from "@potential-guide/task-sdk";
+import {runTask} from "@silvermoon-work/task-sdk";
 import {setTimeout as delay} from "node:timers/promises";
 import {languages,problemCodes} from "../dist/definitions/text.js";
 runTask(createCheckTask(problemCodes,languages,async(input,context)=>{
@@ -123,7 +122,7 @@ export default createProbeContract(Type.Object({
     parent,
     "src/main.ts",
     `
-import {runTask} from "@potential-guide/task-sdk";
+import {runTask} from "@silvermoon-work/task-sdk";
 import {createProbeTask} from "@potential-guide/probe-sdk";
 import {definitions} from "../dist/definitions/text-ready.js";
 runTask(createProbeTask(definitions,async()=>{throw new Error("transport not configured");}));`,
@@ -559,11 +558,11 @@ test("standard Engine executes Probe and independent child Tasks via authorized 
       f.parent,
       "src/main.ts",
       `
-import {runTask} from "@potential-guide/task-sdk";
+import {runTask} from "@silvermoon-work/task-sdk";
 import {createProbeTask} from "@potential-guide/probe-sdk";
 import {createCheckInvoker} from "@potential-guide/probe-sdk/execution";
 import {createIpfsGatewayClient} from "@potential-guide/ipfs-content";
-import {TaskClient} from "@potential-guide/task-engine-http";
+import {TaskClient} from "@silvermoon-work/task-engine-http";
 import {definitions} from "../dist/definitions/text-ready.js";
 const service = new TaskClient({url:${JSON.stringify(url)},headers:{Authorization:"fixture-only-capability"},
  fetch:(url,init)=>fetch(url,{...init,signal:AbortSignal.timeout(10000)})});

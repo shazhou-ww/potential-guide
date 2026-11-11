@@ -5,8 +5,9 @@ Probe authoring uses this package to acquire and verify complete canonical Check
 trees and final CARs. Probe's explicit execution adapter uses `openContent` to
 verify the child directory CID through the parent DAG before independent Task
 submission. These are active production-code consumers within the workspace, not
-fixture-only APIs. Generic Task compilation still uses `pguide-task-bundle/car`;
-the generic Engine retains its own Gateway/UnixFS read boundary in `task-engine`.
+fixture-only APIs. Generic Task compilation and execution are maintained in
+[silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine),
+not this workspace.
 Legacy adapter tests remain here to preserve migration vectors.
 
 Thin local policy adapters for official Helia/IPLD, not a second IPFS implementation

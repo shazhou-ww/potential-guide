@@ -8,7 +8,7 @@ objectives:
       {
         "root": context.repo.rootPath, "directory": context.path,
         "roles": ["npm"], "runtime": "node",
-        "allows": ["@potential-guide/check-sdk", "@potential-guide/pguide-task-bundle", "@potential-guide/task-sdk", "@potential-guide/task-engine", "@potential-guide/task-protocol"],
+        "allows": ["@potential-guide/check-sdk", "@potential-guide/task-authoring"],
         "entries": ["src/index.ts"], "generated": [], "deliveries": [],
         "joins": [{"id": "public-library-suite", "kind": "npm"}]
       }

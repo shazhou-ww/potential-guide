@@ -3,8 +3,7 @@ import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promis
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyCheckResources } from "@potential-guide/check-sdk/authoring";
-import { buildTask } from "@potential-guide/pguide-task-bundle";
-import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
+import { buildTask, readTaskArtifact } from "@potential-guide/task-authoring";
 import { prepareEnvironment } from "./prepare.mjs";
 
 export async function stageCheck(check, built, candidate) {

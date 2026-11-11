@@ -1,13 +1,13 @@
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { type Static, Type } from "@sinclair/typebox";
-import { Value } from "@sinclair/typebox/value";
-import { parseDocument, stringify } from "yaml";
 import {
   normalizeTaskText,
   readTaskBundle,
   selectTaskBinary,
-} from "@potential-guide/task-protocol";
+} from "@silvermoon-work/task-protocol";
+import { type Static, Type } from "@sinclair/typebox";
+import { Value } from "@sinclair/typebox/value";
+import { parseDocument, stringify } from "yaml";
 
 const pathSchema = Type.String({ minLength: 1 });
 export const checkBuildSchema = Type.Object(
@@ -321,9 +321,7 @@ export function verifyCheckResources(
   artifact: ReadonlyMap<string, Uint8Array>,
 ): void {
   const actual = [...artifact.keys()]
-    .filter(
-      (path) => path !== "task.yaml" && path !== "worker.cjs" && !/^schemas\/\d+\.json$/.test(path),
-    )
+    .filter((path) => path !== "task.yaml" && path !== "worker.cjs" && !path.startsWith("schemas/"))
     .sort();
   const expected = [...prepared.resources.keys()].sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected))

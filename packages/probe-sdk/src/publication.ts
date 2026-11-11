@@ -1,7 +1,7 @@
 import {
   bundleCid,
   validateBundleReference,
-} from "@potential-guide/task-protocol/bundle-reference";
+} from "@silvermoon-work/task-protocol/bundle-reference";
 
 export interface PublicationResolution {
   cid: string;

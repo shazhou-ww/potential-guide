@@ -11,8 +11,7 @@
       "env": ["PGUIDE_ENVIRONMENT_BINARY_INPUTS"],
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/packages/task-protocol/src/**",
-        "$TURBO_ROOT$/packages/pguide-task-bundle/src/**",
+        "$TURBO_ROOT$/packages/task-authoring/src/**",
         "$TURBO_ROOT$/packages/check-sdk/src/authoring.ts",
         "$TURBO_ROOT$/scripts/environment-cache-inputs.mjs"
       ],

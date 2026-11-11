@@ -50,9 +50,13 @@ await verifyProbeResources(prepared, artifact);
 // Only now accept/copy the artifact and prepared.lock into the application's index.
 ```
 
-`prepareProbe` comes from `/authoring`, `buildTask` from
-`@potential-guide/pguide-task-bundle`, and `readTaskArtifact` from its `/artifact`
-entry. Preparation never invokes compilation. `dist/definitions/<kind>.{js,d.ts}`
+`prepareProbe` comes from `/authoring`. Build its prepared description with the
+external `@silvermoon-work/task-builder-cli`; use
+`@silvermoon-work/task-engine-cli` for execution. Both belong to
+[silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine).
+Repository builds use the private `task-authoring` integration; it delegates
+compilation and CAR validation to those external packages. Preparation never
+invokes compilation. `dist/definitions/<kind>.{js,d.ts}`
 exports `definitions`; snapshot inputs live under
 `dist/staging/<kind>/<snapshot>/`. Distinct candidates cannot replace earlier
 accepted candidates. Keep accepted outputs and locks separate from staging.

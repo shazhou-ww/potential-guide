@@ -6,7 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { stageCheck } from "../packages/check-environment/build.mjs";
 import { prepareCheck } from "../packages/check-sdk/dist/authoring.js";
-import { readTaskArtifact } from "../packages/pguide-task-bundle/dist/artifact.js";
+import { readTaskArtifact } from "../packages/task-authoring/dist/index.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 test("environment candidate writes the validated snapshot after source path replacement", async (t) => {

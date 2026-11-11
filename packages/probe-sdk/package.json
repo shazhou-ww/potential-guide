@@ -47,16 +47,16 @@
   "dependencies": {
     "@potential-guide/check-sdk": "workspace:^",
     "@potential-guide/ipfs-content": "workspace:^",
-    "@potential-guide/task-protocol": "workspace:^",
-    "@potential-guide/task-sdk": "workspace:^",
+    "@silvermoon-work/task-protocol": "catalog:",
+    "@silvermoon-work/task-sdk": "catalog:",
     "@sinclair/typebox": "catalog:",
     "multiformats": "catalog:",
     "yaml": "catalog:"
   },
   "devDependencies": {
-    "@potential-guide/pguide-task-bundle": "workspace:^",
-    "@potential-guide/task-engine": "workspace:^",
-    "@potential-guide/task-engine-http": "workspace:^"
+    "@potential-guide/task-authoring": "workspace:^",
+    "@silvermoon-work/task-engine": "catalog:",
+    "@silvermoon-work/task-engine-http": "catalog:"
   },
   "publishConfig": {
     "access": "public"

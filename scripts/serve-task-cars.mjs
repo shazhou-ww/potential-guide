@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { MemoryIpfsClient } from "../packages/ipfs-content/dist/testing.js";
-import { readTaskArtifact } from "../packages/pguide-task-bundle/dist/artifact.js";
+import { readTaskArtifact } from "../packages/task-authoring/dist/index.js";
 
 const [portText, ...files] = process.argv.slice(2);
 const port = Number(portText);

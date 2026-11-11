@@ -6,15 +6,6 @@ Potential Guide defines independent CLI, library, and Objective releases:
 | --- | --- |
 | `@potential-guide/check-sdk` | `check-sdk-vX.Y.Z` |
 | `@potential-guide/check-environment` | `check-environment-vX.Y.Z` |
-| `@potential-guide/pguide-task-bundle` | `pguide-task-bundle-vX.Y.Z` |
-| `@potential-guide/task-protocol` | `task-protocol-vX.Y.Z` |
-| `@potential-guide/task-engine` | `task-engine-vX.Y.Z` |
-| `@potential-guide/task-engine-http` | `task-engine-http-vX.Y.Z` |
-| `@potential-guide/task-engine-storage` | `task-engine-storage-vX.Y.Z` |
-| `@potential-guide/task-sdk` | `task-sdk-vX.Y.Z` |
-| `@potential-guide/task-engine-server` | `task-engine-server-vX.Y.Z` |
-| `@potential-guide/task-engine-webui` | `task-engine-webui-vX.Y.Z` |
-| `@potential-guide/pguide-task-engine` | `pguide-task-engine-vX.Y.Z` |
 | `@potential-guide/effects` | `effects-vX.Y.Z` |
 | `@potential-guide/git-source` | `git-source-vX.Y.Z` |
 | `@potential-guide/objective-pilot` | `objective-pilot-vX.Y.Z` |
@@ -47,10 +38,12 @@ Release packages in manifest dependency order. `effects` and `pilot-protocol`
 are protocol; `objective-pilot` consumes both protocols, then
 `objective-regulator` builds regulation capabilities. Checker/Objective Host
 packages and their release tags are retired.
-The generic Task Engine release scope is documented below. Its release routes
-prepare configuration only: they do not prove external publishing authorization
-or a successful npm release. `check-runtime-files` remains local-verification-only.
-Their pack/install checks do not authorize bootstrap or product publication.
+Task Engine infrastructure, protocol, SDK and builder releases belong to
+[silvermoon-work/task-engine](https://github.com/silvermoon-work/task-engine).
+Install its `@silvermoon-work/task-engine-cli` and
+`@silvermoon-work/task-builder-cli`; this repository retains Check and Objective
+task definitions and does not publish engine products.
+`check-runtime-files` and `task-authoring` remain private workspace support.
 `check-artifacts`, `check-task` and `probe-task` are retired from the repository, verification packs and author
 examples. This does not deprecate or unpublish any historical npm version.
 Publish `check-sdk` before `check-environment`, which consumes it. Both Check
@@ -131,162 +124,12 @@ The general workflow still distinguishes stable and RC tags: stable versions
 publish to the npm `latest` dist-tag, while release candidates use
 the `X.Y.Z-rc.N` version form and publish to the `rc` dist-tag, so testing an RC
 never changes the default version installed by consumers.
-The generic Task Engine scope entries, including `cli-core`, are
-RC-only in both tag parsing and workflow metadata validation. The other twenty
-existing routes retain their stable/RC behavior. A future stable Task Engine
-release requires separate approval and an explicit change to that restriction.
-
-## Generic Task Engine release preparation
-
-### Task Context composition follow-up
-
-The next RC batch includes host-mediated child Tasks, multiple content gateways,
-version-bound Check documentation, and the standalone Engine configuration.
-Publish the following changed packages in dependency order, after exact-main CI
-and `Release verification (v1)` succeed:
-
-1. `task-protocol` `0.1.0-rc.2`.
-2. `task-sdk` and `task-engine` `0.1.0-rc.2`.
-3. `pguide-task-bundle` `0.1.0-rc.2`, `task-engine-server` `0.1.0-rc.3`,
-   and `check-sdk` `0.2.0-rc.1`.
-4. `pguide-task-engine` `0.1.0-rc.4` and `check-environment` `0.2.0-rc.1`.
-
-Keep `task-engine-http`, `task-engine-storage`, `task-engine-webui`, and CLI Core
-at their existing published versions. Retain `workspace:^` source ranges; packing
-must use the new minimum versions for changed dependencies. Newly initialized
-Task packages pin `task-sdk` `0.1.0-rc.2`, and the Check text example pins the
-matching author/runtime candidates. `probe-sdk` and `ipfs-content` remain private;
-this batch does not publish them or publish/pin any CAR. Existing Bundles remain
-immutable; rebuilding a Bundle and updating a consumer CID is a separate action.
-
-The parent-timeout regression uses an explicit virtual clock only after observing
-a dispatched child, then asserts cancellation and actual release. It must not
-assume that Worker startup completes inside a 150 ms wall-clock admission budget.
-The fixture's graceful-stop allowance is separate from the logical Task deadline;
-forced-exit and unknown-cleanup tests remain enabled.
-
-Unfiltered workspace builds also build the two local Probe author examples after
-Environment Check verification, so clean checkouts have their generated definition
-imports before repository checks run. This is offline preparation against pinned
-local Check DAGs, not Probe execution or content publication. Filtered package
-release builds retain their original dependency closure and never run that step.
-
-### Previous Bundle normalization batch
-
-The approved configuration scope is the exact internal runtime closure of
-`pguide-task-bundle` and `pguide-task-engine`, not the entire release inventory.
-Publish only after each upstream version is available, in these groups:
-
-| Group | Packages | Candidate guidance |
-| --- | --- | --- |
-| 1 | `task-protocol`, `cli-core` | Protocol: `0.1.0-rc.1`; CLI Core: already published `0.3.0-rc.0`, unchanged |
-| 2 | `task-sdk`, `task-engine-http`, `task-engine-storage`, `task-engine-webui` | `0.1.0-rc.1` |
-| 3 | `pguide-task-bundle`, `task-engine` | `0.1.0-rc.1` |
-| 4 | `task-engine-server` | `0.1.0-rc.2` |
-| 5 | `pguide-task-engine` | `0.1.0-rc.3` |
-| 6 | `check-sdk` | `0.2.0-rc.0` |
-| 7 | `check-environment` | `0.2.0-rc.0` |
-
-The Bundle normalization follow-up advances the nine generic Task packages
-within their existing candidate series and leaves CLI Core unchanged.
-It also advances both Check packages from stable `0.1.0` to `0.2.0-rc.0`
-because the emitted Bundle contract is incompatible. This eleven-package RC
-release must not move any `latest` tag. Internal `workspace:^` dependencies
-are packed against the updated manifest versions, including the new protocol
-and Engine minimum candidates. The independent Check text example uses these
-same candidates.
-Rebuild old Bundles without the required `binary` declaration. Publishing npm
-packages does not import or pin the rebuilt CARs; artifact delivery and consumer
-CID updates remain separate operations.
-Unified verification must confirm each source manifest version, its matching
-release tag, and every packed internal dependency range against the dependency's
-actual manifest version before publishing.
-
-These are recommendations, not permission to publish or overwrite a version.
-If a candidate already exists, review its changes and advance its RC instead
-of reusing the immutable version. The UI manifest must be an RC before release;
-a stable `0.1.0` manifest is rejected rather than published to `latest`.
-
-**Blocking prerequisite:** Bundle budgets, paths, declaration parsing and
-file-set inspection must use the independent `task-protocol` implementation,
-not Check utilities or `artifact-files` equivalents. Author directory reads
-now use native Node APIs, and author/Engine runtime comparison uses `semver`;
-neither root requires `artifact-files`. That repository package and its
-release/verification inventory, bootstrap selection and workflow route are
-retired; its old tags are rejected. This is not npm deprecation or unpublish.
-The production manifest must no longer depend on either Check package.
-Release-inventory tests walk actual dependencies,
-optional dependencies and peers from both roots and require exactly these
-ten public packages. A remaining Check dependency fails the test and blocks
-release; it must not be hidden with local overrides or an extra release route.
-Validate the actual packed consumers after the source migration; a passing
-manifest-closure test alone does not prove runtime correctness.
-
-`task-sdk` is the Worker runtime, not the old build/publish API; author tooling
-belongs to `pguide-task-bundle`. The CLI under `apps/pguide-task-engine` installs
-the public UI server and browser assets under `apps/task-engine-webui` as a
-normal production dependency, even if the user does not enable `--ui`.
-Workflow and bootstrap paths use each inventory entry's `workspace` field,
-defaulting to `packages`. Local tarball overrides prove neither registry
-resolution nor provenance. Do not bypass `pnpm check` or `pnpm consumers:check`.
-Check/Probe adapter product publication requires a separately reviewed scope.
-
-### Public evidence and external authorization
-
-Read-only research on 2026-11-05 used [npmx](https://npmx.dev/):
-
-- [task-engine](https://npmx.dev/package/@potential-guide/task-engine),
-  [pguide-task-bundle](https://npmx.dev/package/@potential-guide/pguide-task-bundle)
-  and [pguide-task-engine](https://npmx.dev/package/@potential-guide/pguide-task-engine)
-  showed only `0.0.0` placeholders.
-- [cli-core](https://npmx.dev/package/@potential-guide/cli-core) showed
-  `latest=0.0.0` and `rc=0.2.0-rc.0`, not the source's `0.3.0-rc.0`.
-- Pages for the other seven scope entries returned 404. This means npmx did
-  not find them, not an authoritative registry check that permits bootstrap.
-
-The GitHub `npm` environment existed with no protection rules or deployment
-branch policy at inspection time. This does **not** establish any package's
-current Trusted Publisher configuration. An earlier owner report about the
-Bundle publisher and CLI Core's historical OIDC success are not current
-authorization evidence. Before any external action, obtain owner confirmation
-for every selected package's exact repository, workflow, environment and
-publish/dist-tag permissions. Missing packages need explicit bootstrap approval;
-adding these routes grants neither that approval nor Trusted Publisher access.
-
-### Cleanup boundaries
-
-The unused `artifact-files` and legacy `check-artifacts` packages are retired
-from the repository. Historical Checker/Objective schema JSON and their URLs
-remain unchanged; schema synchronization no longer imports the retired package.
-Repository retirement does not deprecate or unpublish any npm version.
-
-- `ipfs-content` is private and outside the product runtime closure, but Engine
-  regression tests still use it. Migrate those tests with equivalent coverage
-  before considering repository removal.
-- `test-tree` is private with no workspace manifest reverse dependencies at
-  inspection time. Confirm its manual-generation workflow is no longer needed
-  before removing it and its root TypeScript/layer/lockfile references.
-- `check-environment` remains a build dependency of concrete Objective packages
-  and generated workers. `check-runtime-files` still supplies private directory
-  and file operations to CLI Runtime; retain it independently of the retired
-  Check/Probe adapters and `check-artifacts`.
-- Historical `config` and Supervisor names are already retired in this source
-  tree. Preserve published versions. Consider a separate npm deprecation only
-  after replacement products and caller migration are verified; configuration
-  binaries conflict, and Supervisor has no automatic one-to-one replacement.
-  Unpublish is not a cleanup mechanism for this migration.
-
-The self-check Docker harness also resolves release entries by workspace.
-Its tarballs are installed into `/opt/consumer`, which is copied into the runtime
-image; it must retain the UI's server and browser assets. Source/path assertions
-or local consumer checks are not a successful Docker build or image run.
-The source workspace still uses a production-only frozen install. The isolated
-image toolchain also supplies the UI's existing catalog-selected build and
-TypeScript fixture dependencies, then invokes its normal build script to
-generate complete esbuild/Tailwind assets before the required-file checks and
-packing. See the [Docker harness](../scripts/self-check-docker/README.md).
-This prepared build path still needs unified build/consumer validation and an
-actual Docker build when a daemon is available; it is not image-success evidence.
+Retained packages keep their stable/RC rules, including the existing RC-only
+restriction for CLI Core. The external engine's release policy is independent.
+Check and Objective task definitions remain here.
+`probe-sdk` uses private `ipfs-content` for Check composition and publication.
+Previously published schemas and npm versions remain immutable. Removing local
+engine products is not npm deprecation, unpublication or permission to publish.
 
 ## Before configuring npm
 
@@ -299,15 +142,6 @@ environment named `npm`, and leave it without npm secrets. Optional required
 reviewers are compatible with the workflow, but any deployment branch or tag
 rules must allow these release tags:
 
-- `pguide-task-bundle-v*`
-- `task-protocol-v*`
-- `task-engine-v*`
-- `task-engine-http-v*`
-- `task-engine-storage-v*`
-- `task-sdk-v*`
-- `task-engine-server-v*`
-- `task-engine-webui-v*`
-- `pguide-task-engine-v*`
 - `objective-monorepo-standard-v*`
 - `objective-package-standard-v*`
 - `objective-devbox-health-v*`
@@ -536,7 +370,7 @@ Deployment fixtures use the `worker.cjs` contract, not retired `run.*` checks.
 The old Host launchers and their deployment fixtures are removed.
 CLI execution checks verify removed probe/check/validate/scaffold entrypoints
 as unknown commands without installation advice, rather than running legacy
-Probe workflows. Configuration/resource CLI and generic Task Bundle consumers
+Probe workflows. Configuration/resource CLI and Objective package consumers
 remain verified. Old regulation wrappers still reject execution; setup/self-check
 CLI execution and continuation are not supported until explicitly migrated.
 

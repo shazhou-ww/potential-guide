@@ -1,5 +1,5 @@
 import { createCheckTask } from "@potential-guide/check-sdk";
-import { runTask } from "@potential-guide/task-sdk";
+import { runTask } from "@silvermoon-work/task-sdk";
 import type { Static } from "@sinclair/typebox";
 import { languages, problemCodes } from "../dist/definitions/text.js";
 import type contract from "./contract.js";

@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/pguide-task-bundle" },
+    { "path": "./packages/task-authoring" },
     { "path": "./packages/ipfs-content" },
     { "path": "./packages/check-sdk" },
     { "path": "./packages/probe-sdk" },

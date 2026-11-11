@@ -8,8 +8,8 @@ acquisition and observation APIs are not active compatibility surfaces.
 retired from the repository. The Checker/Objective schema JSON and canonical
 URLs remain unchanged as static historical contracts; they are no longer
 regenerated from a runtime package.
-Use [Task Bundles](axis/task-engine-contracts/task-bundle.md) and the
-[Task Engine Server](task-server.md) for execution. The Host service and bridge
+Use the external [Task Engine](https://github.com/silvermoon-work/task-engine)
+for execution. The Host service and bridge
 sections below are historical protocol documentation, not available APIs.
 
 New immutable schema namespaces:
@@ -23,15 +23,12 @@ step. Historical schemas and `sha256-pguide-*` digests retain their original
 meaning. Re-author and validate the new file set to migrate; changing a prefix,
 file extension, or schema URI is not migration.
 
-The Task namespace has its own declaration and Worker protocol:
-[`task-bundle-worker.md`](task-bundle-worker.md) and
-[`task-sdk`](../packages/task-sdk/README.md). It uses `task.yaml`, one
-`worker.cjs`, optional `schemas/` and `resources/`, and three business Schemas.
-Authors use [`pguide task-bundle`](../packages/pguide-task-bundle/README.md)
-to generate the declaration and its required exact file manifest from TypeBox
-contracts and `task.build.yaml`. The low-level compiler is
-`@potential-guide/pguide-task-bundle/build`; offline artifact checks use `/artifact`.
-Upload and pin use independently chosen external tools; `/publish` has been removed. It does not extend the
+Task declarations, protocols and SDKs are now maintained in that external
+repository. Install `@silvermoon-work/task-builder-cli` for construction and
+`@silvermoon-work/task-engine-cli` for execution. Previously published generic
+Task schemas remain immutable compatibility snapshots here, not locally owned
+runtime implementations. Upload and pin use independently chosen external tools.
+This does not extend the
 Checker/Objective Host authorization or business APIs. The remaining sections
 below describe historical Checker/Objective artifacts and their retired Host services.
 

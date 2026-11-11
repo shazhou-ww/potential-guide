@@ -1,7 +1,7 @@
 import { lstat, open, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { createCheckTask } from "@potential-guide/check-sdk";
-import { runTask } from "@potential-guide/task-sdk";
+import { runTask } from "@silvermoon-work/task-sdk";
 import { parse } from "yaml";
 import { languages, problemCodes } from "../dist/definitions/monorepo-policy.js";
 

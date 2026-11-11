@@ -35,14 +35,15 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@potential-guide/task-protocol": "workspace:^",
-    "@potential-guide/task-sdk": "workspace:^",
+    "@silvermoon-work/task-protocol": "catalog:",
+    "@silvermoon-work/task-sdk": "catalog:",
     "@sinclair/typebox": "catalog:",
     "yaml": "catalog:"
   },
   "devDependencies": {
-    "@potential-guide/pguide-task-bundle": "workspace:^",
-    "@potential-guide/task-engine": "workspace:^",
+    "@silvermoon-work/task-builder-cli": "catalog:",
+    "@potential-guide/task-authoring": "workspace:^",
+    "@silvermoon-work/task-engine": "catalog:",
     "esbuild": "catalog:"
   },
   "publishConfig": {

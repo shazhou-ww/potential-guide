@@ -7,8 +7,8 @@
   },
   "dependencies": {
     "@potential-guide/check-sdk": "0.2.0-rc.1",
-    "@potential-guide/task-sdk": "0.1.0-rc.2",
-    "@potential-guide/pguide-task-bundle": "0.1.0-rc.2",
+    "@silvermoon-work/task-sdk": "0.1.0-canary-261110-1",
+    "@silvermoon-work/task-builder-cli": "0.1.0-canary-261111-1",
     "@sinclair/typebox": "0.34.52"
   }
 }

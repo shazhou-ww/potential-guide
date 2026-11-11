@@ -42,9 +42,9 @@ test("each Objective build caches its staging tree and generator inputs", async 
 test("structure checks cannot silently replace a requested consumer scope", () => {
   const result = spawnSync(
     process.execPath,
-    [fileURLToPath(new URL("scripts/check-packages.mjs", root)), "--structure", "--task-sdk"],
+    [fileURLToPath(new URL("scripts/check-packages.mjs", root)), "--structure", "--unknown"],
     { encoding: "utf8" },
   );
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /Select only one consumer scope/);
+  assert.match(result.stderr, /Unsupported consumer scope/);
 });

@@ -4,15 +4,14 @@ import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { toTaskSchema } from "@potential-guide/pguide-task-bundle";
-import { readTaskArtifact } from "@potential-guide/pguide-task-bundle/artifact";
-import { createTaskEngine, newId } from "@potential-guide/task-engine";
-import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@potential-guide/task-engine/testing";
+import { readTaskArtifact, toTaskSchema } from "@potential-guide/task-authoring";
+import { createTaskEngine, newId } from "@silvermoon-work/task-engine";
+import { MemoryIpfsClient, MemoryStore, VirtualClock } from "@silvermoon-work/task-engine/testing";
 import {
   compileInputSchema,
   compileJsonSchema,
   type JsonObject,
-} from "@potential-guide/task-protocol";
+} from "@silvermoon-work/task-protocol";
 import { inputSchemas, resultSchema } from "../src/contracts.js";
 
 const caller = { scope: "environment-tests", subject: "consumer" };

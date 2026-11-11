@@ -1,9 +1,9 @@
-import { type Static, Type } from "@sinclair/typebox";
-import { Value } from "@sinclair/typebox/value";
 import {
   bundleCid,
   validateBundleReference,
-} from "@potential-guide/task-protocol/bundle-reference";
+} from "@silvermoon-work/task-protocol/bundle-reference";
+import { type Static, Type } from "@sinclair/typebox";
+import { Value } from "@sinclair/typebox/value";
 
 export const identifier = Type.String({ pattern: "^[a-z][a-z0-9-]*$", maxLength: 128 });
 const path = Type.String({ minLength: 1, maxLength: 4096 });

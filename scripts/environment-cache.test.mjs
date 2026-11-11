@@ -1,20 +1,10 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import {
-  cp,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  realpath,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
-import { join } from "node:path";
+import { cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import test from "node:test";
 import { environmentCacheInputs } from "./environment-cache-inputs.mjs";
 
 const execute = promisify(execFile);
@@ -54,23 +44,48 @@ test("real environment build: normalized Git/Turbo hit, binary/rule invalidation
       await cp(join(original, path), join(environment, path), { recursive: true });
     await cp(join(root, "LICENSE"), join(sandbox, "LICENSE"));
     await cp(join(root, "LICENSE"), join(environment, "LICENSE"));
-    const linkType = process.platform === "win32" ? "junction" : "dir";
-    await symlink(join(root, "node_modules"), join(sandbox, "node_modules"), linkType);
-    await mkdir(join(environment, "node_modules", "@potential-guide"), { recursive: true });
-    await mkdir(join(environment, "node_modules", "@sinclair"), { recursive: true });
+    // The external builder confines dependency reads to the fixture's workspace.
+    const copied = new Set();
+    async function copyDependency(name, from) {
+      if (copied.has(name)) return;
+      copied.add(name);
+      let ancestor = from;
+      let source;
+      for (;;) {
+        try {
+          source = await realpath(join(ancestor, "node_modules", name));
+          break;
+        } catch (error) {
+          if (error.code !== "ENOENT" || dirname(ancestor) === ancestor) throw error;
+          ancestor = dirname(ancestor);
+        }
+      }
+      const destination = join(sandbox, "node_modules", name);
+      await cp(source, destination, {
+        recursive: true,
+        dereference: true,
+        filter: (path) => basename(path) !== "node_modules",
+      });
+      const manifest = JSON.parse(await readFile(join(source, "package.json"), "utf8"));
+      for (const dependency of Object.keys(manifest.dependencies ?? {}))
+        await copyDependency(dependency, source);
+      for (const dependency of Object.keys(manifest.optionalDependencies ?? {}))
+        try {
+          await copyDependency(dependency, source);
+        } catch (error) {
+          if (error.code !== "ENOENT") throw error;
+        }
+    }
     for (const name of [
       "@potential-guide/check-sdk",
-      "@potential-guide/task-sdk",
-      "@potential-guide/task-protocol",
-      "@potential-guide/pguide-task-bundle",
+      "@silvermoon-work/task-sdk",
+      "@silvermoon-work/task-protocol",
+      "@potential-guide/task-authoring",
       "@sinclair/typebox",
       "yaml",
     ])
-      await symlink(
-        await realpath(join(original, "node_modules", name)),
-        join(environment, "node_modules", name),
-        linkType,
-      );
+      await copyDependency(name, original);
+    await copyDependency("@potential-guide/ipfs-content", join(root, "packages", "probe-sdk"));
     const tsconfig = JSON.parse(await readFile(join(original, "tsconfig.json"), "utf8"));
     tsconfig.extends = join(root, "tsconfig.base.json");
     tsconfig.compilerOptions.tsBuildInfoFile = "dist/build.tsbuildinfo";
@@ -108,11 +123,7 @@ test("real environment build: normalized Git/Turbo hit, binary/rule invalidation
       join(sandbox, "scripts/environment-cache-inputs.mjs"),
     );
     const build = config.tasks["@potential-guide/check-environment#build"];
-    for (const path of [
-      "packages/task-protocol/src",
-      "packages/pguide-task-bundle/src",
-      "packages/check-sdk/src",
-    ])
+    for (const path of ["packages/task-authoring/src", "packages/check-sdk/src"])
       await cp(join(root, path), join(sandbox, path), { recursive: true });
     await writeFile(
       join(sandbox, "turbo.json"),
@@ -133,8 +144,8 @@ test("real environment build: normalized Git/Turbo hit, binary/rule invalidation
       `
 import assert from "node:assert/strict";
 import {readFile,writeFile} from "node:fs/promises";
-import {encodeContentCar} from "@potential-guide/pguide-task-bundle/car";
-import {readTaskArtifact} from "@potential-guide/pguide-task-bundle/artifact";
+import {encodeContentCar} from "@potential-guide/ipfs-content";
+import {readTaskArtifact} from "@potential-guide/task-authoring";
 assert.equal(process.versions.node,${JSON.stringify(process.versions.node)},"Turbo build must use the test's Node runtime");
 if(process.env.IDENTITY_POISON==="1") {
  const path="dist/candidate/tools";
@@ -251,7 +262,7 @@ if(process.env.IDENTITY_POISON==="1") {
       binaryRefs,
     );
     await turbo(cache, "HIT");
-    const rule = join(sandbox, "packages/task-protocol/src/bundle-content.ts");
+    const rule = join(sandbox, "packages/task-authoring/src/index.ts");
     await writeFile(rule, `${await readFile(rule, "utf8")}\n// Cache rule revision probe.\n`);
     await turbo(cache, "MISS");
     const oldCache = join(sandbox, ".cache", "old");

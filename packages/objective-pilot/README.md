@@ -9,7 +9,7 @@ dependency handling, evidence, and explicit memory/process probes; it does not
 provide a replacement Task scheduler or translate old Host requests.
 The old probe/scaffold/validate CLI is removed; remaining legacy regulate/continue
 wrappers explicitly reject execution until migrated.
-Use [Task Bundles](../../docs/axis/task-engine-contracts/task-bundle.md) for
+Use [Task Bundles](https://github.com/silvermoon-work/task-engine) for
 generic Engine execution. The old `check-task` Checker adapter and `probe-task`
 Objective observation adapter are retired without direct replacements. New checks use
 [`check-sdk`](../check-sdk/README.md), as shown by

@@ -13,10 +13,10 @@ import {
 } from "@potential-guide/check-sdk/authoring";
 import { createCheckResultSchema } from "@potential-guide/check-sdk/contracts";
 import {
-  readContentTree,
   type IpfsClient,
-  validateContentCar,
   openContent,
+  readContentTree,
+  validateContentCar,
 } from "@potential-guide/ipfs-content";
 import {
   canonical,
@@ -24,24 +24,25 @@ import {
   normalizeTaskText,
   readTaskBundle,
   selectTaskBinary,
-} from "@potential-guide/task-protocol";
+} from "@silvermoon-work/task-protocol";
 import { type Static, Type } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 import { stringify } from "yaml";
+import { createProbeResultSchema } from "./contracts.js";
 import {
+  type CheckDefinition,
   checksSchema,
   identifier,
   levelsSchema,
+  type ObjectiveDefinition,
   objectiveSchemaUri,
+  type ProbeDefinitions,
   readCheckDefinition,
   readObjective,
   validateComposition,
-  type CheckDefinition,
-  type ObjectiveDefinition,
-  type ProbeDefinitions,
 } from "./model.js";
 import type { PublicationResolution } from "./publication.js";
-import { createProbeResultSchema } from "./contracts.js";
+
 export { objectiveSchema, objectiveSchemaUri } from "./model.js";
 
 const path = Type.String({ minLength: 1 });

@@ -76,9 +76,8 @@ async function directoryCandidates(
 
 async function discover(
   globals: GlobalOptions,
-  skipUser = false,
 ): Promise<{ commands: Candidate[]; conflicts: Record<string, string[]> }> {
-  const config = await loadConfig(globals.cwd, ["pguide"], { user: !skipUser });
+  const config = await loadConfig(globals.cwd, ["pguide"]);
   const configured = (
     await Promise.all(
       requiredSetting<string[]>(config.value, "pguide.commandDirectories").map((path) =>
@@ -500,10 +499,7 @@ function topLevelFlag(argv: string[], flag: "--help" | "--version"): boolean {
 async function main(): Promise<number> {
   try {
     const argv = process.argv.slice(2);
-    // Only the service command owns --config; this is not a revived global option.
-    const probe = extractGlobals(argv, { serviceConfig: true });
-    const service = probe.rest[0] === "task-engine";
-    const { options: globals, rest } = service ? probe : extractGlobals(argv);
+    const { options: globals, rest } = extractGlobals(argv);
     const command = rest[0];
     if (topLevelFlag(argv, "--version")) {
       writeResult(
@@ -547,7 +543,7 @@ async function main(): Promise<number> {
       );
     }
     if (!commandPattern.test(command)) throw new CliError(`Invalid command name: ${command}.`);
-    const found = await discover(globals, service && rest.includes("--no-global-config"));
+    const found = await discover(globals);
     const conflict = found.conflicts[command];
     if (conflict !== undefined)
       throw new CliError(

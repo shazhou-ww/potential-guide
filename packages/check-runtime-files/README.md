@@ -19,7 +19,7 @@ native directory roots. Windows uses per-operation no-reparse native handles
 without write/delete sharing and a private owned compiler scratch directory;
 POSIX uses pinned descriptor-relative opens with no-follow flags. Unsupported
 host facilities fail closed. It does not interpret artifact schemas or URLs.
-See the exact [file-source boundaries](../../docs/task-server.md#local-file-source-boundaries).
+These filesystem primitives remain independent of the external Task Engine.
 
 The old Checker Worker, its JSON/type helpers, embedded source and execution
 identity are retired. `/worker`, `/worker-json`, `checkerWorkerSource` and

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryIpfsClient } from "@potential-guide/ipfs-content/testing";
-import { newId } from "@potential-guide/task-engine";
-import type { TaskContext } from "@potential-guide/task-sdk";
-import type { TaskSnapshot } from "@potential-guide/task-protocol";
+import { newId } from "@silvermoon-work/task-engine";
+import type { TaskSnapshot } from "@silvermoon-work/task-protocol";
+import type { TaskContext } from "@silvermoon-work/task-sdk";
 import {
   CheckInvocationCleanupError,
   createCheckInvoker,

@@ -3,10 +3,6 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { delimiter, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
-import { checkBundleAuthoringConsumer } from "./check-bundle-authoring-consumer.mjs";
-import { checkMvpConsumer } from "./check-mvp-consumer.mjs";
-import { checkTaskSdkConsumer } from "./check-task-sdk-consumer.mjs";
-import { checkTaskServiceConsumer } from "./check-task-service-consumer.mjs";
 import { consumerVersions, verifyConsumerGraph } from "./deployment-consumer.mjs";
 
 export async function checkPackageConsumers(root, scratch, definitions, tarballs, run, only) {
@@ -44,33 +40,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
   }
   const scenarios = [
     [
-      "task-sdk",
-      [
-        "@potential-guide/pguide-task-bundle",
-        "@potential-guide/task-sdk",
-        "@potential-guide/task-protocol",
-        "@potential-guide/task-engine",
-      ],
-    ],
-    [
-      "mvp-server",
-      [
-        "@potential-guide/task-engine-server",
-        "@potential-guide/task-engine",
-        "@potential-guide/task-protocol",
-      ],
-    ],
-    ["task-protocol", ["@potential-guide/task-protocol"]],
-    ["task-engine", ["@potential-guide/task-engine"]],
-    [
-      "task-adapters",
-      [
-        "@potential-guide/task-engine",
-        "@potential-guide/task-engine-http",
-        "@potential-guide/task-engine-storage",
-      ],
-    ],
-    [
       "npm-objectives",
       [
         ...definitions.filter((entry) => entry.objective).map((entry) => entry.name),
@@ -86,27 +55,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
     ["objectives", ["@potential-guide/pguide-objectives"]],
     ["config", ["@potential-guide/pguide-config"]],
     ["agents", ["@potential-guide/pguide-agents"]],
-    [
-      "task-service",
-      [
-        "@potential-guide/pguide-task-bundle",
-        "pguide",
-        "@potential-guide/pguide-task-engine",
-        "@potential-guide/task-engine",
-        "@potential-guide/task-protocol",
-        "@potential-guide/task-sdk",
-      ],
-    ],
-    [
-      "bundle-authoring",
-      [
-        "pguide",
-        "@potential-guide/pguide-task-bundle",
-        "@potential-guide/task-sdk",
-        "@potential-guide/task-protocol",
-        "@potential-guide/task-engine",
-      ],
-    ],
     [
       "combined",
       [
@@ -136,61 +84,20 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
         entries.map((name) => [name, pathToFileURL(tarballs.get(name)).href]),
       ),
     };
-    if (label === "task-service")
-      manifest.overrides = Object.fromEntries(
-        [...tarballs].map(([name, path]) => [name, pathToFileURL(path).href]),
-      );
-    if (label === "bundle-authoring") {
-      manifest.dependencies["@sinclair/typebox"] = "0.34.52";
-      manifest.dependencies["@ipld/car"] = JSON.parse(
-        await readFile(
-          join(root, "packages/pguide-task-bundle/node_modules/@ipld/car/package.json"),
-          "utf8",
-        ),
-      ).version;
-    }
     await writeFile(join(directory, "package.json"), JSON.stringify(manifest, null, 2));
-    if (label === "task-service")
-      await run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], directory);
-    else
-      await run(
-        "pnpm",
-        [
-          "install",
-          "--prefer-offline",
-          "--ignore-scripts",
-          "--no-frozen-lockfile",
-          "--reporter=append-only",
-        ],
-        directory,
-      );
-    const closure = consumerVersions(manifests, entries);
-    const graph = await verifyConsumerGraph(
+    await run(
+      "pnpm",
+      [
+        "install",
+        "--prefer-offline",
+        "--ignore-scripts",
+        "--no-frozen-lockfile",
+        "--reporter=append-only",
+      ],
       directory,
-      closure,
-      entries,
-      label === "npm-objectives" || label.startsWith("mvp-"),
     );
-    if (label === "bundle-authoring" || label === "task-sdk") {
-      const authorEntries = ["@potential-guide/pguide-task-bundle"];
-      const authorGraph = await verifyConsumerGraph(
-        directory,
-        consumerVersions(manifests, authorEntries),
-        authorEntries,
-        true,
-      );
-      const names = new Set(authorGraph.map((entry) => entry.name));
-      for (const forbidden of [
-        "@potential-guide/check-artifacts",
-        "@potential-guide/check-runtime-files",
-      ])
-        assert.ok(!names.has(forbidden), `Author tools must not install ${forbidden}.`);
-    }
-    if (label.startsWith("mvp-")) await checkMvpConsumer(root, directory, label, graph, run);
-    if (label === "task-sdk") {
-      await checkTaskSdkConsumer(directory, run);
-    }
-    if (label === "task-service") await checkTaskServiceConsumer(root, directory, run);
+    const closure = consumerVersions(manifests, entries);
+    await verifyConsumerGraph(directory, closure, entries, label === "npm-objectives");
     const binaries = join(directory, "node_modules", ".bin");
     const toolchain = join(directory, "toolchain");
     await mkdir(toolchain);
@@ -212,183 +119,6 @@ async function checkConsumers(root, scratch, definitions, tarballs, run, only) {
           assert.ok(source, `Missing shim utility: ${name}`);
         if (source) await symlink(source, join(toolchain, name));
       }
-    }
-    if (label === "bundle-authoring") {
-      for (const [source, target] of [
-        ["build-bundles.mjs", "echo-builder.mjs"],
-        ["echo-type.mjs", "echo-type.mjs"],
-      ])
-        await writeFile(
-          join(directory, target),
-          await readFile(join(root, "examples", "task-server", source)),
-        );
-      await writeFile(
-        join(directory, "bundle-identity.mjs"),
-        await readFile(join(root, "scripts", "bundle-identity-consumer.mjs")),
-      );
-      console.log(await run(process.execPath, ["bundle-identity.mjs"], directory));
-      const home = join(directory, "home");
-      await mkdir(home);
-      const env = {
-        ...process.env,
-        APPDATA: home,
-        XDG_CONFIG_HOME: home,
-        PATH: [binaries, toolchain].join(delimiter),
-      };
-      const pguide = join(directory, "node_modules", "pguide", "dist", "bin.js");
-      const metadata = JSON.parse(
-        await run("pguide-task-bundle", ["--pguide-command-metadata"], directory, env),
-      );
-      assert.equal(metadata.command, "task-bundle");
-      const help = JSON.parse(
-        await run(
-          process.execPath,
-          [pguide, "task-bundle", "--help", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      assert.deepEqual(help.subcommands, ["init", "check", "build"]);
-      const initialized = JSON.parse(
-        await run(
-          process.execPath,
-          [pguide, "task-bundle", "init", "minimal", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      assert.equal(initialized.status, "ok");
-      assert.equal(initialized.result.packageCreated, false);
-      assert.equal(initialized.result.packageFile, join(directory, "package.json"));
-      const minimal = JSON.parse(
-        await run(
-          "pguide-task-bundle",
-          ["build", "minimal/task.build.yaml", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      const minimalArtifact = JSON.parse(
-        await run(
-          "pguide-task-bundle",
-          ["check", "artifact", "minimal/dist", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      assert.equal(minimalArtifact.result.cid, minimal.result.cid);
-      await writeFile(
-        join(directory, "contract.ts"),
-        `import {Type} from "@sinclair/typebox";export default {input:Type.Object({text:Type.String()}),result:Type.String(),message:Type.Never()};`,
-      );
-      await writeFile(
-        join(directory, "main.ts"),
-        `import type {BundleCallback} from "@potential-guide/pguide-task-bundle";
-import type contract from "./contract.js";
-const callback:BundleCallback<typeof contract>=async input=>input.text;
-export default callback;`,
-      );
-      await writeFile(
-        join(directory, "task.build.yaml"),
-        JSON.stringify({
-          $schema:
-            "https://shazhou-ww.github.io/potential-guide/schemas/artifacts/task-build/v1.json",
-          name: "Packed author",
-          runtime: { minVersion: "22.13.0" },
-          source: { entry: "main.ts", contract: "contract.ts" },
-          outDirectory: "bundle",
-        }),
-      );
-      const checked = JSON.parse(
-        await run(
-          "pguide-task-bundle",
-          ["check", "author", "task.build.yaml", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      assert.equal(existsSync(join(directory, "bundle")), false);
-      const built = JSON.parse(
-        await run(
-          process.execPath,
-          [pguide, "task-bundle", "build", "task.build.yaml", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      assert.equal(built.result.cid, checked.result.cid);
-      await writeFile(
-        join(directory, "contract.ts"),
-        "throw new Error('Artifact checks must not evaluate author code');",
-      );
-      const artifact = JSON.parse(
-        await run(
-          "pguide-task-bundle",
-          ["check", "artifact", "bundle", "--format", "json"],
-          directory,
-          env,
-        ),
-      );
-      assert.equal(artifact.result.cid, built.result.cid);
-      await checkBundleAuthoringConsumer(directory, built.result.cid, tarballs, manifests, run);
-    }
-    if (["task-protocol", "task-engine", "task-adapters"].includes(label)) {
-      const script = join(directory, "generic-task.mjs");
-      await writeFile(
-        join(directory, "type-worker.mjs"),
-        `export default async function echo(input){return input}`,
-      );
-      await writeFile(
-        script,
-        `
-import assert from "node:assert/strict";
-${
-  label === "task-protocol"
-    ? `
-import {emptyFacts,json} from "@potential-guide/task-protocol";
-assert.equal(emptyFacts().watermark,0);
-assert.deepEqual(json({value:2}),{value:2});
-`
-    : `
-import {createTaskEngine,newId} from "@potential-guide/task-engine";
-import {MemoryIpfsClient,MemoryStore} from "@potential-guide/task-engine/testing";
-import {readFile} from "node:fs/promises";
-const binding=JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "binding.json"))},"utf8"));
-const bundle=binding.cid;
-const ipfsClient=new MemoryIpfsClient();
-for(const [cid,hex] of JSON.parse(await readFile(${JSON.stringify(join(scratch, "task-sdk", "fixture", "blocks.json"))},"utf8")))ipfsClient.blocks.set(cid,Buffer.from(hex,"hex"));
-${
-  label === "task-adapters"
-    ? `
-import {openSqliteStore} from "@potential-guide/task-engine-storage";
-import {createTaskHandler} from "@potential-guide/task-engine-http";
-const store=openSqliteStore("consumer.sqlite");
-`
-    : "const store=new MemoryStore();"
-}
-const engine=createTaskEngine({store,ipfsClient,authorize:()=>true});
-await engine.start();
-const caller={scope:"consumer",subject:"fixture"};
-let decision=await engine.submit({requestId:newId(),bundle,text:"packed",timeoutMs:10000},caller);
-while(decision.status==="preparing")decision=await engine.getRequestStatus(decision.requestId,{waitMs:1000},caller);
-assert.equal(decision.status,"accepted");const task=engine.getTask(decision.taskId,caller);
-let result;
-for(let i=0;i<200;i++){await new Promise(r=>setTimeout(r,10));result=engine.getTask(task.taskId,caller);if(result.stage==="completed")break;}
-assert.equal(result.stage,"completed");assert.deepEqual(result.result,{text:"packed"});
-${
-  label === "task-adapters"
-    ? `
-const handler=createTaskHandler({service:engine,resolveCaller:()=>caller});
-assert.equal((await handler(new Request("http://fixture/tasks/"+task.taskId))).status,200);
-`
-    : ""
-}
-await engine.close();store.close();
-`
-}
-`,
-      );
-      await run(process.execPath, [script], directory);
     }
     if (label === "npm-objectives") {
       const script = join(directory, "static-objectives.mjs");

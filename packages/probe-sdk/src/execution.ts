@@ -1,17 +1,17 @@
 import { randomBytes } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
-import { openContent, type IpfsClient } from "@potential-guide/ipfs-content";
+import { type IpfsClient, openContent } from "@potential-guide/ipfs-content";
 import {
+  bundleCid,
   type Caller,
   type CancellationResult,
+  type JsonObject,
   type SubmissionResult,
+  TaskError,
   type TaskRequest,
   type TaskSnapshot,
-  TaskError,
-  type JsonObject,
-  bundleCid,
   validateBundleReference,
-} from "@potential-guide/task-protocol";
+} from "@silvermoon-work/task-protocol";
 import type { CheckInvoker } from "./index.js";
 
 /** Both the ordinary Engine and TaskClient satisfy this async-compatible public API. */

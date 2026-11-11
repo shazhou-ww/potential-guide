@@ -1,7 +1,7 @@
 import { createCheckResult } from "@potential-guide/check-sdk";
 import { createCheckResultSchema } from "@potential-guide/check-sdk/contracts";
-import { canonical, json } from "@potential-guide/task-protocol";
-import type { TaskCallback, TaskContext } from "@potential-guide/task-sdk";
+import { canonical, json } from "@silvermoon-work/task-protocol";
+import type { TaskCallback, TaskContext } from "@silvermoon-work/task-sdk";
 import { Value } from "@sinclair/typebox/value";
 import { mapInput, type ProbeDefinitions, readCheckDefinition, readObjective } from "./model.js";
 

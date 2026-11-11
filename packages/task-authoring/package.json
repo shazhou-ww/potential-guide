@@ -1,0 +1,29 @@
+{
+  "name": "@potential-guide/task-authoring",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Repository Check and Objective build integration with the external Task Builder.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "lint": "biome lint .",
+    "test": "tsx --test \"test/*.test.ts\"",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@silvermoon-work/task-builder": "catalog:",
+    "@silvermoon-work/task-builder-cli": "catalog:",
+    "@silvermoon-work/task-protocol": "catalog:"
+  }
+}

@@ -4,11 +4,11 @@ Checker/Objective Host 执行链路已退役。npm 包的显式准备、摘要�
 旧 `probe`、`scaffold`、`validate` 命令已随 pguide-pilot 移除；
 保留的 `regulate` 和 `continue` 包装仍明确拒绝执行，
 不会重放或改写旧治理记录。以下旧消费与恢复示例仅用于理解历史格式；
-新执行请按 [Task Bundle 契约](axis/task-engine-contracts/task-bundle.md)显式构建和提交。
+新执行请按外部 [Task Engine 契约](https://github.com/silvermoon-work/task-engine)显式构建和提交。
 
 独立 Check 的新增交付入口见
 [`@potential-guide/check-sdk`](../packages/check-sdk/README.md) 和
-[Task Bundle](axis/task-engine-contracts/task-bundle.md)。
+[Task Bundle](https://github.com/silvermoon-work/task-engine)。
 旧 `check-artifacts` 包已退役，历史 schema 保留。本文的 npm Objective 格式仍保留现有语义；
 Objective 组合和内置制品迁移不在该入口中隐式进行。
 

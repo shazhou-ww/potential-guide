@@ -5,15 +5,6 @@ on:
     tags:
       - "check-sdk-v*"
       - "check-environment-v*"
-      - "pguide-task-bundle-v*"
-      - "task-protocol-v*"
-      - "task-engine-v*"
-      - "task-engine-http-v*"
-      - "task-engine-storage-v*"
-      - "task-sdk-v*"
-      - "task-engine-server-v*"
-      - "task-engine-webui-v*"
-      - "pguide-task-engine-v*"
       - "effects-v*"
       - "git-source-v*"
       - "objective-pilot-v*"
@@ -43,15 +34,6 @@ on:
         options:
           - check-sdk
           - check-environment
-          - pguide-task-bundle
-          - task-protocol
-          - task-engine
-          - task-engine-http
-          - task-engine-storage
-          - task-sdk
-          - task-engine-server
-          - task-engine-webui
-          - pguide-task-engine
           - effects
           - git-source
           - objective-pilot
@@ -129,7 +111,7 @@ jobs:
           node --input-type=module <<'NODE'
           import { appendFileSync, readFileSync } from "node:fs";
           import { join } from "node:path";
-          import { parseReleaseTag, releasePackageDirectory, releasePackages, releaseVersion, taskEngineReleaseIds } from "./scripts/release-packages.mjs";
+          import { parseReleaseTag, releasePackageDirectory, releasePackages, releaseVersion } from "./scripts/release-packages.mjs";
 
           const packages = Object.fromEntries(releasePackages.map((entry) => [
             entry.id,
@@ -171,8 +153,8 @@ jobs:
             );
             process.exit(1);
           }
-          if (taskEngineReleaseIds.includes(packageId) && !packageJson.version.includes("-rc.")) {
-            console.error(`::error::Task Engine releases require an RC version; received ${packageJson.version}.`);
+          if (packageId === "cli-core" && !packageJson.version.includes("-rc.")) {
+            console.error(`::error::CLI Core releases require an RC version; received ${packageJson.version}.`);
             process.exit(1);
           }
           if (packageJson.publishConfig?.access !== "public") {

@@ -6,13 +6,9 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { prepareCheck, verifyCheckResources } from "@potential-guide/check-sdk/authoring";
-import { buildTask } from "@potential-guide/pguide-task-bundle";
-import {
-  inspectTaskArtifact,
-  readTaskArtifact,
-} from "@potential-guide/pguide-task-bundle/artifact";
+import { buildTask, inspectTaskArtifact, readTaskArtifact } from "@potential-guide/task-authoring";
+import { normalizeTaskText } from "@silvermoon-work/task-protocol";
 import { parse, stringify } from "yaml";
-import { normalizeTaskText } from "@potential-guide/task-protocol";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const execute = promisify(execFile);
@@ -104,7 +100,7 @@ test("first/second-stage failures preserve every accepted CAR and the final inde
       contract,
       `${source.toString().replace("export default createCheckContract(", "const contract = createCheckContract(")}\nexport default {...contract,message:Type.Date()};\n`,
     );
-    await assert.rejects(run(), /Unsupported TypeBox kind: Date/);
+    await assert.rejects(run(), /Contract evaluation failed/);
     assert.deepEqual(await snapshot(output), accepted);
     await writeFile(contract, source);
     const prepared = await prepareCheck(join(directory, "tools.check.build.yaml"));

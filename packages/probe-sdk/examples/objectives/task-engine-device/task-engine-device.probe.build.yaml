@@ -10,15 +10,15 @@ bundles:
   runtime:
     source:
       kind: ipfs
-      cid: bafybeiddh766ctfmeqgiehph7sc4qi7p6tb4qrwluylowp4ekkawvveeb4
+      cid: bafybeievov6ycszz56edl74irjfdfgltilfwgtfiusbrf6lbdc3vvmydna
   storage:
     source:
       kind: ipfs
-      cid: bafybeifluumi66st55omw4eru3sgb234jhpihuj2uab4tb3cli2cmuk4oe
+      cid: bafybeicpjxkclunwjg3ncpfskwhu6wtxvhexjo5ed5mvnsk3xjlvf4ftd4
   gateway:
     source:
       kind: ipfs
-      cid: bafybeiego4r4tngvq6rn6lp6jcu2mxyqvtrpiwsx4hopri4o7hcbqu2rx4
+      cid: bafybeiaphdtbrppxfsdtkhnq7etwsk3widavjd53azkjfsju2zhbbbywf4
 checks:
   runtime:
     bundle: runtime
