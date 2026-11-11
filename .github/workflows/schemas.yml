@@ -25,7 +25,7 @@ jobs:
           node-version: "22"
       - name: Verify immutable definitions and build site
         run: node scripts/publish-schemas.mjs
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: .cache/schema-site
   deploy:
